@@ -75,9 +75,13 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.headers["Content-Disposition"]).to include('attachment; filename="analysis.csv"')
     expect(response.body).to include("column_a,column_b")
 
-    expect {
-      post publish_dataset_path(dataset)
-    }.to have_enqueued_job(Ingest::PublishDatasetEventJob).with(dataset.id)
+    post publish_dataset_path(dataset)
+
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    globus_jobs = enqueued_jobs.select { |job| job[:job] == Globus::SubmitDatasetTransferJob }
+
+    expect(ingest_jobs.map { |job| job[:args].first }).to include(dataset.id)
+    expect(globus_jobs.map { |job| job[:args].first }).to include(dataset.id)
     expect(response).to redirect_to(dataset_path(dataset))
 
     dataset.reload

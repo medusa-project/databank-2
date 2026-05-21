@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_20_225000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_21_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -97,6 +97,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_225000) do
     t.index ["key"], name: "index_datasets_on_key", unique: true
   end
 
+  create_table "external_delivery_attempts", force: :cascade do |t|
+    t.integer "attempt", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.jsonb "details", default: {}, null: false
+    t.string "error_class"
+    t.text "error_message"
+    t.string "event_name", null: false
+    t.string "idempotency_key"
+    t.string "integration", null: false
+    t.string "job_id"
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_id", "integration", "created_at"], name: "index_delivery_attempts_on_dataset_integration_created"
+    t.index ["dataset_id", "integration", "event_name", "idempotency_key", "status"], name: "index_delivery_attempts_idempotency_status"
+    t.index ["dataset_id"], name: "index_external_delivery_attempts_on_dataset_id"
+    t.index ["integration"], name: "index_external_delivery_attempts_on_integration"
+    t.index ["status"], name: "index_external_delivery_attempts_on_status"
+  end
+
   create_table "funders", force: :cascade do |t|
     t.string "award_number"
     t.datetime "created_at", null: false
@@ -137,6 +157,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_225000) do
   add_foreign_key "contributors", "datasets"
   add_foreign_key "creators", "datasets"
   add_foreign_key "datafiles", "datasets"
+  add_foreign_key "external_delivery_attempts", "datasets"
   add_foreign_key "funders", "datasets"
   add_foreign_key "related_materials", "datasets"
 end

@@ -64,6 +64,40 @@ Set these variables to enable RabbitMQ publish:
 If not enabled or if publish to RabbitMQ fails, the app logs a warning and
 continues serving the user request.
 
+## Optional Globus Transfer Submission
+
+On successful dataset publish, the app also enqueues a Globus transfer job.
+
+Set these variables to enable transfer submission:
+
+- `ENABLE_GLOBUS_TRANSFER=true`
+- `GLOBUS_TRANSFER_ENDPOINT` (for example, `https://globus.example.org/api/transfers`)
+- `GLOBUS_TRANSFER_TOKEN` (bearer token)
+- `GLOBUS_SOURCE_COLLECTION`
+- `GLOBUS_DESTINATION_COLLECTION`
+- `GLOBUS_SOURCE_BASE_PATH` (optional, default `/`)
+- `GLOBUS_DESTINATION_BASE_PATH` (optional, default `/`)
+
+If Globus transfer is not enabled or submission fails, the app logs a warning
+and keeps the user publish flow successful.
+
+## External Delivery Audit Trail
+
+Each ingest and globus background delivery attempt is persisted in
+`external_delivery_attempts` with:
+
+- integration (`ingest` or `globus`)
+- event name (`dataset.published`)
+- status (`started`, `skipped`, `succeeded`, `failed`)
+- attempt number and job id
+- optional failure details (`error_class`, `error_message`, `details`)
+
+Delivery jobs use an idempotency key (`dataset.published:<dataset_id>:<published_at>`) and
+skip external submission when a prior `succeeded` attempt exists for the same
+dataset/integration/event key.
+
+This provides an operational record for diagnosing delivery and replay flows.
+
 ## Testing
 
 This project uses RSpec.

@@ -1,5 +1,5 @@
-module Ingest
-  class PublishDatasetEventJob < ApplicationJob
+module Globus
+  class SubmitDatasetTransferJob < ApplicationJob
     queue_as :default
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
 
@@ -18,29 +18,28 @@ module Ingest
         return
       end
 
-      publisher = RabbitmqEventPublisher.new
+      service = TransferService.new
       attempt_record = build_attempt(dataset: dataset, status: :started, idempotency_key: key)
-
-      unless publisher.enabled?
+      unless service.enabled?
         attempt_record.update!(status: :skipped, details: { reason: "integration_disabled" })
         return
       end
 
-      success = publisher.publish_dataset_published(dataset)
+      success = service.submit_dataset_transfer(dataset)
       if success
         attempt_record.update!(status: :succeeded)
         return
       end
 
-      message = "Ingest::PublishDatasetEventJob failed"
+      message = "Globus::SubmitDatasetTransferJob failed"
       attempt_record.update!(
         status: :failed,
-        error_class: "PublisherError",
+        error_class: "TransferError",
         error_message: message
       )
       Rails.logger.warn(
         {
-          event: "ingest.publish_dataset_event.failed",
+          event: "globus.submit_dataset_transfer.failed",
           job_id: job_id,
           dataset_id: dataset_id,
           dataset_key: dataset.key,
@@ -56,7 +55,7 @@ module Ingest
     def build_attempt(dataset:, status:, idempotency_key:, details: {})
       ExternalDeliveryAttempt.create!(
         dataset: dataset,
-        integration: :ingest,
+        integration: :globus,
         event_name: "dataset.published",
         status: status,
         attempt: [ executions.to_i, 1 ].max,
@@ -68,7 +67,7 @@ module Ingest
 
     def already_succeeded?(dataset:, idempotency_key:)
       ExternalDeliveryAttempt.succeeded_for(
-        integration: :ingest,
+        integration: :globus,
         event_name: "dataset.published",
         idempotency_key: idempotency_key
       ).where(dataset: dataset).exists?
