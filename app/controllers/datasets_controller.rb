@@ -5,13 +5,23 @@ class DatasetsController < ApplicationController
 
   def index
     @query = params[:q].to_s
-    @subject = params[:subject].to_s
+    @per_page = per_page
+    @page = page
 
-    @datasets = Search::DatasetSearch.new(
-      scope: public_datasets,
+    @search = Search::DatasetSearch.new(
+      scope: datasets_for_current_role,
       query: @query,
-      subject: @subject
-    ).results
+      filters: dataset_filter_params,
+      page: @page,
+      per_page: @per_page,
+      role: current_role
+    )
+
+    @datasets = @search.results
+    @facet_options = @search.facet_options
+    @available_facets = @search.available_facets
+    @total_count = @search.total_count
+    @total_pages = @search.total_pages
   end
 
   def show
@@ -134,6 +144,55 @@ class DatasetsController < ApplicationController
       Dataset.published
     end
   end
+
+  def current_role
+    return "guest" unless logged_in?
+
+    current_user.admin? ? "admin" : "depositor"
+  end
+
+  def datasets_for_current_role
+    public_datasets
+  end
+
+  def dataset_filter_params
+    {
+      subjects: params[:subjects],
+      licenses: params[:licenses],
+      funders: params[:funders],
+      publication_years: params[:publication_years],
+      publication_states: params[:publication_states],
+      depositors: params[:depositors]
+    }
+  end
+
+  def per_page
+    requested = params[:per_page].to_i
+    return Search::DatasetSearch::DEFAULT_PER_PAGE if requested <= 0
+
+    [ requested, Search::DatasetSearch::MAX_PER_PAGE ].min
+  end
+
+  def page
+    requested = params[:page].to_i
+    requested.positive? ? requested : 1
+  end
+
+  def index_query_params(overrides = {})
+    {
+      q: @query,
+      per_page: @per_page,
+      subjects: params[:subjects],
+      licenses: params[:licenses],
+      funders: params[:funders],
+      publication_years: params[:publication_years],
+      publication_states: params[:publication_states],
+      depositors: params[:depositors],
+      page: @page
+    }.merge(overrides)
+  end
+
+  helper_method :index_query_params
 
   def latest_delivery_attempts
     ExternalDeliveryAttempt

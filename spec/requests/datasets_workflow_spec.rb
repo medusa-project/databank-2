@@ -127,6 +127,29 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("a,b")
   end
 
+  it "shows the shared legacy funder catalog on the edit form" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Catalog Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    get edit_dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("known-funders")
+    expect(response.body).to include("U.S. Department of Energy (DOE)")
+    expect(response.body).to include("10.13039/100000015")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

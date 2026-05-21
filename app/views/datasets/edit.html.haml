@@ -120,36 +120,17 @@
     %ul
       - @dataset.funders.each do |funder|
         %li
-          = form_with model: [@dataset, funder], local: true do |f|
-            = f.text_field :name, required: true
-            = f.text_field :award_number, placeholder: "Award number"
-            = f.text_field :identifier, placeholder: "Identifier"
-            = f.number_field :position, min: 1
-            = f.submit "Update", class: "ilw-button"
+          = render "funder_fields", dataset: @dataset, funder: funder, submit_label: "Update"
           = button_to "Remove", dataset_funder_path(@dataset, funder), method: :delete, class: "ilw-button"
   - else
     %p No funders added yet.
 
   %h3 Add Funder
-  = form_with model: [@dataset, Funder.new], local: true do |f|
-    %p
-      = f.label :name
-      %br/
-      = f.text_field :name, required: true
-    %p
-      = f.label :award_number
-      %br/
-      = f.text_field :award_number
-    %p
-      = f.label :identifier
-      %br/
-      = f.text_field :identifier
-    %p
-      = f.label :position
-      %br/
-      = f.number_field :position, min: 1
-    %p
-      = f.submit "Add Funder", class: "ilw-button"
+  = render "funder_fields", dataset: @dataset, funder: Funder.new, submit_label: "Add Funder"
+
+  %datalist#known-funders
+    - FunderCatalog.known_entries.each do |entry|
+      %option{value: entry.name}
 
   %h2 Related Materials
   - if @dataset.related_materials.any?
