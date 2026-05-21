@@ -74,3 +74,33 @@
     %p
       DOI:
       = @dataset.identifier
+
+  - if logged_in? && can?(:manage, Dataset)
+    %h2 External Delivery
+
+    %p
+      = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "ilw-button"
+
+    - if @latest_delivery_attempts.present?
+      %ul
+        - @latest_delivery_attempts.each do |integration, attempt|
+          %li
+            = "#{integration}: #{attempt.status}"
+            = " (attempt #{attempt.attempt})"
+            = " at #{attempt.created_at.utc.iso8601}"
+            - if attempt.error_message.present?
+              = " - #{attempt.error_message}"
+    - else
+      %p No external delivery attempts recorded yet.
+
+    - total_failed = @failed_delivery_counts.values.sum
+    - if total_failed.positive?
+      %p
+        Failed attempts:
+        = total_failed
+      %p
+        = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "ilw-button"
+      - @failed_delivery_counts.each do |integration, count|
+        %p
+          = "#{integration} failures: #{count}"
+          = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "ilw-button"

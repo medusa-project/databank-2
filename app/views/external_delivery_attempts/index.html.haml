@@ -1,0 +1,65 @@
+- content_for :title, "External Delivery Audit"
+
+%ilw-page-title
+  %h1{slot: "title"} External Delivery Audit
+
+%ilw-content
+  = form_with url: admin_external_delivery_attempts_path, method: :get, local: true do
+    %p
+      = label_tag :dataset_key, "Dataset Key"
+      = text_field_tag :dataset_key, @dataset_key
+    %p
+      = label_tag :integration, "Integration"
+      = select_tag :integration, options_for_select([["All", ""]] + @integrations.map { |value| [value, value] }, @integration)
+    %p
+      = label_tag :status, "Status"
+      = select_tag :status, options_for_select([["All", ""]] + @statuses.map { |value| [value, value] }, @status)
+    %p
+      = label_tag :event_name, "Event Name"
+      = text_field_tag :event_name, @event_name
+    %p
+      = label_tag :per_page, "Per Page"
+      = number_field_tag :per_page, @per_page, min: 1, max: 200
+    = hidden_field_tag :sort, sort_column
+    = hidden_field_tag :direction, sort_direction
+    = hidden_field_tag :page, 1
+    %p
+      = submit_tag "Apply Filters", class: "ilw-button"
+
+  %p
+    = link_to "Export CSV", admin_external_delivery_attempts_path(query_params_for(format: :csv, page: 1)), class: "ilw-button"
+
+  - if @attempts.any?
+    %p
+      = "Showing #{@attempts.size} of #{@total_count} attempt(s)."
+
+    %table
+      %thead
+        %tr
+          %th= link_to "Time", admin_external_delivery_attempts_path(query_params_for(sort: "created_at", direction: next_direction_for("created_at"), page: 1))
+          %th Dataset
+          %th= link_to "Integration", admin_external_delivery_attempts_path(query_params_for(sort: "integration", direction: next_direction_for("integration"), page: 1))
+          %th= link_to "Event", admin_external_delivery_attempts_path(query_params_for(sort: "event_name", direction: next_direction_for("event_name"), page: 1))
+          %th= link_to "Status", admin_external_delivery_attempts_path(query_params_for(sort: "status", direction: next_direction_for("status"), page: 1))
+          %th= link_to "Attempt", admin_external_delivery_attempts_path(query_params_for(sort: "attempt", direction: next_direction_for("attempt"), page: 1))
+          %th Error
+      %tbody
+        - @attempts.each do |attempt|
+          %tr
+            %td= attempt.created_at.utc.iso8601
+            %td= link_to(attempt.dataset.key, dataset_path(attempt.dataset))
+            %td= attempt.integration
+            %td= attempt.event_name
+            %td= attempt.status
+            %td= attempt.attempt
+            %td= attempt.error_message.presence || "-"
+
+    - if @total_pages > 1
+      %p
+        - if @page > 1
+          = link_to "Previous", admin_external_delivery_attempts_path(query_params_for(page: @page - 1)), class: "ilw-button"
+        = " Page #{@page} of #{@total_pages} "
+        - if @page < @total_pages
+          = link_to "Next", admin_external_delivery_attempts_path(query_params_for(page: @page + 1)), class: "ilw-button"
+  - else
+    %p No delivery attempts match the selected filters.

@@ -69,6 +69,25 @@ RSpec.describe Ingest::PublishDatasetEventJob, type: :job do
     expect(attempt.details).to include("reason" => "already_succeeded")
   end
 
+  it "uses provided replay idempotency key" do
+    replay_key = "dataset.published:#{dataset.id}:manual-replay"
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :succeeded,
+      attempt: 1,
+      idempotency_key: replay_key
+    )
+
+    publisher = instance_double(Ingest::RabbitmqEventPublisher, enabled?: true)
+    allow(publisher).to receive(:publish_dataset_published)
+    allow(Ingest::RabbitmqEventPublisher).to receive(:new).and_return(publisher)
+
+    expect { described_class.perform_now(dataset.id, replay_key) }.not_to raise_error
+    expect(publisher).not_to have_received(:publish_dataset_published)
+  end
+
   it "records skipped attempt when publisher is disabled" do
     publisher = instance_double(Ingest::RabbitmqEventPublisher, enabled?: false)
     allow(Ingest::RabbitmqEventPublisher).to receive(:new).and_return(publisher)

@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
-  before_action :set_dataset, only: %i[show edit update publish]
+  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries]
 
   def index
     @query = params[:q].to_s
@@ -16,6 +16,8 @@ class DatasetsController < ApplicationController
 
   def show
     authorize! :read, @dataset
+    @latest_delivery_attempts = latest_delivery_attempts
+    @failed_delivery_counts = failed_delivery_counts
   end
 
   def new
@@ -68,6 +70,39 @@ class DatasetsController < ApplicationController
     end
   end
 
+  def replay_failed_deliveries
+    authorize! :manage, Dataset
+
+    selected_integration = replay_integration
+
+    failures = ExternalDeliveryAttempt
+      .where(dataset: @dataset, event_name: "dataset.published", status: :failed)
+      .order(created_at: :desc)
+    failures = failures.where(integration: selected_integration) if selected_integration.present?
+
+    replay_targets = failures.uniq { |attempt| [ attempt.integration, attempt.idempotency_key ] }
+
+    replayed = 0
+    replay_targets.each do |attempt|
+      case attempt.integration
+      when "ingest"
+        Ingest::PublishDatasetEventJob.perform_later(@dataset.id, attempt.idempotency_key)
+        replayed += 1
+      when "globus"
+        Globus::SubmitDatasetTransferJob.perform_later(@dataset.id, attempt.idempotency_key)
+        replayed += 1
+      end
+    end
+
+    target_label = selected_integration || "all"
+
+    if replayed.positive?
+      redirect_to dataset_path(@dataset), notice: "Requeued #{replayed} failed external delivery attempt(s) for #{target_label}."
+    else
+      redirect_to dataset_path(@dataset), alert: "No failed external deliveries to replay for #{target_label}."
+    end
+  end
+
   private
 
   def set_dataset
@@ -98,5 +133,28 @@ class DatasetsController < ApplicationController
     else
       Dataset.published
     end
+  end
+
+  def latest_delivery_attempts
+    ExternalDeliveryAttempt
+      .where(dataset: @dataset, event_name: "dataset.published")
+      .order(created_at: :desc)
+      .group_by(&:integration)
+      .transform_values(&:first)
+  end
+
+  def failed_delivery_counts
+    ExternalDeliveryAttempt
+      .where(dataset: @dataset, event_name: "dataset.published", status: :failed)
+      .group(:integration)
+      .count
+  end
+
+  def replay_integration
+    value = params[:integration].to_s.strip
+    return nil if value.blank? || value == "all"
+    return value if ExternalDeliveryAttempt.integrations.key?(value)
+
+    nil
   end
 end

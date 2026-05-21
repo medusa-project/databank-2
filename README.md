@@ -96,6 +96,23 @@ Delivery jobs use an idempotency key (`dataset.published:<dataset_id>:<published
 skip external submission when a prior `succeeded` attempt exists for the same
 dataset/integration/event key.
 
+Admins can replay failed delivery attempts for a dataset via:
+
+- `POST /datasets/:id/replay_failed_deliveries`
+- optional `integration` param: `ingest`, `globus`, or `all` (default)
+
+Replay enqueues one job per failed integration/idempotency key pair.
+
+Admins can browse delivery attempts at:
+
+- `GET /admin/external_delivery_attempts`
+
+Supported filters: `dataset_key`, `integration`, `status`, `event_name`.
+
+The audit page also supports CSV export with active filters/sort:
+
+- `GET /admin/external_delivery_attempts.csv`
+
 This provides an operational record for diagnosing delivery and replay flows.
 
 ## Testing

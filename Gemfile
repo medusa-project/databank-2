@@ -26,6 +26,8 @@ gem "omniauth-rails_csrf_protection", "~> 2.0"
 gem "aws-sdk-s3", "~> 1.0", require: false
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
+# CSV parser/generator (explicit for Ruby 3.4+ compatibility)
+gem "csv", "~> 3.3"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
@@ -66,4 +68,4 @@ group :development do
   gem "web-console"
 end
 
-gem "rspec-rails", "~> 8.0", :groups => [:development, :test]
+gem "rspec-rails", "~> 8.0", groups: [ :development, :test ]

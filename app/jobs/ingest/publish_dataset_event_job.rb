@@ -3,11 +3,11 @@ module Ingest
     queue_as :default
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
 
-    def perform(dataset_id)
+    def perform(dataset_id, replay_idempotency_key = nil)
       dataset = Dataset.find_by(id: dataset_id)
       return unless dataset
 
-      key = idempotency_key_for(dataset)
+      key = idempotency_key_for(dataset, replay_idempotency_key)
       if already_succeeded?(dataset: dataset, idempotency_key: key)
         build_attempt(
           dataset: dataset,
@@ -74,7 +74,9 @@ module Ingest
       ).where(dataset: dataset).exists?
     end
 
-    def idempotency_key_for(dataset)
+    def idempotency_key_for(dataset, replay_idempotency_key = nil)
+      return replay_idempotency_key if replay_idempotency_key.present?
+
       published_at = dataset.published_at&.utc&.iso8601 || "unpublished"
       "dataset.published:#{dataset.id}:#{published_at}"
     end

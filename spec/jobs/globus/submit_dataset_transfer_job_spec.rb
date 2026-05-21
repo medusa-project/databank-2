@@ -82,4 +82,23 @@ RSpec.describe Globus::SubmitDatasetTransferJob, type: :job do
     expect(attempt.status).to eq("skipped")
     expect(attempt.details).to include("reason" => "already_succeeded")
   end
+
+  it "uses provided replay idempotency key" do
+    replay_key = "dataset.published:#{dataset.id}:manual-replay"
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset,
+      integration: :globus,
+      event_name: "dataset.published",
+      status: :succeeded,
+      attempt: 1,
+      idempotency_key: replay_key
+    )
+
+    service = instance_double(Globus::TransferService, enabled?: true)
+    allow(service).to receive(:submit_dataset_transfer)
+    allow(Globus::TransferService).to receive(:new).and_return(service)
+
+    expect { described_class.perform_now(dataset.id, replay_key) }.not_to raise_error
+    expect(service).not_to have_received(:submit_dataset_transfer)
+  end
 end
