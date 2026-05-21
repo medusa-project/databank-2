@@ -1,6 +1,6 @@
 class Dataset < ApplicationRecord
   KEY_PREFIX = ENV.fetch("DATASET_KEY_PREFIX", "IDB").freeze
-  KEY_DIGITS  = 7
+  KEY_DIGITS = 7
 
   has_many :datafiles,         dependent: :destroy
   has_many :creators,          -> { order(:position, :id) }, dependent: :destroy
@@ -10,16 +10,13 @@ class Dataset < ApplicationRecord
 
   enum :publication_state, { draft: 0, published: 1 }, default: :draft
 
-  validates :key,             presence: true, uniqueness: true,
-                              format: { with: /\A#{Regexp.escape(KEY_PREFIX)}-\d{#{KEY_DIGITS}}\z/ }
+  validates :key,             presence: true, uniqueness: true
   validates :title,           presence: true
   validates :owner_uid,       presence: true
   validates :depositor_name,  presence: true
   validates :depositor_email, presence: true
 
   before_validation :set_key, on: :create
-  after_commit :enqueue_search_reindex, on: %i[create update]
-  after_commit :enqueue_search_delete, on: :destroy
 
   def to_param
     key
@@ -54,13 +51,5 @@ class Dataset < ApplicationRecord
       candidate = "#{KEY_PREFIX}-#{rand(10**KEY_DIGITS).to_s.rjust(KEY_DIGITS, '0')}"
       break candidate unless self.class.exists?(key: candidate)
     end
-  end
-
-  def enqueue_search_reindex
-    Search::IndexDatasetJob.perform_later(id)
-  end
-
-  def enqueue_search_delete
-    Search::DeleteDatasetJob.perform_later(key)
   end
 end

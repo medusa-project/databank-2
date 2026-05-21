@@ -39,3 +39,5 @@
 # Ignore local working files
 /working/*
 !/working/.keep
+/migration_bundles/*
+!/migration_bundles/.keep

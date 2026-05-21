@@ -292,11 +292,8 @@ module Migration
     def dataset_key
       return payload["key"] if payload["key"].present?
 
-      from_url = payload["url"].to_s[/IDB-\d{7}/]
+      from_url = payload["url"].to_s[/\/datasets\/([^\/]+)\.json\z/i, 1]
       return from_url if from_url.present?
-
-      from_identifier = payload["identifier"].to_s[/B2IDB-(\d{7})/i, 1]
-      return "IDB-#{from_identifier}" if from_identifier.present?
 
       nil
     end
