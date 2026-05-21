@@ -1,106 +1,201 @@
 - content_for :title, @dataset.title
 
-%ilw-page-title
-  %h1{slot: "title"}= @dataset.title
+- doi_url = dataset_persistent_url(@dataset)
+- citation_text = dataset_plain_text_citation(@dataset)
+- primary_contact_name = dataset_primary_contact_name(@dataset)
+- version_related_materials = @dataset.version_related_materials
+- nonversion_related_materials = @dataset.nonversion_related_materials
 
-%ilw-content
-  %p= @dataset.key
+%ilw-content.dataset-show-page
+  .dataset-show-summary
+    .dataset-show-titlebar
+      %p.dataset-show-key= @dataset.key
 
-  - if logged_in? && can?(:update, @dataset)
-    %p
-      = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "ilw-button"
+      - if logged_in? && can?(:update, @dataset)
+        .dataset-show-actions
+          = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "ilw-button"
+          - if @dataset.version_eligible?
+            = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "ilw-button"
 
-  - if @dataset.description.present?
-    %p= @dataset.description
+    - if @dataset.description.present?
+      .dataset-show-abstract
+        %h2.dataset-show-section-title Dataset Description
+        = simple_format(@dataset.description)
 
-  - if @dataset.keywords.present?
-    %p
-      Keywords:
-      = @dataset.keywords
-  - if @dataset.subject.present?
-    %p
-      Subject:
-      = @dataset.subject
-  - if @dataset.license.present?
-    %p
-      License:
-      = @dataset.license
-  - if @dataset.publisher.present?
-    %p
-      Publisher:
-      = @dataset.publisher
+    - if citation_text.present? || doi_url.present?
+      .dataset-show-citation
+        - if citation_text.present?
+          .dataset-show-citation-copy
+            %p.dataset-show-eyebrow Cite this dataset:
+            %p.dataset-show-citation-text= citation_text
 
-  - if logged_in? && can?(:update, @dataset)
-    - missing = @dataset.missing_publish_fields
-    - if missing.any?
-      %p
-        Publish requirements missing:
-        = missing.join(", ")
-    - else
-      %p This dataset is ready to publish.
+        - if doi_url.present?
+          .dataset-show-persistent-link
+            %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
+            .dataset-show-persistent-controls
+              %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
+              %button.ilw-button.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value)"}
+                Copy
 
-    - unless @dataset.published?
-      %p
-        = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "ilw-button"
+    - if logged_in? && can?(:update, @dataset)
+      - missing = @dataset.missing_publish_fields
+      .dataset-show-status
+        - if missing.any?
+          %p
+            %strong Publish requirements missing:
+            = " #{missing.join(', ')}"
+        - else
+          %p
+            %strong This dataset is ready to publish.
 
-  - if @dataset.creators.any?
-    %h2 Creators
-    %ul
-      - @dataset.creators.each do |creator|
-        %li
-          = creator.name
-          - if creator.email.present?
-            = " (#{creator.email})"
-          - if creator.contact?
-            = " [contact]"
+        - unless @dataset.published?
+          = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "ilw-button"
 
-  - if @dataset.datafiles.any?
-    %h2 Files
-    %ul
-      - @dataset.datafiles.each do |datafile|
-        %li
-          = datafile.binary_name.presence || datafile.web_id
-          - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
-          = " (#{number_to_human_size(file_size)})" if file_size.present?
-          = " [uploaded]" if datafile.binary.attached?
-          - if can?(:read, @dataset)
-            = link_to "Download", download_dataset_datafile_path(@dataset, datafile)
+  .dataset-show-grid
+    %section.dataset-show-panel{aria: { label: "Dataset metadata" }}
+      %h2.dataset-show-section-title Metadata
+      %dl.dataset-show-metadata
+        - if doi_url
+          %dt DOI
+          %dd= link_to @dataset.identifier, doi_url
 
-  %p
-    Deposited by:
-    = @dataset.depositor_name
+        - if doi_url
+          %dt Persistent URL
+          %dd= link_to doi_url, doi_url
 
-  - if @dataset.identifier.present?
-    %p
-      DOI:
-      = @dataset.identifier
+        - if @dataset.subject.present?
+          %dt Subject
+          %dd= link_to @dataset.subject, datasets_path(subjects: [@dataset.subject])
+
+        - if @dataset.keywords.present?
+          %dt Keywords
+          %dd= @dataset.keywords
+
+        - if @dataset.license.present?
+          %dt License
+          %dd= @dataset.license
+
+        - if @dataset.publisher.present?
+          %dt Publisher
+          %dd= @dataset.publisher
+
+        - if primary_contact_name.present?
+          %dt Corresponding Creator
+          %dd= primary_contact_name
+
+        - if can?(:manage, @dataset)
+          %dt Depositor
+          %dd= @dataset.depositor_name
+
+          %dt Depositor Email
+          %dd= @dataset.depositor_email
+
+    - if @dataset.creators.any?
+      %section.dataset-show-panel{aria: { label: "Creators" }}
+        %h2.dataset-show-section-title Creators
+        %ul.dataset-show-list
+          - @dataset.creators.each do |creator|
+            %li
+              %span.dataset-show-list-primary= creator.name
+              - if creator.contact?
+                %span.dataset-show-badge Primary contact
+              - if (can?(:update, @dataset) || can?(:manage, @dataset)) && creator.email.present?
+                %span.dataset-show-list-secondary= creator.email
+
+    - if @dataset.contributors.any?
+      %section.dataset-show-panel{aria: { label: "Contributors" }}
+        %h2.dataset-show-section-title Contributors
+        %ul.dataset-show-list
+          - @dataset.contributors.each do |contributor|
+            %li
+              %span.dataset-show-list-primary= contributor.name
+              - if contributor.role.present?
+                %span.dataset-show-list-secondary= contributor.role
+              - if (can?(:update, @dataset) || can?(:manage, @dataset)) && contributor.email.present?
+                %span.dataset-show-list-tertiary= contributor.email
+
+    - if @dataset.funders.any?
+      %section.dataset-show-panel{aria: { label: "Funders" }}
+        %h2.dataset-show-section-title Funders
+        %ul.dataset-show-list
+          - @dataset.funders.each do |funder|
+            %li
+              %span.dataset-show-list-primary= funder.name
+              - if funder.identifier.present?
+                %span.dataset-show-list-secondary= funder.identifier
+              - if funder.award_number.present?
+                %span.dataset-show-list-tertiary= "Award: #{funder.award_number}"
+
+    - if nonversion_related_materials.any?
+      %section.dataset-show-panel{aria: { label: "Related materials" }}
+        %h2.dataset-show-section-title Related Materials
+        %ul.dataset-show-list
+          - nonversion_related_materials.each do |material|
+            %li
+              - if material.uri.present?
+                %span.dataset-show-list-primary= link_to material.title, material.uri
+              - else
+                %span.dataset-show-list-primary= material.title
+              - if material.relation_type.present?
+                %span.dataset-show-list-secondary= material.relation_type
+
+    - if version_related_materials.any?
+      %section.dataset-show-panel{aria: { label: "Versions" }}
+        %h2.dataset-show-section-title Versions
+        %ul.dataset-show-list
+          - version_related_materials.each do |material|
+            %li
+              - if material.uri.present?
+                %span.dataset-show-list-primary= link_to material.title, material.uri
+              - else
+                %span.dataset-show-list-primary= material.title
+              %span.dataset-show-list-secondary= material.relation_type
+
+    - if @dataset.datafiles.any?
+      %section.dataset-show-panel{aria: { label: "Files" }}
+        %h2.dataset-show-section-title Files
+        %ul.dataset-show-file-list
+          - @dataset.datafiles.each do |datafile|
+            - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+            %li
+              .dataset-show-file-row
+                .dataset-show-file-main
+                  %span.dataset-show-list-primary= datafile.binary_name.presence || datafile.web_id
+                  - if datafile.description.present?
+                    %span.dataset-show-list-tertiary= datafile.description
+                .dataset-show-file-meta
+                  - if file_size.present?
+                    %span.dataset-show-list-secondary= number_to_human_size(file_size)
+                  - if can?(:read, @dataset)
+                    %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "ilw-button dataset-show-download-button"
 
   - if logged_in? && can?(:manage, Dataset)
-    %h2 External Delivery
+    %section.dataset-show-panel{aria: { label: "External delivery" }}
+      %h2.dataset-show-section-title External Delivery
 
-    %p
-      = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "ilw-button"
-
-    - if @latest_delivery_attempts.present?
-      %ul
-        - @latest_delivery_attempts.each do |integration, attempt|
-          %li
-            = "#{integration}: #{attempt.status}"
-            = " (attempt #{attempt.attempt})"
-            = " at #{attempt.created_at.utc.iso8601}"
-            - if attempt.error_message.present?
-              = " - #{attempt.error_message}"
-    - else
-      %p No external delivery attempts recorded yet.
-
-    - total_failed = @failed_delivery_counts.values.sum
-    - if total_failed.positive?
       %p
-        Failed attempts:
-        = total_failed
-      %p
-        = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "ilw-button"
-      - @failed_delivery_counts.each do |integration, count|
+        = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "ilw-button"
+
+      - if @latest_delivery_attempts.present?
+        %ul.dataset-show-list
+          - @latest_delivery_attempts.each do |integration, attempt|
+            %li
+              %span.dataset-show-list-primary= "#{integration}: #{attempt.status}"
+              %span.dataset-show-list-secondary= "Attempt #{attempt.attempt} at #{attempt.created_at.utc.iso8601}"
+              - if attempt.error_message.present?
+                %span.dataset-show-list-tertiary= attempt.error_message
+      - else
         %p
-          = "#{integration} failures: #{count}"
-          = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "ilw-button"
+          No external delivery attempts recorded yet.
+
+      - total_failed = @failed_delivery_counts.values.sum
+      - if total_failed.positive?
+        %p
+          Failed attempts:
+          = total_failed
+        %p
+          = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "ilw-button"
+        - @failed_delivery_counts.each do |integration, count|
+          %p
+            = "#{integration} failures: #{count}"
+            = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "ilw-button"

@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
-  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries]
+  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version]
 
   def index
     @query = params[:q].to_s
@@ -78,6 +78,27 @@ class DatasetsController < ApplicationController
     else
       redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
     end
+  end
+
+  def create_version
+    authorize! :update, @dataset
+
+    unless @dataset.published?
+      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
+      return
+    end
+
+    unless @dataset.version_eligible?
+      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
+      return
+    end
+
+    new_dataset = DatasetVersionBuilder.new(
+      previous_dataset: @dataset,
+      new_version_uri_builder: ->(dataset) { dataset_url(dataset) }
+    ).call
+
+    redirect_to edit_dataset_path(new_dataset), notice: "Draft version created from #{@dataset.key}."
   end
 
   def replay_failed_deliveries

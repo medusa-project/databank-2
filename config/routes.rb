@@ -20,6 +20,8 @@ Rails.application.routes.draw do
     resources :related_materials, except: %i[index new show]
   end
 
+  post "datasets/:id/version", to: "datasets#create_version", as: :version_dataset
+
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts

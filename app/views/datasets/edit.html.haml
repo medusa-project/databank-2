@@ -49,7 +49,7 @@
             = f.text_field :name, required: true
             = f.email_field :email, placeholder: "Email"
             = f.check_box :contact
-            = f.label :contact, "Contact"
+            = f.label :contact, "Primary contact"
             = f.number_field :position, min: 1
             = f.submit "Update", class: "ilw-button"
           = button_to "Remove", dataset_creator_path(@dataset, creator), method: :delete, class: "ilw-button"
@@ -68,7 +68,9 @@
       = f.email_field :email
     %p
       = f.check_box :contact
-      = f.label :contact, "Contact creator"
+      = f.label :contact, "Primary contact creator"
+    %p
+      Selecting a primary contact will replace any existing primary contact.
     %p
       = f.label :position
       %br/
@@ -137,7 +139,7 @@
           = form_with model: [@dataset, material], local: true do |f|
             = f.text_field :title, required: true
             = f.url_field :uri, placeholder: "https://example.org/resource"
-            = f.text_field :relation_type, placeholder: "Relation type"
+            = f.select :relation_type, options_for_select(RelatedMaterial::RELATION_TYPE_OPTIONS, material.relation_type), { include_blank: "Select relation type" }
             = f.number_field :position, min: 1
             = f.submit "Update", class: "ilw-button"
           = button_to "Remove", dataset_related_material_path(@dataset, material), method: :delete, class: "ilw-button"
@@ -157,7 +159,7 @@
     %p
       = f.label :relation_type
       %br/
-      = f.text_field :relation_type
+      = f.select :relation_type, options_for_select(RelatedMaterial::RELATION_TYPE_OPTIONS), { include_blank: "Select relation type" }
     %p
       = f.label :position
       %br/

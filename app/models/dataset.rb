@@ -26,12 +26,41 @@ class Dataset < ApplicationRecord
     "10.5555/#{key}"
   end
 
+  def persistent_url
+    return if identifier.blank?
+
+    "https://doi.org/#{identifier}"
+  end
+
+  def version_successor
+    return if persistent_url.blank?
+
+    RelatedMaterial.includes(:dataset).find_by(
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      uri: persistent_url
+    )&.dataset
+  end
+
+  def version_eligible?
+    published? && version_successor.nil?
+  end
+
+  def nonversion_related_materials
+    related_materials.reject(&:version_relation?)
+  end
+
+  def version_related_materials
+    related_materials.select(&:version_relation?)
+  end
+
   def missing_publish_fields
     missing = []
     missing << "title"            if title.blank?
     missing << "description"      if description.blank?
     missing << "creators"         if creators.empty?
     missing << "contact creator"  if creators.where(contact: true).empty?
+    missing << "email address for all creators" if creators.any? { |creator| creator.email.blank? }
+    missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_type.blank? }
     missing << "depositor contact" if depositor_email.blank?
     missing
   end
