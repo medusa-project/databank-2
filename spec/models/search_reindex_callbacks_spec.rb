@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Search reindex callbacks", type: :model do
   include ActiveJob::TestHelper
 
-  let(:dataset) do
+  let!(:dataset) do
     Dataset.create!(
       key: "IDB-7654321",
       title: "Land Surface Temperatures",
@@ -12,6 +12,10 @@ RSpec.describe "Search reindex callbacks", type: :model do
       depositor_name: "Owner Two",
       depositor_email: "owner2@example.edu"
     )
+  end
+
+  before do
+    clear_enqueued_jobs
   end
 
   it "enqueues reindex when creator changes" do

@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Datasets workflow", type: :request do
+  include ActiveJob::TestHelper
+
   around do |example|
     OmniAuth.config.test_mode = true
     example.run
@@ -10,6 +12,7 @@ RSpec.describe "Datasets workflow", type: :request do
   end
 
   it "allows a depositor to create edit and publish a dataset with contact creator" do
+    clear_enqueued_jobs
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     post datasets_path, params: {
@@ -72,7 +75,9 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.headers["Content-Disposition"]).to include('attachment; filename="analysis.csv"')
     expect(response.body).to include("column_a,column_b")
 
-    post publish_dataset_path(dataset)
+    expect {
+      post publish_dataset_path(dataset)
+    }.to have_enqueued_job(Ingest::PublishDatasetEventJob).with(dataset.id)
     expect(response).to redirect_to(dataset_path(dataset))
 
     dataset.reload

@@ -50,6 +50,20 @@ To enqueue a full backfill:
 bin/rails search:reindex_all
 ```
 
+## Optional Ingest Event Publishing (RabbitMQ / Medusa Scaffold)
+
+On successful dataset publish, the app enqueues an ingest event job.
+
+Set these variables to enable RabbitMQ publish:
+
+- `ENABLE_INGEST_EVENTS=true`
+- `RABBITMQ_URL` (for example, `amqp://guest:guest@rabbitmq:5672`)
+- `INGEST_EVENTS_EXCHANGE` (optional, default `databank.ingest`)
+- `INGEST_EVENTS_ROUTING_KEY` (optional, default `dataset.published`)
+
+If not enabled or if publish to RabbitMQ fails, the app logs a warning and
+continues serving the user request.
+
 ## Testing
 
 This project uses RSpec.

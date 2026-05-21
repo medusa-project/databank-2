@@ -60,6 +60,7 @@ class DatasetsController < ApplicationController
         published_at: Time.current,
         identifier: identifier
       )
+      Ingest::PublishDatasetEventJob.perform_later(@dataset.id)
       redirect_to dataset_path(@dataset), notice: "Dataset published. DOI: #{@dataset.identifier}"
     else
       redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
