@@ -1,8 +1,9 @@
 !!! 5
+- page_title = content_for?(:title) ? yield(:title) : nil
 %html{lang: "en"}
   %head
-    - if content_for?(:title)
-      %title= "#{yield(:title)} | Illinois Data Bank | Illinois"
+    - if page_title.present?
+      %title= "#{page_title} | Illinois Data Bank | Illinois"
     - else
       %title Illinois Data Bank | Illinois
     %meta{charset: "utf-8"}/
@@ -43,5 +44,11 @@
           - css = key.to_s == "alert" ? "error" : "success"
           %div{class: "ilw-notice ilw-notice--#{css}", role: "alert"}
             = sanitize(value)
+        - if page_title.present? && !content_for?(:hide_page_title)
+          %ilw-page-title
+            - if content_for?(:page_title)
+              = yield(:page_title)
+            - else
+              %h1= page_title
         = yield
       = render "shared/footer"

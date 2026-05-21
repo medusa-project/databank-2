@@ -1,8 +1,5 @@
 - content_for :title, "External Delivery Audit"
 
-%ilw-page-title
-  %h1{slot: "title"} External Delivery Audit
-
 %ilw-content
   = form_with url: admin_external_delivery_attempts_path, method: :get, local: true do
     %p

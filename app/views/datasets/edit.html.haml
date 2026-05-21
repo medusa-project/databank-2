@@ -1,8 +1,5 @@
 - content_for :title, "Edit Dataset"
 
-%ilw-page-title
-  %h1{slot: "title"} Edit Dataset
-
 %ilw-content
   = render "form", dataset: @dataset, submit_label: "Update Dataset"
 

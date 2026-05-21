@@ -1,8 +1,5 @@
 - content_for :title, "Sign in"
 
-%ilw-page-title
-  %h1{slot: "title"} Sign in
-
 %ilw-content
   - if Rails.env.development? || Rails.env.test?
     = form_with url: "/auth/developer/callback", method: :post do |f|

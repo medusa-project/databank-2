@@ -1,7 +1,4 @@
-- content_for :title, "Datasets"
-
-%ilw-page-title
-  %h1{slot: "title"} Dataset Search
+- content_for :title, "Dataset Search"
 
 %ilw-content.datasets-search-page
   - if logged_in?
@@ -26,11 +23,13 @@
         %nav.datasets-pagination.datasets-pagination-top{aria: { label: "Pagination" }}
           - if @page > 1
             = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
-          - (1..@total_pages).each do |page_number|
-            - if page_number == @page
-              %span.datasets-page-current{aria: { current: "page" }}= page_number
+          - pagination_items.each do |item|
+            - if item == :gap
+              %span.datasets-page-ellipsis{aria: { hidden: true }} ...
+            - elsif item == @page
+              %span.datasets-page-current{aria: { current: "page" }}= item
             - else
-              = link_to page_number, datasets_path(index_query_params(page: page_number)), class: "datasets-page-link", aria: { label: "Page #{page_number}" }
+              = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
           - if @page < @total_pages
             = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }
 
@@ -147,10 +146,12 @@
     %nav.datasets-pagination{aria: { label: "Pagination" }}
       - if @page > 1
         = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
-      - (1..@total_pages).each do |page_number|
-        - if page_number == @page
-          %span.datasets-page-current{aria: { current: "page" }}= page_number
+      - pagination_items.each do |item|
+        - if item == :gap
+          %span.datasets-page-ellipsis{aria: { hidden: true }} ...
+        - elsif item == @page
+          %span.datasets-page-current{aria: { current: "page" }}= item
         - else
-          = link_to page_number, datasets_path(index_query_params(page: page_number)), class: "datasets-page-link", aria: { label: "Page #{page_number}" }
+          = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
       - if @page < @total_pages
         = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }

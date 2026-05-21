@@ -192,7 +192,25 @@ class DatasetsController < ApplicationController
     }.merge(overrides)
   end
 
-  helper_method :index_query_params
+  def pagination_items
+    return [] if @total_pages <= 1
+
+    pages = []
+    pages.concat((1..[ 3, @total_pages ].min).to_a)
+    pages.concat(([ @page - 1, 1 ].max..[ @page + 1, @total_pages ].min).to_a)
+    pages.concat(([ @total_pages - 1, 1 ].max..@total_pages).to_a)
+
+    ordered_pages = pages.uniq.sort
+
+    ordered_pages.each_with_object([]) do |page_number, items|
+      if items.last.is_a?(Integer) && page_number - items.last > 1
+        items << :gap
+      end
+      items << page_number
+    end
+  end
+
+  helper_method :index_query_params, :pagination_items
 
   def latest_delivery_attempts
     ExternalDeliveryAttempt

@@ -41,6 +41,9 @@ RSpec.describe "Datasets search", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(dataset_one.title)
     expect(response.body).to include("Apply Filters")
+    expect(response.body).to include("<ilw-page-title>")
+    expect(response.body).to include("<h1>Dataset Search</h1>")
+    expect(response.body).not_to include('slot="title"')
     expect(response.body).not_to include("Marine Biology Survey")
   end
 
@@ -147,6 +150,29 @@ RSpec.describe "Datasets search", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Displaying 3 - 3 of 3 in total")
+  end
+
+  it "renders adaptive pagination with an ellipsis for longer result sets" do
+    220.times do |index|
+      Dataset.create!(
+        title: "Long Pagination Dataset #{index}",
+        description: "Long pagination item #{index}",
+        keywords: "long-pagination",
+        subject: "Data Science",
+        owner_uid: "owner-long-page-#{index}",
+        depositor_name: "Owner #{index}",
+        depositor_email: "owner-long-page-#{index}@example.edu",
+        publication_state: :published
+      )
+    end
+
+    get datasets_path, params: { q: "Long Pagination Dataset", per_page: 5, page: 20 }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("datasets-page-ellipsis")
+    expect(response.body).to include("Page 1")
+    expect(response.body).to include("Page 44")
+    expect(response.body).not_to include("Page 10")
   end
 
   it "renders a more description toggle for long descriptions" do

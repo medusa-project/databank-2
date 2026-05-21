@@ -228,7 +228,8 @@
 }
 
 .datasets-page-link,
-.datasets-page-current {
+.datasets-page-current,
+.datasets-page-ellipsis {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -250,6 +251,11 @@
   background: var(--idb-blue);
   border-color: var(--idb-blue);
   color: #fff;
+}
+
+.datasets-page-ellipsis {
+  color: var(--idb-muted);
+  cursor: default;
 }
 
 .datasets-clear-filters {
