@@ -185,6 +185,99 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(response.body).not_to include("csv-globus")
   end
 
+  it "allows admin to replay a single failed ingest attempt" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:single-replay"
+    )
+
+    post replay_admin_external_delivery_attempt_path(attempt)
+
+    expect(response).to have_http_status(:redirect)
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs.map { |job| job[:args] }).to include([ dataset_one.id, attempt.idempotency_key ])
+  end
+
+  it "does not replay non-failed attempts" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :globus,
+      event_name: "dataset.published",
+      status: :succeeded,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:already-ok"
+    )
+
+    post replay_admin_external_delivery_attempt_path(attempt)
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("Only failed attempts can be replayed.")
+  end
+
+  it "replays selected failed attempts in bulk" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    failed_ingest = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:bulk-ingest"
+    )
+    failed_globus = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :globus,
+      event_name: "dataset.published",
+      status: :failed,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:bulk-globus"
+    )
+    succeeded_attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :succeeded,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:bulk-skip"
+    )
+
+    post replay_selected_admin_external_delivery_attempts_path, params: {
+      attempt_ids: [ failed_ingest.id, failed_globus.id, succeeded_attempt.id ]
+    }
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("Replayed 2 selected failed attempt")
+
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    globus_jobs = enqueued_jobs.select { |job| job[:job] == Globus::SubmitDatasetTransferJob }
+
+    expect(ingest_jobs.map { |job| job[:args] }).to include([ dataset_one.id, failed_ingest.idempotency_key ])
+    expect(globus_jobs.map { |job| job[:args] }).to include([ dataset_one.id, failed_globus.idempotency_key ])
+  end
+
+  it "alerts when no attempts are selected for bulk replay" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post replay_selected_admin_external_delivery_attempts_path
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("No attempts were selected for replay.")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

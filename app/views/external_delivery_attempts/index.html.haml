@@ -36,6 +36,7 @@
     %table
       %thead
         %tr
+          %th Select
           %th= link_to "Time", admin_external_delivery_attempts_path(query_params_for(sort: "created_at", direction: next_direction_for("created_at"), page: 1))
           %th Dataset
           %th= link_to "Integration", admin_external_delivery_attempts_path(query_params_for(sort: "integration", direction: next_direction_for("integration"), page: 1))
@@ -43,9 +44,13 @@
           %th= link_to "Status", admin_external_delivery_attempts_path(query_params_for(sort: "status", direction: next_direction_for("status"), page: 1))
           %th= link_to "Attempt", admin_external_delivery_attempts_path(query_params_for(sort: "attempt", direction: next_direction_for("attempt"), page: 1))
           %th Error
+          %th Actions
       %tbody
         - @attempts.each do |attempt|
           %tr
+            %td
+              - if attempt.status == "failed"
+                = check_box_tag "attempt_ids[]", attempt.id, false, form: "bulk-replay-form"
             %td= attempt.created_at.utc.iso8601
             %td= link_to(attempt.dataset.key, dataset_path(attempt.dataset))
             %td= attempt.integration
@@ -53,6 +58,23 @@
             %td= attempt.status
             %td= attempt.attempt
             %td= attempt.error_message.presence || "-"
+            %td
+              - if attempt.status == "failed"
+                = button_to "Replay", replay_admin_external_delivery_attempt_path(attempt), method: :post, params: query_params_for, class: "ilw-button"
+              - else
+                = "-"
+
+    = form_with url: replay_selected_admin_external_delivery_attempts_path, method: :post, local: true, id: "bulk-replay-form" do
+      = hidden_field_tag :dataset_key, @dataset_key
+      = hidden_field_tag :integration, @integration
+      = hidden_field_tag :status, @status
+      = hidden_field_tag :event_name, @event_name
+      = hidden_field_tag :per_page, @per_page
+      = hidden_field_tag :sort, sort_column
+      = hidden_field_tag :direction, sort_direction
+      = hidden_field_tag :page, @page
+      %p
+        = submit_tag "Replay Selected Failed Attempts", class: "ilw-button"
 
     - if @total_pages > 1
       %p

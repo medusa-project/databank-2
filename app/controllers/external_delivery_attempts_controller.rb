@@ -41,6 +41,61 @@ class ExternalDeliveryAttemptsController < ApplicationController
     end
   end
 
+  def replay
+    authorize! :manage, Dataset
+
+    attempt = ExternalDeliveryAttempt.includes(:dataset).find(params[:id])
+
+    unless attempt.status == "failed"
+      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Only failed attempts can be replayed."
+      return
+    end
+
+    enqueued = enqueue_replay(attempt)
+
+    if enqueued
+      redirect_back fallback_location: admin_external_delivery_attempts_path, notice: "Replay enqueued for #{attempt.integration} (#{attempt.dataset.key})."
+    else
+      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Replay is not supported for integration #{attempt.integration}."
+    end
+  end
+
+  def replay_selected
+    authorize! :manage, Dataset
+
+    ids = selected_attempt_ids
+    if ids.empty?
+      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No attempts were selected for replay."
+      return
+    end
+
+    attempts = ExternalDeliveryAttempt.includes(:dataset).where(id: ids)
+
+    replayed = 0
+    skipped = 0
+
+    attempts.each do |attempt|
+      if attempt.status != "failed"
+        skipped += 1
+        next
+      end
+
+      if enqueue_replay(attempt)
+        replayed += 1
+      else
+        skipped += 1
+      end
+    end
+
+    if replayed.positive?
+      message = "Replayed #{replayed} selected failed attempt(s)."
+      message += " Skipped #{skipped}." if skipped.positive?
+      redirect_back fallback_location: admin_external_delivery_attempts_path, notice: message
+    else
+      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed."
+    end
+  end
+
   private
 
   def normalize_integration(value)
@@ -141,5 +196,22 @@ class ExternalDeliveryAttemptsController < ApplicationController
   def csv_filename
     suffix = Time.current.utc.strftime("%Y%m%d%H%M%S")
     "external_delivery_attempts_#{suffix}.csv"
+  end
+
+  def enqueue_replay(attempt)
+    case attempt.integration
+    when "ingest"
+      Ingest::PublishDatasetEventJob.perform_later(attempt.dataset_id, attempt.idempotency_key)
+      true
+    when "globus"
+      Globus::SubmitDatasetTransferJob.perform_later(attempt.dataset_id, attempt.idempotency_key)
+      true
+    else
+      false
+    end
+  end
+
+  def selected_attempt_ids
+    Array(params[:attempt_ids]).map(&:to_i).select(&:positive?).uniq
   end
 end

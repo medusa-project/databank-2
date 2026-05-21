@@ -106,6 +106,8 @@ Replay enqueues one job per failed integration/idempotency key pair.
 Admins can browse delivery attempts at:
 
 - `GET /admin/external_delivery_attempts`
+- `POST /admin/external_delivery_attempts/:id/replay` (replay one failed attempt)
+- `POST /admin/external_delivery_attempts/replay_selected` (replay selected failed attempts)
 
 Supported filters: `dataset_key`, `integration`, `status`, `event_name`.
 
