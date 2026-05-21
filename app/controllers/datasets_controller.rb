@@ -1,0 +1,100 @@
+class DatasetsController < ApplicationController
+  skip_before_action :authenticate_user!, only: %i[index show]
+
+  before_action :set_dataset, only: %i[show edit update publish]
+
+  def index
+    @query = params[:q].to_s
+    @subject = params[:subject].to_s
+
+    @datasets = Search::DatasetSearch.new(
+      scope: public_datasets,
+      query: @query,
+      subject: @subject
+    ).results
+  end
+
+  def show
+    authorize! :read, @dataset
+  end
+
+  def new
+    @dataset = Dataset.new
+    authorize! :create, @dataset
+  end
+
+  def create
+    @dataset = Dataset.new(dataset_params)
+    assign_depositor_fields(@dataset)
+    authorize! :create, @dataset
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset created."
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    authorize! :update, @dataset
+  end
+
+  def update
+    authorize! :update, @dataset
+
+    if @dataset.update(dataset_params)
+      redirect_to dataset_path(@dataset), notice: "Dataset updated."
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def publish
+    authorize! :update, @dataset
+
+    if @dataset.ready_to_publish?
+      identifier = Doi::IdentifierService.new(@dataset).mint_for_publish!
+
+      @dataset.update!(
+        publication_state: :published,
+        published_at: Time.current,
+        identifier: identifier
+      )
+      redirect_to dataset_path(@dataset), notice: "Dataset published. DOI: #{@dataset.identifier}"
+    else
+      redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
+    end
+  end
+
+  private
+
+  def set_dataset
+    @dataset = Dataset.find_by!(key: params[:id])
+
+    unless @dataset.published? || logged_in?
+      redirect_to login_path, alert: "Please sign in to continue."
+    end
+  end
+
+  def dataset_params
+    params.require(:dataset).permit(:title, :description, :keywords, :subject, :license, :publisher)
+  end
+
+  def assign_depositor_fields(dataset)
+    dataset.owner_uid      = current_user.uid
+    dataset.depositor_name  = current_user.name
+    dataset.depositor_email = current_user.email
+  end
+
+  def public_datasets
+    return Dataset.all if logged_in? && current_user.admin?
+
+    if logged_in?
+      owned   = Dataset.where(depositor_email: current_user.email)
+      public  = Dataset.published
+      Dataset.where(id: owned).or(Dataset.where(id: public))
+    else
+      Dataset.published
+    end
+  end
+end

@@ -1,0 +1,54 @@
+- content_for :title, "Illinois Data Bank"
+
+%section#welcome-image{style: "background-image: url('#{asset_path('orange_data_banner_2021-08-05.png')}')"}
+  #welcome-overlay
+    %ul.list-unstyled
+      %li.welcome-item
+        The
+        %h1.welcome-title Illinois Data Bank
+        is a public access repository for publishing research data from the University of Illinois Urbana-Champaign.
+      %li.welcome-item
+        %a{href: "/guides#desirable_characteristics"} Learn how we meet trustworthy repository standards
+
+%section#welcome-body
+  .welcome-main
+    %h2 You are ready to deposit data if:
+    %ul
+      %li Your data is in a final state and not expected to undergo revisions.
+      %li You have removed any private, confidential, or legally protected information.
+      %li You are a faculty member, staff member, or graduate student at the University of Illinois Urbana-Champaign.
+      %li You have permission to publicly distribute data from all creators and copyright owners.
+
+    %h2 Published data:
+    %ul
+      %li Is open to anyone in the world.
+      %li Receives a stable DOI for easy reference and citation.
+      %li Is readily available for a minimum of 5 years.
+      %li Is stored in a stable environment that complies with funder and publisher requirements.
+
+  .welcome-spotlight
+    %h2 Researcher Spotlight
+    .featured-bio
+      .photo-preview
+        %img{src: "https://uofi.box.com/shared/static/09a7yq9bgzlformr3k33ocfoqw4632jy.png",
+             class: "img-responsive",
+             alt: "Headshot of Lindsay Clark"}
+      %strong Lindsay Clark
+      %p
+        I am a plant geneticist with particular interests in polyploidy, population genetics, and the development of novel algorithms and software for the analysis of molecular markers. I am currently a research specialist in the lab of Prof. Erik Sacks in the Department of Crop Sciences at the University of Illinois, Urbana-Champaign.
+
+    .featured-buttons
+      %a.ilw-button{href: "#", target: "_blank", rel: "noopener", "aria-label": "dataset provided by Lindsay Clark"}
+        dataset
+      %a.ilw-button{href: "#", target: "_blank", rel: "noopener", "aria-label": "article provided by Lindsay Clark"}
+        article
+
+    .featured-comment
+      %strong How did you decide the Data Bank was the best place to put the data?
+      .elbow
+        %p
+          The Data Bank is free, and it allows any type of data, which is great. We liked that we could put essentially any information in there that we wanted.
+
+    %hr
+    %p
+      %a{href: "/researcher_spotlights"} See all researcher spotlights

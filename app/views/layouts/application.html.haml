@@ -1,0 +1,46 @@
+!!! 5
+%html{lang: "en"}
+  %head
+    - if content_for?(:title)
+      %title= "#{yield(:title)} | Illinois Data Bank | Illinois"
+    - else
+      %title Illinois Data Bank | Illinois
+    %meta{charset: "utf-8"}/
+    %meta{"http-equiv" => "Content-Type", content: "text/html; charset=UTF-8"}/
+    %meta{name: "viewport", content: "width=device-width,initial-scale=1"}/
+    %link{rel: "icon", href: "https://cdn.brand.illinois.edu/favicon.ico"}/
+    %link{rel: "apple-touch-icon", href: "https://cdn.brand.illinois.edu/touch-icon-40x40.png"}/
+    %link{rel: "apple-touch-icon", sizes: "152x152", href: "https://cdn.brand.illinois.edu/touch-icon-152x152.png"}/
+    %link{rel: "apple-touch-icon", sizes: "167x167", href: "https://cdn.brand.illinois.edu/touch-icon-167x167.png"}/
+    %link{rel: "apple-touch-icon", sizes: "180x180", href: "https://cdn.brand.illinois.edu/touch-icon-180x180.png"}/
+    %link{rel: "dns-prefetch", href: "//cdn.toolkit.illinois.edu"}/
+    %link{rel: "dns-prefetch", href: "//cdn.disability.illinois.edu"}/
+    %link{rel: "stylesheet", href: "//cdn.toolkit.illinois.edu/3/toolkit.css"}/
+    %script{type: "module", src: "//cdn.toolkit.illinois.edu/3/toolkit.js"}
+    %script{async: true, type: "module", src: "/idb-header.js"}
+    %script{src: "//cdn.disability.illinois.edu/skipto.min.js"}
+    :javascript
+      var SkipToConfig = { 'settings': { 'skipTo': { displayOption: 'static', colorTheme: 'illinois', headings: 'h1, h2, h3' } } };
+    = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
+    = stylesheet_link_tag "application", "data-turbo-track": "reload"
+    = stylesheet_link_tag "toolkit_overrides", "data-turbo-track": "reload"
+    = stylesheet_link_tag "welcome", "data-turbo-track": "reload"
+    = javascript_importmap_tags
+    = csrf_meta_tags
+    = csp_meta_tag
+    - if @dataset&.published?
+      %meta{name: "citation_title", content: @dataset.title}/
+      %meta{name: "citation_publisher", content: "Illinois Data Bank"}/
+      - if @dataset.identifier.present?
+        %meta{name: "citation_doi", content: @dataset.identifier}/
+      %meta{name: "citation_language", content: "en"}/
+  %body{style: "margin: 0; padding: 0;", data: {controller: "navigation"}}
+    %ilw-page
+      = render "shared/header"
+      %main#main-content
+        - flash.each do |key, value|
+          - css = key.to_s == "alert" ? "error" : "success"
+          %div{class: "ilw-notice ilw-notice--#{css}", role: "alert"}
+            = sanitize(value)
+        = yield
+      = render "shared/footer"

@@ -1,0 +1,15 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+development:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Configure this with credentials and environment variables in production.
+amazon:
+  service: S3
+  access_key_id: <%= ENV.fetch("AWS_ACCESS_KEY_ID", "") %>
+  secret_access_key: <%= ENV.fetch("AWS_SECRET_ACCESS_KEY", "") %>
+  region: <%= ENV.fetch("AWS_REGION", "") %>
+  bucket: <%= ENV.fetch("AWS_S3_BUCKET", "") %>

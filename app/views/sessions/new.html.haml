@@ -1,0 +1,23 @@
+- content_for :title, "Sign in"
+
+%ilw-page-title
+  %h1{slot: "title"} Sign in
+
+%ilw-content
+  - if Rails.env.development? || Rails.env.test?
+    = form_with url: "/auth/developer/callback", method: :post do |f|
+      .space-y-4
+        %div
+          = f.label :email, "Email", class: "block text-sm font-medium"
+          = f.email_field :email, name: "email", required: true, class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
+        %div
+          = f.label :name, "Name", class: "block text-sm font-medium"
+          = f.text_field :name, name: "name", required: true, class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
+        %div
+          = f.label :role, "Role (dev only)", class: "block text-sm font-medium"
+          = f.select :role, %w[depositor admin], {}, name: "role", class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
+        %div
+          %a.ilw-button{href: "#", onclick: "this.closest('form').submit(); return false;"} Sign in
+  - else
+    %p
+      = link_to "Sign in with NetID", "/auth/shibboleth", class: "ilw-button"

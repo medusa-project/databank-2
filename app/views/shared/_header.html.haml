@@ -1,0 +1,27 @@
+<header>
+%il-header{slot: "header"}
+  %a{slot: "site-name", href: root_path} Illinois Data Bank
+  %a{slot: "primary-unit", href: "https://www.library.illinois.edu/rds/"} Research Data Service
+  %nav{slot: "links", "aria-label": "Utility"}
+    %ul
+      - if logged_in?
+        %li
+          %a{href: datasets_path} My Datasets
+        %li
+          = link_to "Sign out", logout_path, data: { turbo_method: :delete }
+      - else
+        %li
+          %a{href: login_path} Sign in
+  %il-header-nav{slot: "navigation"}
+    %ul
+      %li
+        %a{href: deposit_path} Deposit Dataset
+      %li
+        %a{href: datasets_path} Find Data
+      %li
+        %a{href: policies_path} Policies
+      %li
+        %a{href: guides_path} Guides
+      %li
+        %a{href: contact_path} Contact Us
+</header>

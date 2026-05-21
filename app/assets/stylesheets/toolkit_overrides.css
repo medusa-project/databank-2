@@ -1,0 +1,291 @@
+/* Toolkit-specific overrides live here for easier maintenance. */
+
+/* -----------------------------------------------------------------------
+ * Legacy header styling parity (production il-header + il-header-nav)
+ * The legacy header component styles slotted content from page CSS.
+ * ----------------------------------------------------------------------- */
+il-header *[slot="links"] {
+	all: initial;
+	grid-area: eyebrow;
+	align-self: start;
+}
+
+il-header *[slot="links"] ul {
+	all: initial;
+	display: flex;
+	padding-top: 6px;
+	padding-bottom: 28px;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+il-header *[slot="links"] li {
+	all: initial;
+	display: block;
+	position: relative;
+	padding: 0 0 0 1rem;
+}
+
+il-header *[slot="links"] li:before {
+	content: "";
+	position: absolute;
+	left: 0.5rem;
+	top: 20%;
+	background-color: var(--il-orange);
+	height: 60%;
+	width: 2px;
+}
+
+il-header *[slot="links"] li:first-child {
+	padding-left: 0;
+}
+
+il-header *[slot="links"] li:first-child:before {
+	display: none;
+}
+
+il-header *[slot="links"] a {
+	all: initial;
+	display: inline-block;
+	padding: 0 0.25rem;
+	color: var(--il-blue);
+	font: 700 1rem/1.375rem var(--il-font-sans);
+}
+
+il-header *[slot="links"] a:hover,
+il-header *[slot="links"] a:focus {
+	color: var(--il-altgeld);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+il-header *[slot="links"] a:focus {
+	outline: 2px dotted;
+}
+
+il-header[data-initialized="1"] *[slot="links"] {
+	display: block;
+}
+
+il-header[compact] *[slot="links"] {
+	padding: 0.5rem;
+}
+
+il-header[compact] *[slot="links"] ul {
+	padding-bottom: 0;
+	justify-content: center;
+}
+
+il-header *[slot="site-name"] {
+	all: initial;
+	grid-area: site_name;
+	display: inline-block;
+	padding-bottom: 20px;
+	color: var(--il-blue);
+	font: 700 normal 24px/30px var(--il-font-sans);
+}
+
+il-header[data-initialized] *[slot="site-name"] {
+	padding-bottom: 0;
+}
+
+il-header a[slot="site-name"],
+il-header a[slot="primary-unit"] {
+	cursor: pointer;
+}
+
+il-header a[slot="site-name"]:hover,
+il-header a[slot="primary-unit"]:hover {
+	color: var(--il-altgeld);
+	text-decoration: underline;
+}
+
+il-header a[slot="site-name"]:focus,
+il-header a[slot="primary-unit"]:focus {
+	color: var(--il-altgeld);
+	outline: 2px dotted var(--il-altgeld);
+}
+
+il-header *[slot="primary-unit"] {
+	all: initial;
+	display: inline-block;
+	grid-area: primary_unit;
+	color: var(--il-blue);
+	font: 400 normal 18px/24px var(--il-font-sans);
+}
+
+il-header[data-initialized="1"] {
+	display: block;
+}
+
+il-header[data-initialized="1"]:before,
+il-header[data-initialized="1"]:after {
+	display: none;
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav {
+	all: initial;
+	display: block;
+	background: #e8e9eb;
+	padding: 4px calc(50% - 570px) 0;
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul {
+	all: initial;
+	display: flex;
+	flex-direction: row;
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li {
+	all: initial;
+	display: block;
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li > a {
+	all: initial;
+	box-sizing: border-box;
+	display: block;
+	position: relative;
+	padding: 6px 20px;
+	font: 700 16px/22px var(--il-font-sans);
+	text-decoration: underline;
+	background: transparent;
+	color: var(--il-blue);
+	border-width: 0 0 3px 0;
+	border-style: solid;
+	border-color: transparent;
+	outline: 0;
+	cursor: pointer;
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li > a[aria-current="true"],
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li > a[aria-current="page"] {
+	border-color: var(--il-blue);
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li > a:hover {
+	color: var(--il-altgeld);
+}
+
+il-header[data-initialized]:not([compact]) il-header-nav > ul > li > a:focus {
+	background: #c7edf8;
+	border-color: var(--il-blue);
+	color: var(--il-blue);
+}
+
+il-header[data-initialized][compact] il-header-nav {
+	all: initial;
+	display: block;
+}
+
+il-header[data-initialized][compact] il-header-nav ul {
+	all: initial;
+	display: flex;
+	flex-direction: column;
+}
+
+il-header[data-initialized][compact] il-header-nav li {
+	all: initial;
+	display: block;
+	border-top: 1px solid #c0c0c0;
+}
+
+il-header[data-initialized][compact] il-header-nav li > a {
+	all: initial;
+	box-sizing: border-box;
+	display: block;
+	position: relative;
+	padding: 6px 20px;
+	font: 600 18px/28px var(--il-font-sans);
+	text-decoration: underline;
+	background: white;
+	color: var(--il-blue);
+	border-width: 0 0 0 3px;
+	border-style: solid;
+	border-color: transparent;
+	outline: 0;
+	cursor: pointer;
+}
+
+il-header[data-initialized][compact] il-header-nav li > a:focus {
+	background: #c7edf8;
+	border-color: var(--il-blue);
+	color: var(--il-blue);
+}
+
+il-header[data-initialized][compact] il-header-nav li > a:hover {
+	color: var(--il-altgeld);
+}
+
+/* Adding a top border to the header */
+header {
+  border-top: 5px solid var(--il-altgeld);
+}
+
+@media (min-width: 930px) {
+	il-header {
+		grid-template-columns: 30px 435px auto auto 355px 30px !important;
+		grid-template-rows: 63px auto auto auto;
+		grid-template-areas:
+			". illinois eyebrow eyebrow eyebrow ."
+			". primary_unit primary_unit primary_unit search ."
+			". site_name site_name site_name search ."
+			"nav nav nav nav nav nav";
+	}
+
+	il-header *[slot="links"] {
+		display: block;
+	}
+}
+
+@media (min-width: 1200px) {
+	il-header {
+		grid-template-columns: 30px 435px auto auto 355px 30px !important;
+		grid-template-rows: 63px auto auto auto;
+		grid-template-areas:
+			". illinois eyebrow eyebrow eyebrow ."
+			". primary_unit primary_unit primary_unit search ."
+			". site_name site_name site_name search ."
+			"nav nav nav nav nav nav";
+	}
+
+	il-header *[slot="links"] {
+		display: block;
+	}
+}
+
+/* Ensure Toolkit button components fill the spotlight action row. */
+.featured-buttons .ilw-button {
+	flex: 1;
+	text-align: center;
+}
+
+/* Footer styling parity with production site */
+footer {
+  background-color: #f8f8f8; /* Light gray background */
+  padding: 20px 40px; /* Add spacing */
+  font-family: var(--il-font-sans, "Source Sans Pro", Arial, sans-serif);
+  color: #333; /* Text color */
+  border-top: 1px solid #ddd; /* Subtle top border */
+}
+
+footer a {
+  color: #007bff; /* Link color */
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+footer address {
+  font-style: normal;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+il-footer {
+  --il-footer-padding-left: 5rem;
+  --il-footer-padding-right: 5rem;
+}

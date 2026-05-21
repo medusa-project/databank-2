@@ -1,0 +1,76 @@
+- content_for :title, @dataset.title
+
+%ilw-page-title
+  %h1{slot: "title"}= @dataset.title
+
+%ilw-content
+  %p= @dataset.key
+
+  - if logged_in? && can?(:update, @dataset)
+    %p
+      = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "ilw-button"
+
+  - if @dataset.description.present?
+    %p= @dataset.description
+
+  - if @dataset.keywords.present?
+    %p
+      Keywords:
+      = @dataset.keywords
+  - if @dataset.subject.present?
+    %p
+      Subject:
+      = @dataset.subject
+  - if @dataset.license.present?
+    %p
+      License:
+      = @dataset.license
+  - if @dataset.publisher.present?
+    %p
+      Publisher:
+      = @dataset.publisher
+
+  - if logged_in? && can?(:update, @dataset)
+    - missing = @dataset.missing_publish_fields
+    - if missing.any?
+      %p
+        Publish requirements missing:
+        = missing.join(", ")
+    - else
+      %p This dataset is ready to publish.
+
+    - unless @dataset.published?
+      %p
+        = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "ilw-button"
+
+  - if @dataset.creators.any?
+    %h2 Creators
+    %ul
+      - @dataset.creators.each do |creator|
+        %li
+          = creator.name
+          - if creator.email.present?
+            = " (#{creator.email})"
+          - if creator.contact?
+            = " [contact]"
+
+  - if @dataset.datafiles.any?
+    %h2 Files
+    %ul
+      - @dataset.datafiles.each do |datafile|
+        %li
+          = datafile.binary_name.presence || datafile.web_id
+          - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+          = " (#{number_to_human_size(file_size)})" if file_size.present?
+          = " [uploaded]" if datafile.binary.attached?
+          - if can?(:read, @dataset)
+            = link_to "Download", download_dataset_datafile_path(@dataset, datafile)
+
+  %p
+    Deposited by:
+    = @dataset.depositor_name
+
+  - if @dataset.identifier.present?
+    %p
+      DOI:
+      = @dataset.identifier

@@ -1,0 +1,188 @@
+- content_for :title, "Edit Dataset"
+
+%ilw-page-title
+  %h1{slot: "title"} Edit Dataset
+
+%ilw-content
+  = render "form", dataset: @dataset, submit_label: "Update Dataset"
+
+  %h2 Files
+  - if @dataset.datafiles.any?
+    %ul
+      - @dataset.datafiles.each do |datafile|
+        %li
+          = form_with model: [@dataset, datafile], local: true do |f|
+            = f.file_field :binary
+            = f.text_field :binary_name, placeholder: "Filename"
+            = f.number_field :binary_size, min: 0, placeholder: "Size (bytes)"
+            = f.text_field :description, placeholder: "Description"
+            = f.submit "Update", class: "ilw-button"
+          = button_to "Remove", dataset_datafile_path(@dataset, datafile), method: :delete, class: "ilw-button"
+          = link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "ilw-button"
+  - else
+    %p No file metadata added yet.
+
+  %h3 Add File Metadata
+  = form_with model: [@dataset, Datafile.new], local: true do |f|
+    %p
+      = f.label :binary, "Select file"
+      %br/
+      = f.file_field :binary
+    %p
+      = f.label :binary_name, "Filename"
+      %br/
+      = f.text_field :binary_name
+    %p
+      = f.label :binary_size, "Size (bytes)"
+      %br/
+      = f.number_field :binary_size, min: 0
+    %p
+      = f.label :description
+      %br/
+      = f.text_field :description
+    %p
+      = f.submit "Add File Metadata", class: "ilw-button"
+
+  %h2 Creators
+  - if @dataset.creators.any?
+    %ul
+      - @dataset.creators.each do |creator|
+        %li
+          = form_with model: [@dataset, creator], local: true do |f|
+            = f.text_field :name, required: true
+            = f.email_field :email, placeholder: "Email"
+            = f.check_box :contact
+            = f.label :contact, "Contact"
+            = f.number_field :position, min: 1
+            = f.submit "Update", class: "ilw-button"
+          = button_to "Remove", dataset_creator_path(@dataset, creator), method: :delete, class: "ilw-button"
+  - else
+    %p No creators added yet.
+
+  %h3 Add Creator
+  = form_with model: [@dataset, Creator.new], local: true do |f|
+    %p
+      = f.label :name
+      %br/
+      = f.text_field :name, required: true
+    %p
+      = f.label :email
+      %br/
+      = f.email_field :email
+    %p
+      = f.check_box :contact
+      = f.label :contact, "Contact creator"
+    %p
+      = f.label :position
+      %br/
+      = f.number_field :position, min: 1
+    %p
+      = f.submit "Add Creator", class: "ilw-button"
+
+  %h2 Contributors
+  - if @dataset.contributors.any?
+    %ul
+      - @dataset.contributors.each do |contributor|
+        %li
+          = form_with model: [@dataset, contributor], local: true do |f|
+            = f.text_field :name, required: true
+            = f.email_field :email, placeholder: "Email"
+            = f.text_field :role, placeholder: "Role"
+            = f.number_field :position, min: 1
+            = f.submit "Update", class: "ilw-button"
+          = button_to "Remove", dataset_contributor_path(@dataset, contributor), method: :delete, class: "ilw-button"
+  - else
+    %p No contributors added yet.
+
+  %h3 Add Contributor
+  = form_with model: [@dataset, Contributor.new], local: true do |f|
+    %p
+      = f.label :name
+      %br/
+      = f.text_field :name, required: true
+    %p
+      = f.label :email
+      %br/
+      = f.email_field :email
+    %p
+      = f.label :role
+      %br/
+      = f.text_field :role
+    %p
+      = f.label :position
+      %br/
+      = f.number_field :position, min: 1
+    %p
+      = f.submit "Add Contributor", class: "ilw-button"
+
+  %h2 Funders
+  - if @dataset.funders.any?
+    %ul
+      - @dataset.funders.each do |funder|
+        %li
+          = form_with model: [@dataset, funder], local: true do |f|
+            = f.text_field :name, required: true
+            = f.text_field :award_number, placeholder: "Award number"
+            = f.text_field :identifier, placeholder: "Identifier"
+            = f.number_field :position, min: 1
+            = f.submit "Update", class: "ilw-button"
+          = button_to "Remove", dataset_funder_path(@dataset, funder), method: :delete, class: "ilw-button"
+  - else
+    %p No funders added yet.
+
+  %h3 Add Funder
+  = form_with model: [@dataset, Funder.new], local: true do |f|
+    %p
+      = f.label :name
+      %br/
+      = f.text_field :name, required: true
+    %p
+      = f.label :award_number
+      %br/
+      = f.text_field :award_number
+    %p
+      = f.label :identifier
+      %br/
+      = f.text_field :identifier
+    %p
+      = f.label :position
+      %br/
+      = f.number_field :position, min: 1
+    %p
+      = f.submit "Add Funder", class: "ilw-button"
+
+  %h2 Related Materials
+  - if @dataset.related_materials.any?
+    %ul
+      - @dataset.related_materials.each do |material|
+        %li
+          = form_with model: [@dataset, material], local: true do |f|
+            = f.text_field :title, required: true
+            = f.url_field :uri, placeholder: "https://example.org/resource"
+            = f.text_field :relation_type, placeholder: "Relation type"
+            = f.number_field :position, min: 1
+            = f.submit "Update", class: "ilw-button"
+          = button_to "Remove", dataset_related_material_path(@dataset, material), method: :delete, class: "ilw-button"
+  - else
+    %p No related materials added yet.
+
+  %h3 Add Related Material
+  = form_with model: [@dataset, RelatedMaterial.new], local: true do |f|
+    %p
+      = f.label :title
+      %br/
+      = f.text_field :title, required: true
+    %p
+      = f.label :uri
+      %br/
+      = f.url_field :uri
+    %p
+      = f.label :relation_type
+      %br/
+      = f.text_field :relation_type
+    %p
+      = f.label :position
+      %br/
+      = f.number_field :position, min: 1
+    %p
+      = f.submit "Add Related Material", class: "ilw-button"
