@@ -18,6 +18,8 @@ class Dataset < ApplicationRecord
   validates :depositor_email, presence: true
 
   before_validation :set_key, on: :create
+  after_commit :enqueue_search_reindex, on: %i[create update]
+  after_commit :enqueue_search_delete, on: :destroy
 
   def to_param
     key
@@ -52,5 +54,13 @@ class Dataset < ApplicationRecord
       candidate = "#{KEY_PREFIX}-#{rand(10**KEY_DIGITS).to_s.rjust(KEY_DIGITS, '0')}"
       break candidate unless self.class.exists?(key: candidate)
     end
+  end
+
+  def enqueue_search_reindex
+    Search::IndexDatasetJob.perform_later(id)
+  end
+
+  def enqueue_search_delete
+    Search::DeleteDatasetJob.perform_later(key)
   end
 end

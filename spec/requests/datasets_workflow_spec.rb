@@ -1,18 +1,15 @@
-require "test_helper"
+require "rails_helper"
 
-class DatasetsWorkflowTest < ActionDispatch::IntegrationTest
-  include ActionDispatch::TestProcess::FixtureFile
-
-  setup do
+RSpec.describe "Datasets workflow", type: :request do
+  around do |example|
     OmniAuth.config.test_mode = true
-  end
-
-  teardown do
+    example.run
+  ensure
     OmniAuth.config.test_mode = false
     OmniAuth.config.mock_auth[:developer] = nil
   end
 
-  test "depositor can create edit and publish a dataset with contact creator" do
+  it "allows a depositor to create edit and publish a dataset with contact creator" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     post datasets_path, params: {
@@ -27,10 +24,11 @@ class DatasetsWorkflowTest < ActionDispatch::IntegrationTest
     }
     dataset = Dataset.order(:created_at).last
 
-    assert_redirected_to dataset_path(dataset)
+    expect(response).to redirect_to(dataset_path(dataset))
+
     follow_redirect!
-    assert_response :success
-    assert_includes response.body, "Draft Dataset"
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Draft Dataset")
 
     patch dataset_path(dataset), params: {
       dataset: {
@@ -42,7 +40,7 @@ class DatasetsWorkflowTest < ActionDispatch::IntegrationTest
         publisher: "University Library"
       }
     }
-    assert_redirected_to dataset_path(dataset)
+    expect(response).to redirect_to(dataset_path(dataset))
 
     post dataset_creators_path(dataset), params: {
       creator: {
@@ -52,39 +50,40 @@ class DatasetsWorkflowTest < ActionDispatch::IntegrationTest
         position: 1
       }
     }
-    assert_redirected_to edit_dataset_path(dataset)
+    expect(response).to redirect_to(edit_dataset_path(dataset))
+
+    csv_fixture = Rails.root.join("test/fixtures/files/analysis.csv")
+    uploaded_file = Rack::Test::UploadedFile.new(csv_fixture, "text/csv")
 
     post dataset_datafiles_path(dataset), params: {
       datafile: {
-        binary: fixture_file_upload("analysis.csv", "text/csv"),
+        binary: uploaded_file,
         description: "Primary analysis file"
       }
     }
-    assert_redirected_to edit_dataset_path(dataset)
+    expect(response).to redirect_to(edit_dataset_path(dataset))
 
     datafile = dataset.datafiles.order(:created_at).last
-    assert datafile.binary.attached?
-    assert_equal "analysis.csv", datafile.binary_name
+    expect(datafile.binary).to be_attached
+    expect(datafile.binary_name).to eq("analysis.csv")
 
     get download_dataset_datafile_path(dataset, datafile)
-    assert_response :success
-    assert_includes response.headers["Content-Disposition"], "attachment; filename=\"analysis.csv\""
-    assert_includes response.body, "column_a,column_b"
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Disposition"]).to include('attachment; filename="analysis.csv"')
+    expect(response.body).to include("column_a,column_b")
 
     post publish_dataset_path(dataset)
-    assert_redirected_to dataset_path(dataset)
+    expect(response).to redirect_to(dataset_path(dataset))
 
     dataset.reload
-    assert dataset.published?
-    assert_equal "Updated Dataset", dataset.title
-    assert_equal "climate,temperature,time-series", dataset.keywords
-    assert_equal "Earth Systems", dataset.subject
-    assert_equal "CC0", dataset.license
-    assert_equal "University Library", dataset.publisher
-    assert_equal "10.5555/#{dataset.key}", dataset.identifier
+    expect(dataset).to be_published
+    expect(dataset.title).to eq("Updated Dataset")
+    expect(dataset.keywords).to eq("climate,temperature,time-series")
+    expect(dataset.subject).to eq("Earth Systems")
+    expect(dataset.license).to eq("CC0")
+    expect(dataset.publisher).to eq("University Library")
+    expect(dataset.identifier).to eq("10.5555/#{dataset.key}")
   end
-
-  private
 
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
@@ -99,6 +98,6 @@ class DatasetsWorkflowTest < ActionDispatch::IntegrationTest
     )
 
     get "/auth/developer/callback"
-    assert_response :redirect
+    expect(response).to have_http_status(:redirect)
   end
 end

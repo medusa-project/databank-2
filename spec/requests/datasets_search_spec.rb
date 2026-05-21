@@ -1,7 +1,7 @@
-require "test_helper"
+require "rails_helper"
 
-class DatasetsSearchTest < ActionDispatch::IntegrationTest
-  test "searches published datasets by query and subject" do
+RSpec.describe "Datasets search", type: :request do
+  it "searches published datasets by query and subject" do
     dataset_one = Dataset.create!(
       title: "Climate Trend Data",
       description: "Long-term climate observations",
@@ -26,13 +26,13 @@ class DatasetsSearchTest < ActionDispatch::IntegrationTest
 
     get datasets_path, params: { q: "climate", subject: "Earth Systems" }
 
-    assert_response :success
-    assert_includes response.body, dataset_one.title
-    assert_includes response.body, "Apply Filters"
-    assert_not_includes response.body, "Marine Biology Survey"
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(dataset_one.title)
+    expect(response.body).to include("Apply Filters")
+    expect(response.body).not_to include("Marine Biology Survey")
   end
 
-  test "does not show draft datasets to guests in search results" do
+  it "does not show draft datasets to guests in search results" do
     Dataset.create!(
       title: "Draft Climate Dataset",
       description: "Should not be visible",
@@ -46,7 +46,7 @@ class DatasetsSearchTest < ActionDispatch::IntegrationTest
 
     get datasets_path, params: { q: "climate" }
 
-    assert_response :success
-    assert_not_includes response.body, "Draft Climate Dataset"
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Draft Climate Dataset")
   end
 end

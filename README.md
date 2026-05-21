@@ -29,6 +29,37 @@ the callback reads identity headers:
 This allows stage/production integration behind SSO middleware while keeping
 developer provider auth for local development.
 
+## Optional Solr Indexing Sync
+
+Dataset create/update/destroy operations enqueue search indexing jobs when
+`SOLR_URL` is present.
+
+- If `SOLR_URL` points to a core/collection base, indexing uses `.../update`.
+- If `SOLR_URL` points to `.../select`, indexing automatically rewrites to
+	`.../update`.
+
+The indexer posts JSON update payloads and fails safely (logs warning,
+application request still succeeds) if Solr is temporarily unavailable.
+
+Nested metadata edits (creators, contributors, funders, related materials)
+also enqueue dataset reindex jobs so Solr stays consistent with deposit edits.
+
+To enqueue a full backfill:
+
+```sh
+bin/rails search:reindex_all
+```
+
+## Testing
+
+This project uses RSpec.
+
+Run the full test suite:
+
+```sh
+bundle exec rspec
+```
+
 Things you may want to cover:
 
 * Ruby version
