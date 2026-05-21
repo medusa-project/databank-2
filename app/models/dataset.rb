@@ -53,6 +53,20 @@ class Dataset < ApplicationRecord
     related_materials.select(&:version_relation?)
   end
 
+  def previous_version_material
+    related_materials.find_by(relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION)
+  end
+
+  def previous_version_dataset
+    uri = previous_version_material&.uri
+    return if uri.blank?
+
+    identifier = uri.sub(%r{\Ahttps?://doi\.org/}i, "")
+    return if identifier.blank?
+
+    Dataset.find_by(identifier: identifier)
+  end
+
   def missing_publish_fields
     missing = []
     missing << "title"            if title.blank?

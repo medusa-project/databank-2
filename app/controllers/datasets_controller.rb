@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
-  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version]
+  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version copy_version_files]
 
   def index
     @query = params[:q].to_s
@@ -99,6 +99,28 @@ class DatasetsController < ApplicationController
     ).call
 
     redirect_to edit_dataset_path(new_dataset), notice: "Draft version created from #{@dataset.key}."
+  end
+
+  def copy_version_files
+    authorize! :update, @dataset
+
+    unless @dataset.draft?
+      redirect_to edit_dataset_path(@dataset), alert: "Version files can only be copied into a draft dataset."
+      return
+    end
+
+    unless @dataset.previous_version_dataset.present?
+      redirect_to edit_dataset_path(@dataset), alert: "No previous version dataset found to copy files from."
+      return
+    end
+
+    result = DatasetVersionFileCopyService.new(version_dataset: @dataset).call
+    message = "Copied #{result.copied_count} file(s) from the previous version"
+    message += ", skipped #{result.skipped_count} duplicate(s)" if result.skipped_count.positive?
+
+    redirect_to edit_dataset_path(@dataset), notice: "#{message}."
+  rescue ArgumentError => e
+    redirect_to edit_dataset_path(@dataset), alert: e.message
   end
 
   def replay_failed_deliveries

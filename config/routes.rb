@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   # Core dataset resources
   resources :datasets do
     member do
+      post :copy_version_files
       post :publish
       post :replay_failed_deliveries
     end

@@ -423,6 +423,18 @@ RSpec.describe "Datasets workflow", type: :request do
 
     next_version_link = previous.related_materials.find_by!(relation_type: RelatedMaterial::VERSION_NEW_RELATION)
     expect(next_version_link.uri).to include("/datasets/#{new_dataset.key}")
+
+    get dataset_path(previous)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Next Version")
+    expect(response.body).to include(new_dataset.key)
+
+    get dataset_path(new_dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Previous Version")
+    expect(response.body).to include(previous.key)
   end
 
   it "blocks version creation for a depositor who does not own the dataset" do
@@ -693,6 +705,154 @@ RSpec.describe "Datasets workflow", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Create New Version")
+  end
+
+  it "copies files from previous version into a draft version dataset" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    previous = Dataset.create!(
+      title: "Source for File Copy",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900118"
+    )
+
+    csv_fixture = Rails.root.join("test/fixtures/files/analysis.csv")
+    attached = previous.datafiles.create!(description: "Attached source")
+    attached.binary.attach(io: File.open(csv_fixture), filename: "analysis.csv", content_type: "text/csv")
+    attached.sync_metadata_from_attachment!
+    attached.save!
+    previous.datafiles.create!(
+      binary_name: "remote.csv",
+      binary_size: 64,
+      description: "Storage source",
+      storage_root: "medusa",
+      storage_key: "path/to/remote.csv"
+    )
+
+    post version_dataset_path(previous)
+    version = Dataset.order(:created_at).last
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    get edit_dataset_path(version)
+    expect(response.body).to include("Copy Files from Previous Version")
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Previous Version")
+    expect(response.body).to include(previous.key)
+
+    post copy_version_files_dataset_path(version)
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    follow_redirect!
+    expect(response.body).to include("Copied 2 file(s) from the previous version")
+
+    version.reload
+    expect(version.datafiles.count).to eq(2)
+    expect(version.datafiles.find_by!(binary_name: "analysis.csv").binary).to be_attached
+    expect(version.datafiles.find_by!(storage_key: "path/to/remote.csv").binary_name).to eq("remote.csv")
+
+    post copy_version_files_dataset_path(version)
+    follow_redirect!
+    expect(response.body).to include("skipped 2 duplicate(s)")
+    expect(version.reload.datafiles.count).to eq(2)
+  end
+
+  it "does not show copy files button on non-version drafts" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    dataset = Dataset.create!(
+      title: "Regular Draft",
+      description: "Draft without previous relation.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+
+    get edit_dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Copy Files from Previous Version")
+    expect(response.body).not_to include("Version Lineage")
+  end
+
+  it "shows external previous-version URI fallback on edit page when local dataset is unavailable" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    version = Dataset.create!(
+      title: "Version With External Previous URI",
+      description: "Draft with external lineage only.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    version.related_materials.create!(
+      title: "Legacy Published Dataset",
+      uri: "https://doi.org/10.5555/IDB-DOES-NOT-EXIST",
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    get edit_dataset_path(version)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Previous Version")
+    expect(response.body).to include("Legacy Published Dataset")
+    expect(response.body).to include("https://doi.org/10.5555/IDB-DOES-NOT-EXIST")
+  end
+
+  it "shows external next-version URI fallback on show and edit pages when local successor is unavailable" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    dataset = Dataset.create!(
+      title: "Dataset With External Next URI",
+      description: "Published dataset with external successor link.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-3030303"
+    )
+    dataset.related_materials.create!(
+      title: "External Successor Dataset",
+      uri: "https://doi.org/10.5555/IDB-NEXT-ONLY",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+
+    get dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Next Version")
+    expect(response.body).to include("External Successor Dataset")
+    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+
+    get edit_dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Lineage")
+    expect(response.body).to include("Next Version")
+    expect(response.body).to include("External Successor Dataset")
+    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
   end
 
   def sign_in_as(email:, name:, role:)

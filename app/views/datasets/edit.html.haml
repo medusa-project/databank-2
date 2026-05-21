@@ -1,9 +1,39 @@
 - content_for :title, "Edit Dataset"
 
+- previous_version = @dataset.previous_version_dataset
+- next_version = @dataset.version_successor
+- previous_version_material = @dataset.previous_version_material
+- next_version_material = @dataset.version_related_materials.find { |material| material.relation_type == RelatedMaterial::VERSION_NEW_RELATION }
+
 %ilw-content
   = render "form", dataset: @dataset, submit_label: "Update Dataset"
 
+  - if previous_version.present? || next_version.present? || previous_version_material.present? || next_version_material.present?
+    %section
+      %h2 Version Lineage
+      %dl
+        %dt Current Version
+        %dd= "#{@dataset.title} (#{@dataset.key})"
+
+        - if previous_version.present?
+          %dt Previous Version
+          %dd= link_to "#{previous_version.title} (#{previous_version.key})", dataset_path(previous_version)
+        - elsif previous_version_material&.uri.present?
+          %dt Previous Version
+          %dd= link_to(previous_version_material.title, previous_version_material.uri)
+
+        - if next_version.present?
+          %dt Next Version
+          %dd= link_to "#{next_version.title} (#{next_version.key})", dataset_path(next_version)
+        - elsif next_version_material&.uri.present?
+          %dt Next Version
+          %dd= link_to(next_version_material.title, next_version_material.uri)
+
   %h2 Files
+  - if @dataset.draft? && @dataset.previous_version_dataset.present? && can?(:update, @dataset)
+    %p
+      = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset), method: :post, class: "ilw-button"
+
   - if @dataset.datafiles.any?
     %ul
       - @dataset.datafiles.each do |datafile|
