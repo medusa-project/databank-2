@@ -1,4 +1,6 @@
 class Datafile < ApplicationRecord
+  include Datafile::Storable
+
   WEB_ID_LENGTH = 5
 
   belongs_to :dataset

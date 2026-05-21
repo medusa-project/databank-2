@@ -9,6 +9,7 @@
 
 # Ignore all environment files.
 /.env*
+!/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -34,3 +35,7 @@
 /node_modules/
 /test-results/
 /playwright-report/
+
+# Ignore local working files
+/working/*
+!/working/.keep

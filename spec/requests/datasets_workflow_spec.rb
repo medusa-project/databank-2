@@ -94,6 +94,39 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.identifier).to eq("10.5555/#{dataset.key}")
   end
 
+  it "downloads using medusa storage metadata without attachment" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Storage-backed Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    datafile = dataset.datafiles.create!(
+      web_id: "m3d55",
+      binary_name: "remote.csv",
+      binary_size: 14,
+      storage_root: "medusa",
+      storage_key: "path/to/remote.csv"
+    )
+
+    allow_any_instance_of(Datafile).to receive(:exists_on_storage?).and_return(true)
+    allow_any_instance_of(Datafile).to receive(:with_input_io).and_yield(StringIO.new("a,b\n1,2\n"))
+
+    get download_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Disposition"]).to include('attachment; filename="remote.csv"')
+    expect(response.body).to include("a,b")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

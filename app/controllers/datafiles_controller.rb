@@ -37,6 +37,15 @@ class DatafilesController < ApplicationController
         disposition: :attachment,
         type: @datafile.binary.content_type
       )
+    elsif @datafile.exists_on_storage?
+      @datafile.with_input_io do |io|
+        send_data(
+          io.read,
+          filename: (@datafile.binary_name.presence || @datafile.web_id),
+          disposition: :attachment,
+          type: "application/octet-stream"
+        )
+      end
     else
       filename = @datafile.binary_name.presence || "#{@datafile.web_id}.txt"
       send_data(
@@ -64,6 +73,6 @@ class DatafilesController < ApplicationController
   end
 
   def datafile_params
-    params.require(:datafile).permit(:binary_name, :binary_size, :description, :binary)
+    params.require(:datafile).permit(:binary_name, :binary_size, :description, :binary, :storage_root, :storage_key, :medusa_id)
   end
 end

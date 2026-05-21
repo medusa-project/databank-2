@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_21_123000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_21_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -70,9 +70,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_123000) do
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
     t.text "description"
+    t.string "medusa_id"
+    t.string "storage_key"
+    t.string "storage_root"
     t.datetime "updated_at", null: false
     t.string "web_id"
     t.index ["dataset_id"], name: "index_datafiles_on_dataset_id"
+    t.index ["storage_root", "storage_key"], name: "index_datafiles_on_storage_location"
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
   end
 
@@ -126,6 +130,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_123000) do
     t.integer "position"
     t.datetime "updated_at", null: false
     t.index ["dataset_id"], name: "index_funders_on_dataset_id"
+  end
+
+  create_table "migration_runs", force: :cascade do |t|
+    t.string "bundle_path"
+    t.string "checksum_path"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.integer "created_count", default: 0, null: false
+    t.jsonb "details", default: {}, null: false
+    t.integer "expected_count"
+    t.integer "failed_count", default: 0, null: false
+    t.string "label"
+    t.string "manifest_path"
+    t.integer "processed_count", default: 0, null: false
+    t.string "run_type", null: false
+    t.integer "skipped_count", default: 0, null: false
+    t.datetime "source_since"
+    t.datetime "source_until"
+    t.datetime "started_at", null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.integer "updated_count", default: 0, null: false
+    t.text "validation_error"
+    t.integer "would_create_count", default: 0, null: false
+    t.integer "would_update_count", default: 0, null: false
+    t.index ["run_type"], name: "index_migration_runs_on_run_type"
+    t.index ["started_at"], name: "index_migration_runs_on_started_at"
+    t.index ["status"], name: "index_migration_runs_on_status"
   end
 
   create_table "related_materials", force: :cascade do |t|

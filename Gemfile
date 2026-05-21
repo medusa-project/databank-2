@@ -24,6 +24,7 @@ gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
 # AWS S3 for production file storage
 gem "aws-sdk-s3", "~> 1.0", require: false
+gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", branch: "feature-1"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
