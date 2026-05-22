@@ -45,7 +45,7 @@ RSpec.describe Dataset, type: :model do
 
     it "finds successor from reciprocal previous-version relation" do
       current = create_dataset(publication_state: :published, identifier: "10.5555/IDB-6000003", key: "IDB-6000003", title: "Current")
-      successor = create_dataset(title: "Successor")
+      successor = create_dataset(title: "Successor", publication_state: :published)
       successor.related_materials.create!(
         title: current.title,
         uri: current.persistent_url,
@@ -59,7 +59,7 @@ RSpec.describe Dataset, type: :model do
 
     it "falls back to successor URI relation when reciprocal relation is absent" do
       current = create_dataset(publication_state: :published, identifier: "10.5555/IDB-6000004", key: "IDB-6000004", title: "Current")
-      successor = create_dataset(title: "Successor")
+      successor = create_dataset(title: "Successor", publication_state: :published)
       current.related_materials.create!(
         title: successor.title,
         uri: "https://example.test/datasets/#{successor.key}",
@@ -69,6 +69,21 @@ RSpec.describe Dataset, type: :model do
 
       expect(current.version_successor).to eq(successor)
       expect(current.version_eligible?).to be(false)
+    end
+
+    it "does not treat a draft successor as a newer published version" do
+      current = create_dataset(publication_state: :published, identifier: "10.5555/IDB-6000005", key: "IDB-6000005", title: "Current")
+      draft_successor = create_dataset(title: "Draft Successor", publication_state: :draft)
+      draft_successor.related_materials.create!(
+        title: current.title,
+        uri: current.persistent_url,
+        relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+        position: 1
+      )
+
+      expect(current.version_successor).to be_nil
+      expect(current.has_newer_published_version?).to be(false)
+      expect(current.version_eligible?).to be(true)
     end
   end
 end

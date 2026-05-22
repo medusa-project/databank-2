@@ -42,14 +42,21 @@ class Dataset < ApplicationRecord
       )&.dataset
     end
 
-    return successor if successor.present?
+    return successor if successor&.published?
 
     next_material_uri = related_materials.find_by(relation_type: RelatedMaterial::VERSION_NEW_RELATION)&.uri
-    resolve_related_dataset_from_uri(next_material_uri)
+    fallback_successor = resolve_related_dataset_from_uri(next_material_uri)
+    return fallback_successor if fallback_successor&.published?
+
+    nil
+  end
+
+  def has_newer_published_version?
+    version_successor.present?
   end
 
   def version_eligible?
-    published? && version_successor.nil?
+    published? && !has_newer_published_version?
   end
 
   def nonversion_related_materials

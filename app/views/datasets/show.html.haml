@@ -9,6 +9,8 @@
 - next_version = @dataset.version_successor
 - previous_version_material = @dataset.previous_version_material
 - next_version_material = version_related_materials.find { |material| material.relation_type == RelatedMaterial::VERSION_NEW_RELATION }
+- previous_version_visible = previous_version if previous_version.present? && can?(:read, previous_version)
+- next_version_visible = next_version if next_version.present? && can?(:read, next_version)
 
 %ilw-content.dataset-show-page
   .dataset-show-summary
@@ -94,24 +96,24 @@
           %dt Depositor Email
           %dd= @dataset.depositor_email
 
-    - if previous_version.present? || next_version.present? || previous_version_material.present? || next_version_material.present?
+    - if previous_version_visible.present? || next_version_visible.present? || previous_version_material.present? || next_version_material.present?
       %section.dataset-show-panel{aria: { label: "Version lineage" }}
         %h2.dataset-show-section-title Version Lineage
         %dl.dataset-show-metadata
           %dt Current Version
           %dd= "#{@dataset.title} (#{@dataset.key})"
 
-          - if previous_version.present?
+          - if previous_version_visible.present?
             %dt Previous Version
-            %dd= link_to "#{previous_version.title} (#{previous_version.key})", dataset_path(previous_version)
+            %dd= link_to "#{previous_version_visible.title} (#{previous_version_visible.key})", dataset_path(previous_version_visible)
           - elsif previous_version_material&.uri.present?
             %dt Previous Version
             %dd= link_to(previous_version_material.title, previous_version_material.uri)
 
-          - if next_version.present?
+          - if next_version_visible.present?
             %dt Next Version
-            %dd= link_to "#{next_version.title} (#{next_version.key})", dataset_path(next_version)
-          - elsif next_version_material&.uri.present?
+            %dd= link_to "#{next_version_visible.title} (#{next_version_visible.key})", dataset_path(next_version_visible)
+          - elsif next_version.nil? && next_version_material&.uri.present?
             %dt Next Version
             %dd= link_to(next_version_material.title, next_version_material.uri)
 

@@ -488,7 +488,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Only published datasets can be versioned.")
   end
 
-  it "blocks version creation when a newer version is already linked" do
+  it "blocks version creation when a newer published version is already linked" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     source = Dataset.create!(
@@ -515,7 +515,8 @@ RSpec.describe "Datasets workflow", type: :request do
       owner_uid: "owner-version",
       depositor_name: "Owner User",
       depositor_email: "owner@example.edu",
-      publication_state: :draft
+      publication_state: :published,
+      identifier: "10.5555/IDB-5566779"
     )
     existing_successor.related_materials.create!(
       title: source.title,
@@ -531,6 +532,51 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(dataset_path(source))
     follow_redirect!
     expect(response.body).to include("A newer version has already been started for this dataset.")
+  end
+
+  it "allows version creation when only a draft successor exists" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Source With Draft Successor",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-5566780"
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Draft Successor",
+      description: "Draft successor version.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    draft_successor.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    expect {
+      post version_dataset_path(source)
+    }.to change(Dataset, :count).by(1)
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset).to be_draft
   end
 
   it "returns a safe alert when create_version fails unexpectedly" do
@@ -608,7 +654,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Create New Version")
   end
 
-  it "hides the Create New Version button when a successor version already exists" do
+  it "hides the Create New Version button when a published successor version already exists" do
     source = Dataset.create!(
       title: "Source Hidden Version Button",
       description: "Published source dataset.",
@@ -633,7 +679,8 @@ RSpec.describe "Datasets workflow", type: :request do
       owner_uid: "owner-version",
       depositor_name: "Owner User",
       depositor_email: "owner@example.edu",
-      publication_state: :draft
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900213"
     )
     successor.related_materials.create!(
       title: source.title,
@@ -647,6 +694,47 @@ RSpec.describe "Datasets workflow", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Create New Version")
+  end
+
+  it "shows the Create New Version button when only a draft successor exists" do
+    source = Dataset.create!(
+      title: "Source With Draft Successor Button",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900214"
+    )
+
+    successor = Dataset.create!(
+      title: "Draft Successor for Visible Button",
+      description: "Draft successor.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    successor.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Create New Version")
   end
 
   it "hides the Create New Version button for a non-owner depositor" do
@@ -719,7 +807,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Create New Version")
   end
 
-  it "hides the Create New Version button from admins when dataset is ineligible" do
+  it "hides the Create New Version button from admins when a published successor makes dataset ineligible" do
     source = Dataset.create!(
       title: "Admin Ineligible Source",
       description: "Published source dataset.",
@@ -744,7 +832,8 @@ RSpec.describe "Datasets workflow", type: :request do
       owner_uid: "owner-version",
       depositor_name: "Owner User",
       depositor_email: "owner@example.edu",
-      publication_state: :draft
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900217"
     )
     successor.related_materials.create!(
       title: source.title,
@@ -1016,6 +1105,48 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Next Version")
     expect(response.body).to include("External Successor Dataset")
     expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+  end
+
+  it "does not expose draft successor details to guests on published source pages" do
+    source = Dataset.create!(
+      title: "Public Source With Draft Successor",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9090909"
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Hidden Draft Successor",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    draft_successor.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Version Lineage")
+    expect(response.body).not_to include("Hidden Draft Successor")
+    expect(response.body).not_to include(draft_successor.key)
   end
 
   def sign_in_as(email:, name:, role:)
