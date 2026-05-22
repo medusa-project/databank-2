@@ -106,11 +106,13 @@ class Dataset < ApplicationRecord
     creators.select { |creator| creator.type_of == CREATOR_TYPE_INSTITUTION }
   end
 
-  def convert_creators_for_org_mode!
-    if org_creators?
-      ind_creators_to_contributors!
+  def prune_creators_for_mode!(org_mode:)
+    if org_mode
+      creators.where(type_of: [ nil, CREATOR_TYPE_PERSON ]).destroy_all
+      creators.where(type_of: CREATOR_TYPE_INSTITUTION).update_all(type_of: CREATOR_TYPE_INSTITUTION)
     else
-      contributors_to_ind_creators!
+      creators.where(type_of: CREATOR_TYPE_INSTITUTION).destroy_all
+      creators.where(type_of: [ nil, CREATOR_TYPE_PERSON ]).update_all(type_of: CREATOR_TYPE_PERSON)
     end
   end
 
@@ -153,53 +155,6 @@ class Dataset < ApplicationRecord
       self.corresponding_creator_name = creator.display_name
       self.corresponding_creator_email = creator.email
       break
-    end
-  end
-
-  def ind_creators_to_contributors!
-    transaction do
-      individual_creators.each do |creator|
-        Contributor.create!(
-          dataset_id: id,
-          name: creator.name,
-          family_name: creator.family_name,
-          given_name: creator.given_name,
-          institution_name: creator.institution_name,
-          email: creator.email,
-          identifier: creator.identifier,
-          identifier_scheme: creator.identifier_scheme,
-          type_of: CREATOR_TYPE_PERSON,
-          row_position: creator.row_position,
-          position: creator.position,
-          row_order: creator.row_order,
-          is_contact: creator.contact_selected?
-        )
-        creator.destroy!
-      end
-    end
-  end
-
-  def contributors_to_ind_creators!
-    transaction do
-      contributors.each do |contributor|
-        Creator.create!(
-          dataset_id: id,
-          name: contributor.name,
-          family_name: contributor.family_name,
-          given_name: contributor.given_name,
-          institution_name: contributor.institution_name,
-          email: contributor.email,
-          identifier: contributor.identifier,
-          identifier_scheme: contributor.identifier_scheme,
-          type_of: CREATOR_TYPE_PERSON,
-          row_position: contributor.row_position,
-          position: contributor.position,
-          row_order: contributor.row_order,
-          is_contact: contributor.is_contact,
-          contact: contributor.is_contact
-        )
-        contributor.destroy!
-      end
     end
   end
 

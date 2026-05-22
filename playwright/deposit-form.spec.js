@@ -1,11 +1,15 @@
 const { test, expect } = require("@playwright/test");
 
 async function signInWithDeveloperAuth(page) {
+  await signInWithDeveloperAuthRole(page, "depositor");
+}
+
+async function signInWithDeveloperAuthRole(page, role) {
   const response = await page.request.post("/auth/developer/callback", {
     form: {
       email: "deposit-form-tester@example.test",
       name: "Deposit Form Tester",
-      role: "depositor",
+      role,
     },
   });
 
@@ -23,6 +27,10 @@ async function createDatasetAndOpenEdit(page) {
   await page.locator('input[name="dataset[title]"]').fill(`Deposit Form Dataset ${Date.now()}`);
 }
 
+async function addCreatorRowFromToolbar(page) {
+  await page.locator('#creator-rows .idb-add-creator-row:not([hidden])').first().click();
+}
+
 test.describe("deposit form parity behavior", () => {
   test("reorders creator rows and updates persisted row positions", async ({ page }) => {
     await signInWithDeveloperAuth(page);
@@ -31,11 +39,11 @@ test.describe("deposit form parity behavior", () => {
     const creatorRows = page.locator("#creator-rows .idb-nested-row");
 
     await creatorRows.nth(0).locator('input[name*="[family_name]"]').fill("Alpha");
-    await page.getByRole("button", { name: "Add Creator", exact: true }).click();
+    await addCreatorRowFromToolbar(page);
     await expect(creatorRows).toHaveCount(2);
     await creatorRows.nth(1).locator('input[name*="[family_name]"]').fill("Beta");
 
-    await creatorRows.nth(1).getByRole("button", { name: "Up", exact: true }).click();
+    await creatorRows.nth(1).locator('button[data-action="deposit-form#moveRowUp"]').click();
 
     await expect(creatorRows.nth(0).locator('input[name*="[family_name]"]')).toHaveValue("Beta");
     await expect(creatorRows.nth(1).locator('input[name*="[family_name]"]')).toHaveValue("Alpha");
@@ -105,11 +113,11 @@ test.describe("deposit form parity behavior", () => {
     const creatorRows = page.locator("#creator-rows .idb-nested-row");
 
     await creatorRows.nth(0).locator('input[name*="[family_name]"]').fill("Alpha");
-    await page.getByRole("button", { name: "Add Creator", exact: true }).click();
+    await addCreatorRowFromToolbar(page);
     await expect(creatorRows).toHaveCount(2);
     await creatorRows.nth(1).locator('input[name*="[family_name]"]').fill("Beta");
 
-    await creatorRows.nth(1).getByRole("button", { name: "Up", exact: true }).click();
+    await creatorRows.nth(1).locator('button[data-action="deposit-form#moveRowUp"]').click();
     await page.getByRole("button", { name: "Update Dataset", exact: true }).click();
     await expect(page).toHaveURL(/\/datasets\//);
 
@@ -143,5 +151,43 @@ test.describe("deposit form parity behavior", () => {
     expect(titleBox).not.toBeNull();
     expect(licenseBox).not.toBeNull();
     expect(licenseBox.y).toBeGreaterThan(titleBox.y + 10);
+  });
+
+  test("switches between individual and organization creator modes with destructive cleanup", async ({ page }) => {
+    await signInWithDeveloperAuthRole(page, "admin");
+    await createDatasetAndOpenEdit(page);
+    await page.locator('input[name="dataset[identifier]"]').fill(`10.5555/SWITCH-${Date.now()}`);
+
+    const creatorRows = page.locator("#creator-rows .idb-nested-row");
+    await creatorRows.first().locator('input[name*="[family_name]"]').fill("Alpha");
+    await addCreatorRowFromToolbar(page);
+    await expect(creatorRows).toHaveCount(2);
+    await creatorRows.nth(1).locator('input[name*="[family_name]"]').fill("Beta");
+
+    await page.getByRole("button", { name: "Use Organization Creators", exact: true }).click();
+    await expect(page).toHaveURL(/\/datasets\//);
+    await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
+    await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
+
+    await expect(page.locator("#dataset-creators")).toContainText("Organization Name(s)");
+    await expect(page.locator('input[name*="[family_name]"]')).toHaveCount(0);
+    await expect(page.locator('input[name*="[given_name]"]')).toHaveCount(0);
+    await expect(page.locator('#creator-rows input[name*="[identifier]"]')).toHaveCount(0);
+
+    const orgRows = page.locator("#creator-rows .idb-nested-row");
+    await expect(orgRows).toHaveCount(1);
+    await orgRows.first().locator('input[name*="[institution_name]"]').fill("Org Alpha");
+    await addCreatorRowFromToolbar(page);
+    await expect(orgRows).toHaveCount(2);
+    await orgRows.nth(1).locator('input[name*="[institution_name]"]').fill("Org Beta");
+
+    await page.getByRole("button", { name: "Use Individual Creators", exact: true }).click();
+    await expect(page).toHaveURL(/\/datasets\//);
+    await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
+    await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
+
+    await expect(page.locator("#dataset-creators")).toContainText("Family Name(s)");
+    await expect(page.locator('input[name*="[institution_name]"]')).toHaveCount(0);
+    await expect(page.locator('input[name*="[family_name]"]')).toHaveCount(1);
   });
 });

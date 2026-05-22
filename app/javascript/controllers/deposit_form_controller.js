@@ -18,17 +18,17 @@ export default class extends Controller {
   connect() {
     this.activeOrcidRow = null
     this.orcidTriggerButton = null
-    this.applyCreatorMode()
     this.syncPrimaryContact()
     this.materialRowTargets.forEach((row) => this.updateMaterialTypeVisibility(row))
     this.materialRowTargets.forEach((row) => this.syncDataciteListForRow(row))
     this.refreshAllRowPositions()
+    this.refreshCreatorAddButtons()
   }
 
   addCreatorRow() {
     this.addRowFromTemplate(this.creatorTemplateTarget, "creator-rows", "NEW_CREATOR")
-    this.applyCreatorMode()
     this.syncPrimaryContact()
+    this.refreshCreatorAddButtons()
   }
 
   addContributorRow() {
@@ -68,6 +68,7 @@ export default class extends Controller {
 
     this.syncPrimaryContact()
     this.refreshAllRowPositions()
+    this.refreshCreatorAddButtons()
   }
 
   moveRowUp(event) {
@@ -82,6 +83,7 @@ export default class extends Controller {
     const previous = visibleRows[index - 1]
     container.insertBefore(row, previous)
     this.refreshContainerRowPositions(container)
+    this.refreshCreatorAddButtons()
   }
 
   moveRowDown(event) {
@@ -96,6 +98,7 @@ export default class extends Controller {
     const next = visibleRows[index + 1]
     container.insertBefore(next, row)
     this.refreshContainerRowPositions(container)
+    this.refreshCreatorAddButtons()
   }
 
   switchCreatorMode(event) {
@@ -103,7 +106,6 @@ export default class extends Controller {
     if (!this.hasOrgCreatorsFieldTarget) return
 
     this.orgCreatorsFieldTarget.value = mode === "institution" ? "true" : "false"
-    this.applyCreatorMode()
     this.element.requestSubmit()
   }
 
@@ -183,8 +185,7 @@ export default class extends Controller {
     }
 
     const url = `${baseUrl}?family_name=${encodeURIComponent(familyName)}&given_name=${encodeURIComponent(givenName)}`
-
-    this.orcidResultsTarget.textContent = "Searching..."
+    this.orcidResultsTarget.innerHTML = "<div class=\"idb-orcid-results-loading\"><div class=\"idb-orcid-spinner\" aria-hidden=\"true\"></div><p>Searching...</p></div>"
 
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } })
@@ -200,15 +201,18 @@ export default class extends Controller {
         return
       }
 
-      this.orcidResultsTarget.innerHTML = payload.results
+      const countLabel = payload.results.length === 1 ? "1 result found" : `${payload.results.length} results found`
+      const rows = payload.results
         .map((result, idx) => {
-          const label = this.escapeHtml(`${result.given_name || ""} ${result.family_name || ""}`.trim() || result.orcid)
-          const institution = result.institution ? ` (${this.escapeHtml(result.institution)})` : ""
+          const name = this.escapeHtml(`${result.given_name || ""} ${result.family_name || ""}`.trim() || "Unknown")
+          const institution = this.escapeHtml(result.institution || "-")
           const orcid = this.escapeHtml(result.orcid || "")
           const value = encodeURIComponent(JSON.stringify(result))
-          return `<label><input type=\"radio\" name=\"orcid-choice\" value=\"${value}\" ${idx === 0 ? "checked" : ""}> ${label}${institution} - ${orcid}</label><br>`
+          return `<tr><td><a href=\"https://orcid.org/${orcid}\" target=\"_blank\" rel=\"noopener\">${orcid}</a><br><span>${name}</span></td><td>${institution}</td><td><input type=\"radio\" name=\"orcid-choice\" value=\"${value}\" aria-label=\"Select ORCID ${orcid}\" ${idx === 0 ? "checked" : ""}></td></tr>`
         })
         .join("")
+
+      this.orcidResultsTarget.innerHTML = `<p class=\"idb-orcid-results-count\">${countLabel}</p><table class=\"idb-orcid-results-table\"><thead><tr><th>Identifier (click link for details)</th><th>Affiliation</th><th>Select</th></tr></thead><tbody>${rows}</tbody></table>`
     } catch (_error) {
       this.orcidResultsTarget.textContent = "ORCID lookup unavailable."
     }
@@ -243,20 +247,6 @@ export default class extends Controller {
     this.refreshRowPositions(containerId)
   }
 
-  applyCreatorMode() {
-    const isOrgMode = this.hasOrgCreatorsFieldTarget && this.orgCreatorsFieldTarget.value === "true"
-
-    this.creatorRowTargets.forEach((row) => {
-      const personFields = row.querySelector("[data-creator-mode='person']")
-      const orgFields = row.querySelector("[data-creator-mode='institution']")
-      const typeField = row.querySelector("input[data-creator-type]")
-
-      if (personFields) personFields.hidden = isOrgMode
-      if (orgFields) orgFields.hidden = !isOrgMode
-      if (typeField) typeField.value = isOrgMode ? "1" : "0"
-    })
-  }
-
   updateMaterialTypeVisibility(row) {
     const selected = row.querySelector("select[name*='[selected_type]']")
     const materialTypeField = row.querySelector("input[data-material-type-field]")
@@ -286,6 +276,17 @@ export default class extends Controller {
     this.refreshRowPositions("contributor-rows")
     this.refreshRowPositions("funder-rows")
     this.refreshRowPositions("material-rows")
+  }
+
+  refreshCreatorAddButtons() {
+    const creatorContainer = this.element.querySelector("#creator-rows")
+    if (!creatorContainer) return
+
+    const rows = Array.from(creatorContainer.querySelectorAll(":scope > .idb-nested-row")).filter((row) => !row.hidden)
+    rows.forEach((row, idx) => {
+      const addButton = row.querySelector(".idb-add-creator-row")
+      if (addButton) addButton.hidden = idx !== rows.length - 1
+    })
   }
 
   refreshRowPositions(containerId) {

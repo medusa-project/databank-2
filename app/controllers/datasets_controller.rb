@@ -220,12 +220,10 @@ class DatasetsController < ApplicationController
       @dataset.org_creators
     end
 
-    org_mode_changed = requested_org_mode != @dataset.org_creators
-
     begin
       Dataset.transaction do
         @dataset.update!(dataset_params)
-        @dataset.convert_creators_for_org_mode! if org_mode_changed
+        @dataset.prune_creators_for_mode!(org_mode: requested_org_mode)
       end
       redirect_to dataset_path(@dataset), notice: "Dataset updated."
     rescue ActiveRecord::RecordInvalid

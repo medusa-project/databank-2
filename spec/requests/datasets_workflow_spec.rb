@@ -157,7 +157,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.related_materials.first.title).to eq("Research Group (2026) Companion article")
   end
 
-  it "converts individual creators to contributors when org creator mode is enabled" do
+  it "destroys individual creators when switching to organization creator mode" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     post datasets_path, params: {
@@ -194,15 +194,27 @@ RSpec.describe "Datasets workflow", type: :request do
     }
 
     expect(response).to redirect_to(dataset_path(dataset))
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Creator Mode Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        org_creators: true
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
     dataset.reload
     expect(dataset.org_creators).to be(true)
     expect(dataset.creators.count).to eq(0)
-    expect(dataset.contributors.count).to eq(1)
-    expect(dataset.contributors.first.family_name).to eq("Lovelace")
-    expect(dataset.contributors.first.given_name).to eq("Ada")
+    expect(dataset.contributors.count).to eq(0)
   end
 
-  it "converts contributors back to creators when org creator mode is disabled" do
+  it "destroys organization creators when switching to individual creator mode" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     post datasets_path, params: {
@@ -228,9 +240,9 @@ RSpec.describe "Datasets workflow", type: :request do
         org_creators: true,
         creators_attributes: [
           {
-            given_name: "Grace",
-            family_name: "Hopper",
-            email: "grace@example.edu",
+            institution_name: "Center for Legacy Parity",
+            email: "legacy@example.edu",
+            type_of: Dataset::CREATOR_TYPE_INSTITUTION,
             row_position: 1,
             is_contact: true
           }
@@ -239,6 +251,10 @@ RSpec.describe "Datasets workflow", type: :request do
     }
 
     expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.org_creators).to be(true)
+    expect(dataset.creators.count).to eq(1)
+    expect(dataset.creators.first.type_of).to eq(Dataset::CREATOR_TYPE_INSTITUTION)
 
     patch dataset_path(dataset), params: {
       dataset: {
@@ -255,10 +271,48 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(dataset_path(dataset))
     dataset.reload
     expect(dataset.org_creators).to be(false)
-    expect(dataset.contributors.count).to eq(0)
-    expect(dataset.creators.count).to eq(1)
-    expect(dataset.creators.first.family_name).to eq("Hopper")
-    expect(dataset.creators.first.given_name).to eq("Grace")
+    expect(dataset.creators.count).to eq(0)
+  end
+
+  it "renders distinct creator form elements for individual vs organization mode" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "admin")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Creator Mode UI Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    get edit_dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Family Name(s)")
+    expect(response.body).to include("Given Name(s)")
+    expect(response.body).to include("ORCID")
+    expect(response.body).not_to include("Organization Name(s)")
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Creator Mode UI Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        org_creators: true
+      }
+    }
+
+    get edit_dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Organization Name(s)")
+    expect(response.body).not_to include("Family Name(s)")
+    expect(response.body).not_to include("Given Name(s)")
   end
 
   it "persists row positions from nested metadata updates" do
