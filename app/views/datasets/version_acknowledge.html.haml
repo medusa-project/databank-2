@@ -7,6 +7,9 @@
 
   - if @version_request.present?
     %p
+      %strong Current status:
+      = @version_request.status.titleize
+    %p
       %strong Requested at:
       = @version_request.requested_at.utc.iso8601
     - if @version_request.comment.present?

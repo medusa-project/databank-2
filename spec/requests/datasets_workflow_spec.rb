@@ -795,6 +795,113 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(request.requester_email).to eq("owner@example.edu")
   end
 
+  it "does not create a duplicate pending version request" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Duplicate Request Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900318"
+    )
+
+    existing_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Already pending",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    expect {
+      post submit_version_request_dataset_path(source), params: { comment: "Second request attempt" }
+    }.not_to change(VersionRequest, :count)
+
+    expect(response).to redirect_to(version_acknowledge_dataset_path(source, version_request_id: existing_request.id))
+    follow_redirect!
+    expect(response.body).to include("Current status:")
+    expect(response.body).to include("Pending")
+  end
+
+  it "shows acknowledgement only for pending version requests" do
+    source = Dataset.create!(
+      title: "Acknowledgement Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900320"
+    )
+
+    pending_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Pending acknowledgement request",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    approved_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved request",
+      requested_at: Time.current,
+      status: :approved,
+      reviewed_at: Time.current,
+      reviewed_by_uid: "admin@example.edu"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    get version_acknowledge_dataset_path(source, version_request_id: pending_request.id)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Your new version request has been submitted")
+
+    get version_acknowledge_dataset_path(source, version_request_id: approved_request.id)
+    expect(response).to redirect_to(dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("No pending version request found.")
+  end
+
+  it "redirects when acknowledgement request id is missing" do
+    source = Dataset.create!(
+      title: "Missing Ack Request Id Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900321"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    get version_acknowledge_dataset_path(source)
+
+    expect(response).to redirect_to(dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("No pending version request found.")
+  end
+
   it "allows an admin to approve a pending version request and create a draft" do
     source = Dataset.create!(
       title: "Admin Approval Source",
@@ -832,6 +939,79 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(request.status).to eq("approved")
     expect(request.reviewed_by_uid).to eq("admin@example.edu")
     expect(request.approved_dataset_id).to eq(new_dataset.id)
+  end
+
+  it "allows an admin to reject a pending version request" do
+    source = Dataset.create!(
+      title: "Admin Rejection Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900315"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need correction",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    expect {
+      post reject_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Needs additional detail" }
+    }.not_to change(Dataset, :count)
+
+    expect(response).to redirect_to(dataset_path(source))
+
+    request.reload
+    expect(request.status).to eq("rejected")
+    expect(request.reviewed_by_uid).to eq("admin@example.edu")
+    expect(request.review_note).to eq("Needs additional detail")
+    expect(request.approved_dataset_id).to be_nil
+  end
+
+  it "shows optional curator review note fields on pending requests for admins" do
+    source = Dataset.create!(
+      title: "Admin Pending Queue Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900319"
+    )
+
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Pending request for admin queue",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Pending Version Requests")
+    expect(response.body).to include("Curator review note (optional)")
+    expect(response.body).to include("Approve and Create Draft")
+    expect(response.body).to include("Reject Request")
   end
 
   it "blocks non-admin approval of a version request" do
@@ -913,6 +1093,83 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(dataset_path(source))
     follow_redirect!
     expect(response.body).to include("A newer version has already been started for this dataset.")
+  end
+
+  it "shows version request history to the dataset owner" do
+    source = Dataset.create!(
+      title: "Owner Request History Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900316"
+    )
+
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Pending update request",
+      requested_at: 2.days.ago,
+      status: :pending
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Rejected update request",
+      requested_at: 1.day.ago,
+      status: :rejected,
+      reviewed_at: Time.current,
+      reviewed_by_uid: "admin@example.edu",
+      review_note: "Please include detailed change scope"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Request History")
+    expect(response.body).to include("Pending request from Owner User")
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Please include detailed change scope")
+  end
+
+  it "hides version request history from non-owners" do
+    source = Dataset.create!(
+      title: "Private Request History Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900317"
+    )
+
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Pending private request",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "other@example.edu", name: "Other Depositor", role: "depositor")
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Version Request History")
+    expect(response.body).not_to include("Pending private request")
   end
 
   it "allows an admin to create a new version for another depositor's published dataset" do
@@ -1368,7 +1625,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).not_to include("Guest Versions Draft")
   end
 
-  it "shows draft entries in versions panel to owners" do
+  it "hides draft entries in versions panel from owners" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     source = Dataset.create!(
@@ -1407,8 +1664,50 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Versions in Illinois Data Bank")
+  end
+
+  it "shows draft entries in versions panel to admins" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    source = Dataset.create!(
+      title: "Admin Versions Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8100002"
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Admin Versions Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.related_materials.create!(
+      title: draft_successor.title,
+      uri: "https://example.test/datasets/#{draft_successor.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Versions in Illinois Data Bank")
-    expect(response.body).to include("Owner Versions Draft")
+    expect(response.body).to include("Admin Versions Draft")
   end
 
   it "links newer-version banner to latest published version through an intermediate draft" do

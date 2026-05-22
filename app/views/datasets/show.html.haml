@@ -126,7 +126,7 @@
             %dt Next Version
             %dd= link_to(next_version_material.title, next_version_material.uri)
 
-    - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:read, entry[:dataset]) }
+    - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:manage, @dataset) }
     - if visible_version_entries.length > 1
       %section.dataset-show-panel{aria: { label: "Versions in Illinois Data Bank" }}
         %h2.dataset-show-section-title Versions in Illinois Data Bank
@@ -215,6 +215,23 @@
                   - if can?(:read, @dataset)
                     %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "ilw-button dataset-show-download-button"
 
+    - if @version_request_history.present?
+      %section.dataset-show-panel{aria: { label: "Version request history" }}
+        %h2.dataset-show-section-title Version Request History
+        %ul.dataset-show-list
+          - @version_request_history.each do |request|
+            %li
+              %span.dataset-show-list-primary= "#{request.status.titleize} request from #{request.requester_name}"
+              %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
+              - if request.comment.present?
+                %span.dataset-show-list-tertiary= request.comment
+              - if request.reviewed_at.present?
+                %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
+              - if request.review_note.present?
+                %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
+              - if request.approved_dataset.present?
+                %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
+
   - if logged_in? && can?(:manage, Dataset)
     - if @pending_version_requests.present?
       %section.dataset-show-panel{aria: { label: "Pending version requests" }}
@@ -226,7 +243,20 @@
               %span.dataset-show-list-secondary= "Requested at #{request.requested_at.utc.iso8601}"
               - if request.comment.present?
                 %span.dataset-show-list-tertiary= request.comment
-              = button_to "Approve and Create Draft", approve_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, class: "ilw-button"
+              = form_with url: approve_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
+                %p
+                  = f.label :review_note, "Curator review note (optional)"
+                  %br/
+                  = f.text_area :review_note, rows: 2
+                %p
+                  = f.submit "Approve and Create Draft", class: "ilw-button"
+              = form_with url: reject_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
+                %p
+                  = f.label :review_note, "Curator review note (optional)"
+                  %br/
+                  = f.text_area :review_note, rows: 2
+                %p
+                  = f.submit "Reject Request", class: "ilw-button"
 
     %section.dataset-show-panel{aria: { label: "External delivery" }}
       %h2.dataset-show-section-title External Delivery
