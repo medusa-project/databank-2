@@ -49,8 +49,9 @@
             %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
             .dataset-show-persistent-controls
               %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
-              %button.ilw-button.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value)"}
+              %button.ilw-button.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });"}
                 Copy
+              %span#copy-status.sr-only{aria: { live: "polite" }}
 
     - if logged_in? && can?(:update, @dataset)
       - missing = @dataset.missing_publish_fields

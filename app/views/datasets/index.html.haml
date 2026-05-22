@@ -12,7 +12,7 @@
         = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
         .datasets-query-actions
           = f.submit "Apply Filters", class: "ilw-button"
-          = link_to "Clear", datasets_path, class: "ilw-button datasets-clear-button", role: "button", aria: { label: "Clear all search filters" }
+          = link_to "Clear", datasets_path, class: "ilw-button datasets-clear-button", aria: { label: "Clear all search filters" }
 
       - if @total_count.positive?
         - start_item = @search.offset_value + 1
