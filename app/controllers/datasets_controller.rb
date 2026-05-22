@@ -99,6 +99,13 @@ class DatasetsController < ApplicationController
     ).call
 
     redirect_to edit_dataset_path(new_dataset), notice: "Draft version created from #{@dataset.key}."
+  rescue ArgumentError => e
+    redirect_to dataset_path(@dataset), alert: e.message
+  rescue StandardError => e
+    raise e if e.is_a?(CanCan::AccessDenied)
+
+    Rails.logger.error("create_version failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
+    redirect_to dataset_path(@dataset), alert: "Could not create a new version right now. Please try again."
   end
 
   def copy_version_files
@@ -121,6 +128,11 @@ class DatasetsController < ApplicationController
     redirect_to edit_dataset_path(@dataset), notice: "#{message}."
   rescue ArgumentError => e
     redirect_to edit_dataset_path(@dataset), alert: e.message
+  rescue StandardError => e
+    raise e if e.is_a?(CanCan::AccessDenied)
+
+    Rails.logger.error("copy_version_files failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
+    redirect_to edit_dataset_path(@dataset), alert: "Could not copy files from the previous version. Please try again."
   end
 
   def replay_failed_deliveries

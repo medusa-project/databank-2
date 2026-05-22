@@ -533,6 +533,59 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("A newer version has already been started for this dataset.")
   end
 
+  it "returns a safe alert when create_version fails unexpectedly" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Source for Create Version Failure",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-6600118"
+    )
+
+    allow_any_instance_of(DatasetVersionBuilder).to receive(:call).and_raise(StandardError, "boom")
+
+    post version_dataset_path(source)
+
+    expect(response).to redirect_to(dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("Could not create a new version right now. Please try again.")
+    expect(response.body).not_to include("boom")
+  end
+
+  it "surfaces ArgumentError message when create_version raises ArgumentError" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Source for Create Version ArgumentError",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-6610118"
+    )
+
+    allow_any_instance_of(DatasetVersionBuilder).to receive(:call).and_raise(ArgumentError, "previous dataset must be published")
+
+    post version_dataset_path(source)
+
+    expect(response).to redirect_to(dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("previous dataset must be published")
+  end
+
   it "shows the Create New Version button only for an eligible owner" do
     source = Dataset.create!(
       title: "Eligible Version Source",
@@ -762,6 +815,116 @@ RSpec.describe "Datasets workflow", type: :request do
     follow_redirect!
     expect(response.body).to include("skipped 2 duplicate(s)")
     expect(version.reload.datafiles.count).to eq(2)
+  end
+
+  it "blocks copy_version_files for a non-owner depositor" do
+    previous = Dataset.create!(
+      title: "Source for Unauthorized Copy",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-4400118"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+    post version_dataset_path(previous)
+    version = Dataset.order(:created_at).last
+
+    sign_in_as(email: "other@example.edu", name: "Other Depositor", role: "depositor")
+
+    post copy_version_files_dataset_path(version)
+
+    expect(response).to redirect_to(root_path)
+    follow_redirect!
+    expect(response.body).to include("You are not authorized to perform this action.")
+  end
+
+  it "rejects copy_version_files when target dataset is published" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    dataset = Dataset.create!(
+      title: "Published Target",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-5500118"
+    )
+
+    post copy_version_files_dataset_path(dataset)
+
+    expect(response).to redirect_to(edit_dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("Version files can only be copied into a draft dataset.")
+  end
+
+  it "rejects copy_version_files when previous version dataset cannot be resolved" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    version = Dataset.create!(
+      title: "Draft With Unresolvable Previous",
+      description: "Draft dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    version.related_materials.create!(
+      title: "Unknown Previous",
+      uri: "https://doi.org/10.5555/IDB-UNRESOLVABLE",
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    post copy_version_files_dataset_path(version)
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    follow_redirect!
+    expect(response.body).to include("No previous version dataset found to copy files from.")
+  end
+
+  it "returns a safe alert when copy_version_files fails unexpectedly" do
+    previous = Dataset.create!(
+      title: "Source for Failure Case",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-7700118"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+    post version_dataset_path(previous)
+    version = Dataset.order(:created_at).last
+
+    allow_any_instance_of(DatasetVersionFileCopyService).to receive(:call).and_raise(StandardError, "boom")
+
+    post copy_version_files_dataset_path(version)
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    follow_redirect!
+    expect(response.body).to include("Could not copy files from the previous version. Please try again.")
+    expect(response.body).not_to include("boom")
   end
 
   it "does not show copy files button on non-version drafts" do

@@ -33,12 +33,19 @@ class Dataset < ApplicationRecord
   end
 
   def version_successor
-    return if persistent_url.blank?
+    successor = nil
 
-    RelatedMaterial.includes(:dataset).find_by(
-      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
-      uri: persistent_url
-    )&.dataset
+    if persistent_url.present?
+      successor = RelatedMaterial.includes(:dataset).find_by(
+        relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+        uri: persistent_url
+      )&.dataset
+    end
+
+    return successor if successor.present?
+
+    next_material_uri = related_materials.find_by(relation_type: RelatedMaterial::VERSION_NEW_RELATION)&.uri
+    resolve_related_dataset_from_uri(next_material_uri)
   end
 
   def version_eligible?
@@ -58,13 +65,7 @@ class Dataset < ApplicationRecord
   end
 
   def previous_version_dataset
-    uri = previous_version_material&.uri
-    return if uri.blank?
-
-    identifier = uri.sub(%r{\Ahttps?://doi\.org/}i, "")
-    return if identifier.blank?
-
-    Dataset.find_by(identifier: identifier)
+    resolve_related_dataset_from_uri(previous_version_material&.uri)
   end
 
   def missing_publish_fields
@@ -84,6 +85,42 @@ class Dataset < ApplicationRecord
   end
 
   private
+
+  def resolve_related_dataset_from_uri(uri)
+    value = uri.to_s.strip
+    return if value.blank?
+
+    identifier = extract_identifier(value)
+    return Dataset.find_by(identifier: identifier) if identifier.present?
+
+    key = extract_dataset_key(value)
+    return Dataset.find_by(key: key) if key.present?
+
+    nil
+  end
+
+  def extract_identifier(value)
+    return value if value.match?(/\A10\./)
+
+    doi_prefixed = value.match(/\Adoi:(.+)\z/i)
+    return doi_prefixed[1].strip if doi_prefixed
+
+    doi_url = value.match(%r{\Ahttps?://doi\.org/(.+)\z}i)
+    return doi_url[1].strip if doi_url
+
+    nil
+  end
+
+  def extract_dataset_key(value)
+    path = begin
+      URI.parse(value).path
+    rescue URI::InvalidURIError
+      value
+    end
+
+    match = path.to_s.match(%r{/datasets/([^/?#]+)\z})
+    match&.captures&.first
+  end
 
   def set_key
     self.key ||= generate_key
