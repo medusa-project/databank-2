@@ -1,0 +1,19 @@
+- content_for :title, "New Version Request"
+
+%ilw-content
+  %h2 Information before requesting a new version
+  %p
+    A curator will review your request before creating an editable draft of the new version.
+  %p
+    Use this workflow when you need to publish corrected files or other substantial changes as a new version.
+
+  = form_with url: submit_version_request_dataset_path(@dataset), method: :post, local: true do |f|
+    %p
+      = f.label :comment, "In 1-2 sentences, summarize why you are requesting a new version:"
+      %br/
+      = f.text_area :comment, rows: 4
+    %p
+      = f.submit "Request New Version", class: "ilw-button"
+
+  %p
+    = link_to "Cancel", dataset_path(@dataset)

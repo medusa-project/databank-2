@@ -1,0 +1,18 @@
+- content_for :title, "Version Request Submitted"
+
+%ilw-content
+  %h2 Your new version request has been submitted
+  %p
+    A curator will review your request. Once approved, an editable draft version will be created for you.
+
+  - if @version_request.present?
+    %p
+      %strong Requested at:
+      = @version_request.requested_at.utc.iso8601
+    - if @version_request.comment.present?
+      %p
+        %strong Your request note:
+        = @version_request.comment
+
+  %p
+    = link_to "Back to dataset", dataset_path(@dataset), class: "ilw-button"

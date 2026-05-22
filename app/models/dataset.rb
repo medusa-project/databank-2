@@ -7,6 +7,8 @@ class Dataset < ApplicationRecord
   has_many :contributors,      -> { order(:position, :id) }, dependent: :destroy
   has_many :funders,           -> { order(:position, :id) }, dependent: :destroy
   has_many :related_materials, -> { order(:position, :id) }, dependent: :destroy
+  has_many :version_requests, dependent: :destroy
+  has_many :approved_version_requests, class_name: "VersionRequest", foreign_key: :approved_dataset_id, inverse_of: :approved_dataset, dependent: :nullify
 
   enum :publication_state, { draft: 0, published: 1 }, default: :draft
 
@@ -33,6 +35,10 @@ class Dataset < ApplicationRecord
   end
 
   def version_successor
+    next_version_dataset
+  end
+
+  def next_version_dataset(include_unpublished: false)
     successor = nil
 
     if persistent_url.present?
@@ -42,13 +48,19 @@ class Dataset < ApplicationRecord
       )&.dataset
     end
 
-    return successor if successor&.published?
+    if successor.nil?
+      next_material_uri = related_materials.find_by(relation_type: RelatedMaterial::VERSION_NEW_RELATION)&.uri
+      successor = resolve_related_dataset_from_uri(next_material_uri)
+    end
 
-    next_material_uri = related_materials.find_by(relation_type: RelatedMaterial::VERSION_NEW_RELATION)&.uri
-    fallback_successor = resolve_related_dataset_from_uri(next_material_uri)
-    return fallback_successor if fallback_successor&.published?
+    return nil if successor.nil?
+    return successor if include_unpublished || successor.published?
 
     nil
+  end
+
+  def next_version_dataset_any
+    next_version_dataset(include_unpublished: true)
   end
 
   def has_newer_published_version?

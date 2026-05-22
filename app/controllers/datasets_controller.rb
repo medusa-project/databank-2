@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
-  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version copy_version_files]
+  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version copy_version_files pre_version submit_version_request version_acknowledge approve_version_request]
 
   def index
     @query = params[:q].to_s
@@ -26,8 +26,91 @@ class DatasetsController < ApplicationController
 
   def show
     authorize! :read, @dataset
+    @version_group = DatasetVersionGroup.new(@dataset)
+    @pending_version_requests = @dataset.version_requests.pending.order(requested_at: :desc) if can?(:manage, Dataset)
     @latest_delivery_attempts = latest_delivery_attempts
     @failed_delivery_counts = failed_delivery_counts
+  end
+
+  def pre_version
+    authorize! :update, @dataset
+
+    unless @dataset.published?
+      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
+      return
+    end
+
+    unless @dataset.version_eligible?
+      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
+      return
+    end
+
+    @title = "New Version"
+  end
+
+  def submit_version_request
+    authorize! :update, @dataset
+
+    unless @dataset.published?
+      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
+      return
+    end
+
+    unless @dataset.version_eligible?
+      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
+      return
+    end
+
+    request = @dataset.version_requests.create!(
+      requester_uid: current_user.uid,
+      requester_email: current_user.email,
+      requester_name: current_user.name,
+      comment: params[:comment].to_s,
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    redirect_to version_acknowledge_dataset_path(@dataset, version_request_id: request.id)
+  rescue StandardError => e
+    raise e if e.is_a?(CanCan::AccessDenied)
+
+    Rails.logger.error("submit_version_request failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
+    redirect_to dataset_path(@dataset), alert: "Could not submit a version request right now. Please try again."
+  end
+
+  def version_acknowledge
+    authorize! :update, @dataset
+    @version_request = @dataset.version_requests.find_by(id: params[:version_request_id])
+  end
+
+  def approve_version_request
+    authorize! :manage, Dataset
+
+    version_request = @dataset.version_requests.pending.find(params[:version_request_id])
+
+    new_dataset = DatasetVersionBuilder.new(
+      previous_dataset: @dataset,
+      new_version_uri_builder: ->(dataset) { dataset_url(dataset) }
+    ).call
+
+    version_request.update!(
+      status: :approved,
+      reviewed_at: Time.current,
+      reviewed_by_uid: current_user.uid,
+      review_note: params[:review_note].to_s,
+      approved_dataset: new_dataset
+    )
+
+    redirect_to edit_dataset_path(new_dataset), notice: "Version request approved and draft created."
+  rescue ActiveRecord::RecordNotFound
+    redirect_to dataset_path(@dataset), alert: "No pending version request found."
+  rescue ArgumentError => e
+    redirect_to dataset_path(@dataset), alert: e.message
+  rescue StandardError => e
+    raise e if e.is_a?(CanCan::AccessDenied)
+
+    Rails.logger.error("approve_version_request failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
+    redirect_to dataset_path(@dataset), alert: "Could not approve the version request right now. Please try again."
   end
 
   def new

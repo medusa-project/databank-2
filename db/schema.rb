@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_21_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -184,6 +184,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_170000) do
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
   end
 
+  create_table "version_requests", force: :cascade do |t|
+    t.bigint "approved_dataset_id"
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.datetime "requested_at", null: false
+    t.string "requester_email", null: false
+    t.string "requester_name", null: false
+    t.string "requester_uid"
+    t.text "review_note"
+    t.datetime "reviewed_at"
+    t.string "reviewed_by_uid"
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["approved_dataset_id"], name: "index_version_requests_on_approved_dataset_id"
+    t.index ["dataset_id", "status"], name: "index_version_requests_on_dataset_id_and_status"
+    t.index ["dataset_id"], name: "index_version_requests_on_dataset_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "contributors", "datasets"
@@ -192,4 +211,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_170000) do
   add_foreign_key "external_delivery_attempts", "datasets"
   add_foreign_key "funders", "datasets"
   add_foreign_key "related_materials", "datasets"
+  add_foreign_key "version_requests", "datasets"
+  add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"
 end

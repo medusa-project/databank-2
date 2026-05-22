@@ -8,7 +8,11 @@ Rails.application.routes.draw do
   # Core dataset resources
   resources :datasets do
     member do
+      get :pre_version
+      post :submit_version_request
+      get :version_acknowledge
       post :copy_version_files
+      post "approve_version_request/:version_request_id", action: :approve_version_request, as: :approve_version_request
       post :publish
       post :replay_failed_deliveries
     end

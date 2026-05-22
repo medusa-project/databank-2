@@ -632,7 +632,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("previous dataset must be published")
   end
 
-  it "shows the Create New Version button only for an eligible owner" do
+  it "shows the Request New Version button for an eligible owner" do
     source = Dataset.create!(
       title: "Eligible Version Source",
       description: "Published source dataset.",
@@ -651,10 +651,10 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Create New Version")
+    expect(response.body).to include("Request New Version")
   end
 
-  it "hides the Create New Version button when a published successor version already exists" do
+  it "hides the Request New Version button when a published successor version already exists" do
     source = Dataset.create!(
       title: "Source Hidden Version Button",
       description: "Published source dataset.",
@@ -693,10 +693,10 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Create New Version")
+    expect(response.body).not_to include("Request New Version")
   end
 
-  it "shows the Create New Version button when only a draft successor exists" do
+  it "shows the Request New Version button when only a draft successor exists" do
     source = Dataset.create!(
       title: "Source With Draft Successor Button",
       description: "Published source dataset.",
@@ -734,10 +734,10 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Create New Version")
+    expect(response.body).to include("Request New Version")
   end
 
-  it "hides the Create New Version button for a non-owner depositor" do
+  it "hides the Request New Version button for a non-owner depositor" do
     source = Dataset.create!(
       title: "Eligible Source Hidden For Non-Owner",
       description: "Published source dataset.",
@@ -756,7 +756,163 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Create New Version")
+    expect(response.body).not_to include("Request New Version")
+  end
+
+  it "lets a depositor submit a version request and shows acknowledgement" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Request Flow Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900310"
+    )
+
+    get pre_version_dataset_path(source)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Information before requesting a new version")
+
+    expect {
+      post submit_version_request_dataset_path(source), params: { comment: "Need to add corrected analysis files." }
+    }.to change(VersionRequest, :count).by(1)
+
+    request = VersionRequest.order(:created_at).last
+    expect(response).to redirect_to(version_acknowledge_dataset_path(source, version_request_id: request.id))
+
+    follow_redirect!
+    expect(response.body).to include("Your new version request has been submitted")
+    expect(response.body).to include("Need to add corrected analysis files.")
+
+    expect(request.status).to eq("pending")
+    expect(request.requester_email).to eq("owner@example.edu")
+  end
+
+  it "allows an admin to approve a pending version request and create a draft" do
+    source = Dataset.create!(
+      title: "Admin Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900311"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need a corrected v2",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved for update" }
+    }.to change(Dataset, :count).by(1)
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(new_dataset))
+
+    request.reload
+    expect(request.status).to eq("approved")
+    expect(request.reviewed_by_uid).to eq("admin@example.edu")
+    expect(request.approved_dataset_id).to eq(new_dataset.id)
+  end
+
+  it "blocks non-admin approval of a version request" do
+    source = Dataset.create!(
+      title: "Unauthorized Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900312"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need a corrected v2",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id)
+    }.not_to change(Dataset, :count)
+
+    expect(response).to redirect_to(root_path)
+    follow_redirect!
+    expect(response.body).to include("You are not authorized to perform this action.")
+  end
+
+  it "does not allow version request submission when dataset is ineligible" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Ineligible Request Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900313"
+    )
+
+    successor = Dataset.create!(
+      title: "Existing Published Successor",
+      description: "Published successor dataset.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900314"
+    )
+    successor.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    expect {
+      post submit_version_request_dataset_path(source), params: { comment: "Please allow new version." }
+    }.not_to change(VersionRequest, :count)
+
+    expect(response).to redirect_to(dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("A newer version has already been started for this dataset.")
   end
 
   it "allows an admin to create a new version for another depositor's published dataset" do
@@ -1147,6 +1303,174 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).not_to include("Version Lineage")
     expect(response.body).not_to include("Hidden Draft Successor")
     expect(response.body).not_to include(draft_successor.key)
+  end
+
+  it "shows versions panel with published entries for guests and includes newer-version banner" do
+    source = Dataset.create!(
+      title: "Guest Versions Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8000001"
+    )
+
+    newer = Dataset.create!(
+      title: "Guest Versions Newer",
+      description: "Published successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8000002"
+    )
+    newer.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Guest Versions Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.related_materials.create!(
+      title: draft_successor.title,
+      uri: "https://example.test/datasets/#{draft_successor.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 2
+    )
+
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("A newer version of this dataset is available.")
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).to include("Guest Versions Newer")
+    expect(response.body).not_to include("Guest Versions Draft")
+  end
+
+  it "shows draft entries in versions panel to owners" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Owner Versions Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8100001"
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Owner Versions Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.related_materials.create!(
+      title: draft_successor.title,
+      uri: "https://example.test/datasets/#{draft_successor.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).to include("Owner Versions Draft")
+  end
+
+  it "links newer-version banner to latest published version through an intermediate draft" do
+    source = Dataset.create!(
+      title: "Mixed Chain Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8300001"
+    )
+
+    draft_successor = Dataset.create!(
+      title: "Mixed Chain Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.related_materials.create!(
+      title: draft_successor.title,
+      uri: "https://example.test/datasets/#{draft_successor.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+
+    newest_published = Dataset.create!(
+      title: "Mixed Chain Latest",
+      description: "Published successor beyond draft.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-8300002"
+    )
+    draft_successor.related_materials.create!(
+      title: newest_published.title,
+      uri: "https://example.test/datasets/#{newest_published.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("A newer version of this dataset is available.")
+    expect(response.body).to include(%(href="/datasets/#{newest_published.key}"))
+    expect(response.body).not_to include(%(href="/datasets/#{draft_successor.key}"))
   end
 
   def sign_in_as(email:, name:, role:)

@@ -14,6 +14,13 @@
 
 %ilw-content.dataset-show-page
   .dataset-show-summary
+    - if @version_group.latest_published_version.present? && @version_group.latest_published_version != @dataset
+      .dataset-show-status
+        %p
+          %strong A newer version of this dataset is available.
+          = " "
+          = link_to "View the latest version.", dataset_path(@version_group.latest_published_version)
+
     .dataset-show-titlebar
       %p.dataset-show-key= @dataset.key
 
@@ -21,7 +28,9 @@
         .dataset-show-actions
           = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "ilw-button"
           - if @dataset.version_eligible?
-            = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "ilw-button"
+            = link_to "Request New Version", pre_version_dataset_path(@dataset), class: "ilw-button"
+            - if can?(:manage, Dataset)
+              = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "ilw-button"
 
     - if @dataset.description.present?
       .dataset-show-abstract
@@ -117,6 +126,28 @@
             %dt Next Version
             %dd= link_to(next_version_material.title, next_version_material.uri)
 
+    - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:read, entry[:dataset]) }
+    - if visible_version_entries.length > 1
+      %section.dataset-show-panel{aria: { label: "Versions in Illinois Data Bank" }}
+        %h2.dataset-show-section-title Versions in Illinois Data Bank
+        .dataset-show-table-wrap
+          %table.dataset-show-table
+            %thead
+              %tr
+                %th Dataset
+                %th DOI
+                %th State
+            %tbody
+              - visible_version_entries.each do |entry|
+                %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
+                  %td= link_to "#{entry[:title]} (#{entry[:key]})", dataset_path(entry[:dataset])
+                  %td
+                    - if entry[:doi].present?
+                      = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
+                    - else
+                      not yet set
+                  %td= entry[:publication_state].to_s
+
     - if @dataset.creators.any?
       %section.dataset-show-panel{aria: { label: "Creators" }}
         %h2.dataset-show-section-title Creators
@@ -166,18 +197,6 @@
               - if material.relation_type.present?
                 %span.dataset-show-list-secondary= material.relation_type
 
-    - if version_related_materials.any?
-      %section.dataset-show-panel{aria: { label: "Versions" }}
-        %h2.dataset-show-section-title Versions
-        %ul.dataset-show-list
-          - version_related_materials.each do |material|
-            %li
-              - if material.uri.present?
-                %span.dataset-show-list-primary= link_to material.title, material.uri
-              - else
-                %span.dataset-show-list-primary= material.title
-              %span.dataset-show-list-secondary= material.relation_type
-
     - if @dataset.datafiles.any?
       %section.dataset-show-panel{aria: { label: "Files" }}
         %h2.dataset-show-section-title Files
@@ -197,6 +216,18 @@
                     %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "ilw-button dataset-show-download-button"
 
   - if logged_in? && can?(:manage, Dataset)
+    - if @pending_version_requests.present?
+      %section.dataset-show-panel{aria: { label: "Pending version requests" }}
+        %h2.dataset-show-section-title Pending Version Requests
+        %ul.dataset-show-list
+          - @pending_version_requests.each do |request|
+            %li
+              %span.dataset-show-list-primary= "#{request.requester_name} (#{request.requester_email})"
+              %span.dataset-show-list-secondary= "Requested at #{request.requested_at.utc.iso8601}"
+              - if request.comment.present?
+                %span.dataset-show-list-tertiary= request.comment
+              = button_to "Approve and Create Draft", approve_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, class: "ilw-button"
+
     %section.dataset-show-panel{aria: { label: "External delivery" }}
       %h2.dataset-show-section-title External Delivery
 
