@@ -1,0 +1,250 @@
+/* -----------------------------------------------------------------------
+ * DataBank CSS: Global brand-based defaults for core elements
+ * Uses UIUC brand tokens (var(--il-*)) as the foundation.
+ * Page-specific overrides go into dedicated page stylesheets.
+ * ----------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------
+ * Headings
+ * ----------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--il-font-heading);
+	font-weight: 700;
+	color: var(--il-blue);
+	line-height: 1.3;
+	margin-top: 1.5rem;
+	margin-bottom: 0.75rem;
+}
+
+h1 {
+	font-size: 2rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+}
+
+h4 {
+	font-size: 1.1rem;
+}
+
+h5, h6 {
+	font-size: 1rem;
+}
+
+/* -----------------------------------------------------------------------
+ * Paragraph & text flow
+ * ----------------------------------------------------------------------- */
+p {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	line-height: 1.6;
+	color: var(--il-blue-10);
+	margin-bottom: 1rem;
+}
+
+/* -----------------------------------------------------------------------
+ * Lists
+ * ----------------------------------------------------------------------- */
+ul, ol {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	line-height: 1.6;
+	color: var(--il-blue-10);
+	margin-bottom: 1rem;
+	padding-left: 1.5rem;
+}
+
+li {
+	margin-bottom: 0.5rem;
+}
+
+/* -----------------------------------------------------------------------
+ * Links
+ * ----------------------------------------------------------------------- */
+a {
+	color: var(--il-industrial);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+a:visited {
+	color: var(--il-industrial-darker-1);
+}
+
+a:hover,
+a:focus {
+	color: var(--il-orange);
+	outline: none;
+}
+
+a:focus {
+	outline: 2px solid var(--il-orange);
+	outline-offset: 2px;
+}
+
+/* -----------------------------------------------------------------------
+ * Tables
+ * ----------------------------------------------------------------------- */
+table {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	line-height: 1.5;
+	color: var(--il-blue-10);
+	border-collapse: collapse;
+	width: 100%;
+	margin-bottom: 1rem;
+}
+
+th {
+	background-color: var(--il-blue-90);
+	color: var(--il-blue);
+	font-weight: 700;
+	padding: 0.75rem;
+	text-align: left;
+	border: 1px solid var(--il-storm-80);
+}
+
+td {
+	padding: 0.75rem;
+	border: 1px solid var(--il-storm-80);
+}
+
+tr:nth-child(even) {
+	background-color: #f9f9f9;
+}
+
+/* -----------------------------------------------------------------------
+ * Forms & Inputs
+ * ----------------------------------------------------------------------- */
+label {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--il-blue);
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="search"],
+input[type="url"],
+textarea,
+select {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	color: var(--il-blue-10);
+	border: 1px solid var(--il-storm-80);
+	border-radius: 4px;
+	padding: 0.5rem 0.75rem;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	background-color: #ffffff;
+	margin-bottom: 1rem;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+	outline: 3px solid var(--il-orange);
+	outline-offset: 2px;
+	border-color: var(--il-orange);
+}
+
+textarea {
+	resize: vertical;
+	min-height: 120px;
+}
+
+/* -----------------------------------------------------------------------
+ * Buttons (Tailwind-styled; toolkit web component buttons use toolkit_overrides.css)
+ * ----------------------------------------------------------------------- */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.button {
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	font-weight: 600;
+	color: #ffffff;
+	background-color: var(--il-blue);
+	border: 1px solid var(--il-blue);
+	border-radius: 4px;
+	padding: 0.625rem 1.25rem;
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+	text-decoration: none;
+	display: inline-block;
+}
+
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+.button:hover {
+	background-color: var(--il-blue-50);
+	border-color: var(--il-blue-50);
+}
+
+button:focus,
+input[type="button"]:focus,
+input[type="submit"]:focus,
+input[type="reset"]:focus,
+.button:focus {
+	outline: 2px solid var(--il-orange);
+	outline-offset: 2px;
+}
+
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+	background-color: var(--il-storm-70);
+	border-color: var(--il-storm-70);
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+/* -----------------------------------------------------------------------
+ * Miscellaneous
+ * ----------------------------------------------------------------------- */
+hr {
+	border: none;
+	border-top: 1px solid var(--il-storm-80);
+	margin: 1.5rem 0;
+}
+
+code {
+	font-family: "Courier New", monospace;
+	background-color: var(--il-storm-95);
+	padding: 0.25rem 0.5rem;
+	border-radius: 3px;
+	color: var(--il-blue-10);
+}
+
+/* -----------------------------------------------------------------------
+ * WCAG 2.2 AA: Ensure semantic HTML & keyboard accessibility
+ * ----------------------------------------------------------------------- */
+/* Remove outline only when custom outline is provided */
+:focus-visible {
+	outline: 2px solid var(--il-orange);
+	outline-offset: 2px;
+}
