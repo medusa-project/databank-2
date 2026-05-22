@@ -9,7 +9,7 @@
 	/* background-image set via inline asset_path in template */
 	background-size: cover;
 	background-position: center;
-	height: 200px;
+	height: 240px;
 	position: relative;
 	overflow: visible;
 	z-index: 0;

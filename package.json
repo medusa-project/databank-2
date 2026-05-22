@@ -2,9 +2,11 @@
   "name": "databank-2",
   "private": true,
   "scripts": {
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:a11y": "playwright test playwright/accessibility.spec.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.54.2"
   }
 }

@@ -40,9 +40,9 @@
           = f.submit "Go", class: "ilw-button datasets-go-button", aria: { label: "Apply results per page" }
 
     .datasets-search-layout
-      %aside.datasets-filters-panel{aria: { label: "Filters" }}
+      %section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
         .datasets-filter-header
-          %h2.datasets-section-heading Filters
+          %h2#datasets-filters-heading.datasets-section-heading Filters
           = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "ilw-button datasets-clear-filters"
 
         - if @available_facets.include?(:subjects)
@@ -113,8 +113,8 @@
                 = check_box_tag "depositors[]", row[:value], checked, id: depositor_id, class: "facet-checkbox"
                 = label_tag depositor_id, "#{row[:label]} (#{row[:count]})", class: "facet-label"
 
-      %section.datasets-results-panel{aria: { label: "Search results" }}
-        %h2.datasets-section-heading Results
+      %section.datasets-results-panel{aria: { labelledby: "datasets-results-heading" }}
+        %h2#datasets-results-heading.datasets-section-heading Results
 
         - if @datasets.any?
           .datasets-results-list
