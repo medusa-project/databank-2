@@ -14,7 +14,7 @@
           = f.label :role, "Role (dev only)", class: "block text-sm font-medium"
           = f.select :role, %w[depositor admin], {}, name: "role", class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
         %div
-          = f.submit "Sign in", class: "ilw-button"
+          = f.submit "Sign in", class: "idb-button-primary"
   - else
     %p
-      = link_to "Sign in with NetID", "/auth/shibboleth", class: "ilw-button"
+      = link_to "Sign in with NetID", "/auth/shibboleth", class: "idb-button-primary"

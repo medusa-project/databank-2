@@ -37,6 +37,15 @@ class FundersController < ApplicationController
   end
 
   def funder_params
-    params.require(:funder).permit(:name, :award_number, :identifier, :position)
+    params.require(:funder).permit(
+      :name,
+      :code,
+      :grant,
+      :award_number,
+      :identifier,
+      :identifier_scheme,
+      :position,
+      :row_position
+    )
   end
 end

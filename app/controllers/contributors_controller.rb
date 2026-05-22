@@ -37,6 +37,20 @@ class ContributorsController < ApplicationController
   end
 
   def contributor_params
-    params.require(:contributor).permit(:name, :email, :role, :position)
+    params.require(:contributor).permit(
+      :name,
+      :family_name,
+      :given_name,
+      :institution_name,
+      :identifier,
+      :identifier_scheme,
+      :type_of,
+      :email,
+      :role,
+      :position,
+      :row_position,
+      :row_order,
+      :is_contact
+    )
   end
 end

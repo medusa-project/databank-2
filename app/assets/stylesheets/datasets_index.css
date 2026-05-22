@@ -258,12 +258,6 @@
   cursor: default;
 }
 
-.datasets-clear-filters {
-  background: var(--idb-green);
-  border-color: var(--idb-green);
-  color: #fff;
-}
-
 .datasets-go-button {
   min-width: 3.3rem;
 }
@@ -274,17 +268,11 @@
   align-items: center;
 }
 
-.datasets-query-controls .ilw-button,
-.datasets-per-page-inline .ilw-button,
-.datasets-clear-filters {
+.datasets-query-controls .idb-button-primary,
+.datasets-per-page-inline .idb-button-primary {
   background: var(--idb-blue);
   border: 1px solid var(--idb-blue);
   color: #fff;
-}
-
-.datasets-clear-button {
-  background: #d62828;
-  border-color: #d62828;
 }
 
 .no-results {

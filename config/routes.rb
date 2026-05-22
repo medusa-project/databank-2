@@ -7,6 +7,10 @@ Rails.application.routes.draw do
 
   # Core dataset resources
   resources :datasets do
+    collection do
+      get :pre_deposit
+    end
+
     member do
       get :pre_version
       get :version_controls
@@ -21,7 +25,11 @@ Rails.application.routes.draw do
     resources :datafiles, param: :web_id, except: %i[index new show] do
       member { get :download }
     end
-    resources :creators,          except: %i[index new show]
+    resources :creators,          except: %i[index new show] do
+      collection do
+        get :orcid_lookup
+      end
+    end
     resources :contributors,      except: %i[index new show]
     resources :funders,           except: %i[index new show]
     resources :related_materials, except: %i[index new show]
@@ -33,8 +41,8 @@ Rails.application.routes.draw do
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts
 
-  # Static / placeholder nav pages
-  get "/deposit",  to: "pages#deposit",  as: :deposit
+  # Static / nav pages
+  get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides
   get "/contact",  to: "pages#contact",  as: :contact

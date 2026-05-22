@@ -3,7 +3,7 @@
 %ilw-content.datasets-search-page
   - if logged_in?
     %p.datasets-deposit-cta
-      %a.ilw-button{href: new_dataset_path} Deposit a New Dataset
+      %a.idb-button-primary{href: new_dataset_path} Deposit a New Dataset
 
   = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
     .datasets-toolbar
@@ -11,8 +11,8 @@
         = f.label :q, "Search", class: "datasets-form-label"
         = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
         .datasets-query-actions
-          = f.submit "Apply Filters", class: "ilw-button"
-          = link_to "Clear", datasets_path, class: "ilw-button datasets-clear-button", aria: { label: "Clear all search filters" }
+          = f.submit "Apply Filters", class: "idb-button-primary"
+          = link_to "Clear", datasets_path, class: "idb-button-secondary datasets-clear-button", aria: { label: "Clear all search filters" }
 
       - if @total_count.positive?
         - start_item = @search.offset_value + 1
@@ -37,13 +37,13 @@
         = f.label :per_page, "Results per page", class: "datasets-form-label"
         .datasets-per-page-inline
           = f.select :per_page, options_for_select(Search::DatasetSearch::PER_PAGE_OPTIONS.map { |value| ["#{value} per page", value] }, @per_page), {}, class: "datasets-select-input", aria: { label: "Results per page" }
-          = f.submit "Go", class: "ilw-button datasets-go-button", aria: { label: "Apply results per page" }
+          = f.submit "Go", class: "idb-button-primary datasets-go-button", aria: { label: "Apply results per page" }
 
     .datasets-search-layout
       %section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
         .datasets-filter-header
           %h2#datasets-filters-heading.datasets-section-heading Filters
-          = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "ilw-button datasets-clear-filters"
+          = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "idb-button-secondary datasets-clear-filters"
 
         - if @available_facets.include?(:subjects)
           %fieldset.search-facet

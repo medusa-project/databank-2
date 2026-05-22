@@ -132,3 +132,32 @@ test.describe("welcome page banner", () => {
     );
   });
 });
+
+test.describe("pre-deposit section disclosure behavior", () => {
+  test("starts closed and allows opening multiple sections simultaneously", async ({ page }) => {
+    const response = await page.request.post("/auth/developer/callback", {
+      form: {
+        email: "parity-tester@example.test",
+        name: "Parity Tester",
+        role: "depositor",
+      },
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto("/datasets/pre_deposit");
+    await expect(page).toHaveURL(/\/datasets\/pre_deposit$/);
+
+    const sections = page.locator("#main-content details.idb-section-disclosure");
+    await expect(sections).toHaveCount(7);
+
+    await expect(sections.nth(0)).toHaveJSProperty("open", false);
+    await expect(sections.nth(1)).toHaveJSProperty("open", false);
+
+    await sections.nth(0).locator("summary").click();
+    await expect(sections.nth(0)).toHaveJSProperty("open", true);
+
+    await sections.nth(1).locator("summary").click();
+    await expect(sections.nth(0)).toHaveJSProperty("open", true);
+    await expect(sections.nth(1)).toHaveJSProperty("open", true);
+  });
+});

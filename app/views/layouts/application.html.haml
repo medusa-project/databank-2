@@ -18,7 +18,11 @@
     %link{rel: "dns-prefetch", href: "//cdn.disability.illinois.edu"}/
     %link{rel: "stylesheet", href: "https://cdn.brand.illinois.edu/illinois.css"}/
     %link{rel: "stylesheet", href: "//cdn.toolkit.illinois.edu/3/toolkit.css"}/
+    - if content_for?(:include_ilw_accordion)
+      %link{rel: "stylesheet", href: "https://cdn.toolkit.illinois.edu/ilw-accordion/1.3/ilw-accordion.css"}/
     %script{type: "module", src: "//cdn.toolkit.illinois.edu/3/toolkit.js"}
+    - if content_for?(:include_ilw_accordion)
+      %script{type: "module", src: "https://cdn.toolkit.illinois.edu/ilw-accordion/1.3/ilw-accordion.js"}
     %script{async: true, type: "module", src: "/idb-header.js"}
     %script{src: "//cdn.disability.illinois.edu/skipto.min.js"}
     :javascript

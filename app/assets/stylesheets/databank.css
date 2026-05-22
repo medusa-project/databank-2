@@ -4,6 +4,536 @@
  * Page-specific overrides go into dedicated page stylesheets.
  * ----------------------------------------------------------------------- */
 
+:root {
+	--idb-page-gutter: clamp(.75rem, 3vw, 2rem);
+}
+
+#main-content {
+	padding-inline: var(--idb-page-gutter);
+}
+
+/* -----------------------------------------------------------------------
+ * Option 2 section cards + sticky TOC
+ * ----------------------------------------------------------------------- */
+.idb-page-sections .idb-sections-layout {
+	display: grid;
+	grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+	gap: 1rem;
+}
+
+.idb-sections-toc {
+	position: sticky;
+	top: 1rem;
+	align-self: start;
+	background-color: #ffffff;
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+}
+
+.idb-sections-toc-title {
+	margin: 0;
+	font-family: var(--il-font-sans);
+	font-size: 1.05rem;
+	font-weight: 700;
+}
+
+.idb-sections-toc ul {
+	list-style: none;
+	margin: 0.5rem 0 0;
+	padding: 0;
+}
+
+.idb-sections-toc li {
+	margin: 0;
+	padding: 0;
+}
+
+.idb-sections-toc a {
+	display: block;
+	padding: 0.4rem 0;
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.idb-sections-content {
+	display: grid;
+	gap: 1rem;
+}
+
+.dataset-form-page .idb-sections-content {
+	gap: 0.75rem;
+}
+
+.idb-section-card {
+	background-color: #ffffff;
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.5rem;
+	padding: 0.85rem 1rem;
+	scroll-margin-top: 1rem;
+}
+
+.dataset-form-page .idb-section-card {
+	padding: 0.7rem 0.85rem;
+}
+
+.idb-section-title {
+	margin-top: 0;
+	margin-bottom: 0.35rem;
+	font-family: var(--il-font-sans);
+	font-size: 1.2rem;
+	line-height: 1.35;
+	color: var(--il-blue);
+}
+
+.dataset-form-page .idb-section-title {
+	font-size: 1.1rem;
+	margin-bottom: 0.2rem;
+}
+
+.idb-section-disclosure > summary {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.idb-section-disclosure > summary::-webkit-details-marker {
+	display: none;
+}
+
+.idb-section-disclosure > summary::before {
+	content: "+";
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.4rem;
+	height: 1.4rem;
+	border-radius: 999px;
+	border: 1px solid var(--il-storm-80);
+	font-weight: 700;
+	color: var(--il-blue);
+	background-color: var(--il-storm-95);
+	flex-shrink: 0;
+}
+
+.idb-section-disclosure[open] > summary::before {
+	content: "-";
+}
+
+.idb-section-disclosure > summary:focus-visible {
+	outline: 2px solid var(--il-orange);
+	outline-offset: 2px;
+	border-radius: 0.25rem;
+}
+
+.idb-section-body {
+	padding-top: 0.5rem;
+}
+
+.dataset-form-page .idb-section-body {
+	padding-top: 0.35rem;
+}
+
+.idb-metadata-grid {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 0.75rem;
+}
+
+.dataset-form-page .idb-metadata-grid {
+	gap: 0.55rem;
+}
+
+.idb-grid-col-12 {
+	grid-column: span 12;
+}
+
+.idb-grid-col-10 {
+	grid-column: span 10;
+}
+
+.idb-grid-col-6 {
+	grid-column: span 6;
+}
+
+.idb-grid-col-4 {
+	grid-column: span 4;
+}
+
+.idb-grid-col-3 {
+	grid-column: span 3;
+}
+
+.idb-grid-col-2 {
+	grid-column: span 2;
+}
+
+.idb-grid-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding-top: 1.75rem;
+}
+
+.idb-grid-checkbox label {
+	margin-bottom: 0;
+}
+
+.idb-compact-table {
+	width: 100%;
+	table-layout: fixed;
+}
+
+.idb-compact-table th,
+.idb-compact-table td {
+	vertical-align: top;
+	padding: 0.4rem;
+}
+
+.dataset-form-page .idb-compact-table th,
+.dataset-form-page .idb-compact-table td {
+	padding: 0.3rem;
+}
+
+.dataset-form-page .idb-compact-table th {
+	font-size: 0.9rem;
+	line-height: 1.2;
+}
+
+.dataset-form-page .idb-compact-table input,
+.dataset-form-page .idb-compact-table select,
+.dataset-form-page .idb-compact-table textarea {
+	margin-bottom: 0.25rem;
+}
+
+.idb-compact-table th:nth-child(1),
+.idb-compact-table td:nth-child(1) {
+	width: 3%;
+}
+
+.idb-compact-table th:nth-child(2),
+.idb-compact-table td:nth-child(2) {
+	width: 17%;
+}
+
+.idb-compact-table th:nth-child(3),
+.idb-compact-table td:nth-child(3) {
+	width: 17%;
+}
+
+.idb-compact-table th:nth-child(4),
+.idb-compact-table td:nth-child(4) {
+	width: 17%;
+}
+
+.idb-compact-table th:nth-child(5),
+.idb-compact-table td:nth-child(5) {
+	width: 10%;
+}
+
+.idb-compact-table th:nth-child(6),
+.idb-compact-table td:nth-child(6) {
+	width: 17%;
+}
+
+.idb-compact-table th:nth-child(7),
+.idb-compact-table td:nth-child(7) {
+	width: 9%;
+	text-align: center;
+}
+
+.idb-compact-table th:nth-child(8),
+.idb-compact-table td:nth-child(8) {
+	width: 10%;
+}
+
+.idb-drag-cell {
+	text-align: center;
+	color: var(--il-storm-50);
+	font-size: 1.1rem;
+	line-height: 2.2rem;
+}
+
+.idb-contact-cell {
+	text-align: center;
+	padding-top: 0.75rem;
+}
+
+.idb-row-actions {
+	white-space: nowrap;
+}
+
+.dataset-form-page .idb-row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	align-items: center;
+	white-space: normal;
+	margin: 0.2rem 0 0;
+}
+
+.idb-row-actions-inline {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: stretch;
+	gap: 0.25rem;
+	height: 100%;
+}
+
+.idb-row-actions-inline .idb-button-primary,
+.idb-row-actions-inline .idb-button-secondary,
+.idb-row-actions-inline .idb-button-danger {
+	width: 100%;
+	padding: 0.35rem 0.45rem;
+	min-height: 2rem;
+	font-size: 0.82rem;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.idb-nested-row {
+	border: 1px solid var(--il-storm-90);
+	border-radius: 0.4rem;
+	padding: 0.6rem;
+	margin-bottom: 0.65rem;
+}
+
+.dataset-form-page .idb-nested-row {
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.idb-nested-grid {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 0.65rem;
+}
+
+.dataset-form-page .idb-nested-grid {
+	gap: 0.5rem;
+}
+
+.idb-grid-fieldset {
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.35rem;
+	padding: 0.6rem;
+	margin: 0.5rem 0;
+}
+
+.dataset-form-page .idb-grid-fieldset {
+	padding: 0.45rem;
+	margin: 0.35rem 0;
+}
+
+.dataset-form-page .idb-grid-fieldset label {
+	margin-bottom: 0.2rem;
+}
+
+.idb-grid-fieldset legend {
+	font-size: 0.95rem;
+	font-weight: 700;
+	padding: 0 0.2rem;
+}
+
+.idb-file-metadata-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.idb-file-metadata-item {
+	border: 1px solid var(--il-storm-90);
+	border-radius: 0.4rem;
+	padding: 0.65rem;
+	margin-bottom: 0.7rem;
+}
+
+.dataset-form-page .idb-file-metadata-item {
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.idb-file-metadata-form {
+	margin: 0;
+}
+
+.idb-file-metadata-form input,
+.idb-file-metadata-form textarea,
+.idb-file-metadata-form select {
+	margin-bottom: 0.5rem;
+}
+
+.idb-file-metadata-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+	align-items: center;
+}
+
+.dataset-form-page .idb-file-metadata-actions {
+	gap: 0.35rem;
+}
+
+.idb-file-metadata-actions form {
+	margin: 0;
+}
+
+#dataset-version-lineage .idb-lineage-grid {
+	display: grid;
+	grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+	column-gap: 0.8rem;
+	row-gap: 0.3rem;
+	margin: 0;
+}
+
+#dataset-version-lineage .idb-lineage-grid dt,
+#dataset-version-lineage .idb-lineage-grid dd {
+	margin: 0;
+}
+
+#dataset-version-lineage .idb-lineage-grid dt {
+	font-weight: 700;
+}
+
+.dataset-form-page p {
+	margin-bottom: 0.6rem;
+	line-height: 1.45;
+}
+
+.dataset-form-page label {
+	font-size: 0.95rem;
+	margin-bottom: 0.3rem;
+}
+
+.dataset-form-page input[type="text"],
+.dataset-form-page input[type="email"],
+.dataset-form-page input[type="password"],
+.dataset-form-page input[type="number"],
+.dataset-form-page input[type="date"],
+.dataset-form-page input[type="time"],
+.dataset-form-page input[type="search"],
+.dataset-form-page input[type="url"],
+.dataset-form-page textarea,
+.dataset-form-page select {
+	padding: 0.45rem 0.6rem;
+	margin-bottom: 0.55rem;
+}
+
+.dataset-form-page textarea {
+	min-height: 88px;
+}
+
+.dataset-form-page .idb-button-primary,
+.dataset-form-page .idb-button-secondary,
+.dataset-form-page .idb-button-danger {
+	min-height: 2.15rem;
+	padding: 0.4rem 0.75rem;
+	font-size: 0.9rem;
+}
+
+.idb-agreement-grid {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 0.85rem;
+}
+
+.idb-agreement-grid fieldset {
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+}
+
+.idb-agreement-grid legend {
+	font-family: var(--il-font-sans);
+	font-weight: 700;
+	font-size: 1rem;
+	padding: 0 0.2rem;
+}
+
+.idb-agreement-grid label {
+	display: block;
+	font-weight: 500;
+	margin-bottom: 0.4rem;
+}
+
+.idb-agreement-grid input[type="radio"] {
+	margin-right: 0.4rem;
+}
+
+.deposit-agreement-selection-warning {
+	margin-bottom: 0.75rem;
+	padding: 0.65rem 0.8rem;
+	border: 1px solid var(--il-orange-40);
+	border-left: 4px solid var(--il-orange);
+	background-color: #fff7ef;
+}
+
+.deposit-agreement-selection-warning:empty {
+	display: none;
+}
+
+.deposit-agreement-selection-warning h2 {
+	margin: 0 0 0.3rem;
+	font-size: 1.1rem;
+}
+
+/* -----------------------------------------------------------------------
+ * Pre-deposit accordion heading style (page scoped)
+ * ----------------------------------------------------------------------- */
+.pre-deposit-page .pre-deposit-accordion-title {
+	margin: 0;
+	font-family: var(--il-font-sans);
+	font-size: 1.05rem;
+	font-weight: 700;
+	line-height: 1.35;
+	color: var(--il-blue);
+}
+
+@media (max-width: 900px) {
+	.idb-page-sections .idb-sections-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.idb-sections-toc {
+		position: static;
+	}
+
+	.idb-metadata-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.idb-grid-col-12,
+	.idb-grid-col-10,
+	.idb-grid-col-6,
+	.idb-grid-col-4,
+	.idb-grid-col-3,
+	.idb-grid-col-2 {
+		grid-column: span 1;
+	}
+
+	.idb-compact-table {
+		display: block;
+		overflow-x: auto;
+	}
+
+	.idb-agreement-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.idb-nested-grid {
+		grid-template-columns: 1fr;
+	}
+
+	#dataset-version-lineage .idb-lineage-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* -----------------------------------------------------------------------
  * Headings
  * ----------------------------------------------------------------------- */
@@ -221,6 +751,110 @@ input[type="reset"]:disabled {
 	border-color: var(--il-storm-70);
 	cursor: not-allowed;
 	opacity: 0.6;
+}
+
+/* -----------------------------------------------------------------------
+ * Illinois Data Bank custom button classes
+ * ----------------------------------------------------------------------- */
+.idb-button-primary,
+.idb-button-secondary,
+.idb-button-danger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.5rem;
+	padding: 0.5rem 1rem;
+	border-radius: 4px;
+	font-family: var(--il-font-sans);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.2;
+	text-decoration: none;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.idb-button-primary {
+	background-color: var(--il-blue);
+	border-color: var(--il-blue);
+	color: #ffffff;
+}
+
+.idb-button-primary:hover,
+.idb-button-primary:focus,
+.idb-button-primary:focus-visible {
+	background-color: var(--il-blue-50);
+	border-color: var(--il-blue-50);
+	color: #ffffff;
+}
+
+a.idb-button-primary,
+a.idb-button-primary:visited,
+a.idb-button-primary:hover,
+a.idb-button-primary:focus,
+a.idb-button-primary:focus-visible,
+a.idb-button-primary:active {
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.idb-button-danger {
+	background-color: var(--il-altgeld);
+	border-color: var(--il-altgeld);
+	color: #ffffff;
+}
+
+.idb-button-danger:hover,
+.idb-button-danger:focus,
+.idb-button-danger:focus-visible {
+	background-color: var(--il-orange-40);
+	border-color: var(--il-orange-40);
+	color: #ffffff;
+}
+
+a.idb-button-danger,
+a.idb-button-danger:visited,
+a.idb-button-danger:hover,
+a.idb-button-danger:focus,
+a.idb-button-danger:focus-visible,
+a.idb-button-danger:active {
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.idb-button-secondary {
+	background-color: var(--il-storm-95);
+	border-color: var(--il-storm-80);
+	color: var(--il-blue);
+}
+
+.idb-button-secondary:hover,
+.idb-button-secondary:focus,
+.idb-button-secondary:focus-visible {
+	background-color: var(--il-storm-80);
+	border-color: var(--il-storm-70);
+	color: var(--il-blue);
+}
+
+.idb-button-primary:focus,
+.idb-button-primary:focus-visible,
+.idb-button-secondary:focus,
+.idb-button-secondary:focus-visible,
+.idb-button-danger:focus,
+.idb-button-danger:focus-visible {
+	outline: 2px solid var(--il-harvest);
+	outline-offset: 2px;
+}
+
+button.idb-button-primary:disabled,
+button.idb-button-secondary:disabled,
+button.idb-button-danger:disabled,
+input.idb-button-primary:disabled,
+input.idb-button-secondary:disabled,
+input.idb-button-danger:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 /* -----------------------------------------------------------------------

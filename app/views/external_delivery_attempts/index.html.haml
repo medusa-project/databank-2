@@ -21,10 +21,10 @@
     = hidden_field_tag :direction, sort_direction
     = hidden_field_tag :page, 1
     %p
-      = submit_tag "Apply Filters", class: "ilw-button"
+      = submit_tag "Apply Filters", class: "idb-button-primary"
 
   %p
-    = link_to "Export CSV", admin_external_delivery_attempts_path(query_params_for(format: :csv, page: 1)), class: "ilw-button"
+    = link_to "Export CSV", admin_external_delivery_attempts_path(query_params_for(format: :csv, page: 1)), class: "idb-button-secondary"
 
   - if @attempts.any?
     %p
@@ -57,7 +57,7 @@
             %td= attempt.error_message.presence || "-"
             %td
               - if attempt.status == "failed"
-                = button_to "Replay", replay_admin_external_delivery_attempt_path(attempt), method: :post, params: query_params_for, class: "ilw-button"
+                = button_to "Replay", replay_admin_external_delivery_attempt_path(attempt), method: :post, params: query_params_for, class: "idb-button-primary"
               - else
                 = "-"
 
@@ -71,14 +71,14 @@
       = hidden_field_tag :direction, sort_direction
       = hidden_field_tag :page, @page
       %p
-        = submit_tag "Replay Selected Failed Attempts", class: "ilw-button"
+        = submit_tag "Replay Selected Failed Attempts", class: "idb-button-primary"
 
     - if @total_pages > 1
       %p
         - if @page > 1
-          = link_to "Previous", admin_external_delivery_attempts_path(query_params_for(page: @page - 1)), class: "ilw-button"
+          = link_to "Previous", admin_external_delivery_attempts_path(query_params_for(page: @page - 1)), class: "idb-button-secondary"
         = " Page #{@page} of #{@total_pages} "
         - if @page < @total_pages
-          = link_to "Next", admin_external_delivery_attempts_path(query_params_for(page: @page + 1)), class: "ilw-button"
+          = link_to "Next", admin_external_delivery_attempts_path(query_params_for(page: @page + 1)), class: "idb-button-secondary"
   - else
     %p No delivery attempts match the selected filters.

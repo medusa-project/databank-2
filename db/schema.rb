@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_22_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -46,9 +46,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
     t.string "email"
+    t.string "family_name"
+    t.string "given_name"
+    t.string "identifier"
+    t.string "identifier_scheme"
+    t.string "institution_name"
+    t.boolean "is_contact", default: false, null: false
     t.string "name", null: false
     t.integer "position"
     t.string "role"
+    t.integer "row_order"
+    t.integer "row_position"
+    t.integer "type_of"
     t.datetime "updated_at", null: false
     t.index ["dataset_id"], name: "index_contributors_on_dataset_id"
   end
@@ -58,8 +67,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
     t.string "email"
+    t.string "family_name"
+    t.string "given_name"
+    t.string "identifier"
+    t.string "identifier_scheme"
+    t.string "institution_name"
+    t.boolean "is_contact", default: false, null: false
     t.string "name", null: false
     t.integer "position"
+    t.integer "row_order"
+    t.integer "row_position"
+    t.integer "type_of"
     t.datetime "updated_at", null: false
     t.index ["dataset_id"], name: "index_creators_on_dataset_id"
   end
@@ -71,6 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
     t.bigint "dataset_id", null: false
     t.text "description"
     t.string "medusa_id"
+    t.integer "row_position"
     t.string "storage_key"
     t.string "storage_root"
     t.datetime "updated_at", null: false
@@ -81,21 +100,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
   end
 
   create_table "datasets", force: :cascade do |t|
+    t.string "agree"
+    t.boolean "complete"
+    t.string "corresponding_creator_email"
+    t.string "corresponding_creator_name"
     t.datetime "created_at", null: false
+    t.string "dataset_version"
     t.string "depositor_email", null: false
     t.string "depositor_name", null: false
     t.text "description"
+    t.string "embargo"
+    t.string "external_files_link"
+    t.text "external_files_note"
+    t.string "have_permission"
     t.string "identifier"
+    t.boolean "is_import", default: false, null: false
+    t.boolean "is_test", default: false, null: false
     t.string "key", null: false
     t.text "keywords"
     t.string "license"
+    t.string "medusa_dataset_dir"
+    t.datetime "nested_updated_at"
+    t.boolean "org_creators", default: false, null: false
     t.string "owner_uid", null: false
     t.integer "publication_state", default: 0, null: false
     t.datetime "published_at"
     t.string "publisher"
+    t.date "release_date"
+    t.string "removed_private"
+    t.string "search"
     t.string "subject"
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.text "version_comment"
     t.index ["depositor_email"], name: "index_datasets_on_depositor_email"
     t.index ["identifier"], name: "index_datasets_on_identifier", unique: true, where: "(identifier IS NOT NULL)"
     t.index ["key"], name: "index_datasets_on_key", unique: true
@@ -123,11 +160,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
 
   create_table "funders", force: :cascade do |t|
     t.string "award_number"
+    t.string "code"
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
+    t.string "grant"
     t.string "identifier"
+    t.string "identifier_scheme"
     t.string "name", null: false
     t.integer "position"
+    t.integer "row_position"
     t.datetime "updated_at", null: false
     t.index ["dataset_id"], name: "index_funders_on_dataset_id"
   end
@@ -161,13 +202,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_140000) do
   end
 
   create_table "related_materials", force: :cascade do |t|
+    t.string "availability"
+    t.text "citation"
     t.datetime "created_at", null: false
+    t.string "datacite_list"
     t.bigint "dataset_id", null: false
+    t.boolean "feature", default: false, null: false
+    t.string "link"
+    t.string "material_type"
+    t.text "note"
     t.integer "position"
     t.string "relation_type"
+    t.integer "row_position"
+    t.string "selected_type"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.string "uri"
+    t.string "uri_type"
     t.index ["dataset_id"], name: "index_related_materials_on_dataset_id"
   end
 

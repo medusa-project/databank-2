@@ -73,6 +73,6 @@ class DatafilesController < ApplicationController
   end
 
   def datafile_params
-    params.require(:datafile).permit(:binary_name, :binary_size, :description, :binary, :storage_root, :storage_key, :medusa_id)
+    params.require(:datafile).permit(:binary_name, :binary_size, :description, :binary, :storage_root, :storage_key, :medusa_id, :position, :row_position)
   end
 end

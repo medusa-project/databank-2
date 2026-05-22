@@ -1,0 +1,113 @@
+- content_for :title, "Pre-Deposit Considerations"
+
+%ilw-content.pre-deposit-page.idb-page-sections
+  .idb-sections-layout
+    %nav.idb-sections-toc{aria: { label: "Pre-deposit page sections" }}
+      %h2.idb-sections-toc-title On This Page
+      %ul
+        %li= link_to "Large Files", "#predeposit-large-files"
+        %li= link_to "License Selection", "#predeposit-license"
+        %li= link_to "Dataset Organization", "#predeposit-organization"
+        %li= link_to "Zipping Folders", "#predeposit-zipping"
+        %li= link_to "Primary Contact", "#predeposit-contact"
+        %li= link_to "Publication Delay", "#predeposit-delay"
+        %li= link_to "Help Options", "#predeposit-help"
+
+    .idb-sections-content
+      %section#predeposit-large-files.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Files larger than 50 GB require special handling. (click to expand)
+          .idb-section-body
+            %p
+              For files larger than 50 GB, please fill out our
+              %a{href: "http://go.illinois.edu/databank_largefiletransfer"} large file transfer request form
+              or
+              %a{href: "mailto:databank@library.illinois.edu"} email us
+              to learn more about file transfer options.
+
+      %section#predeposit-license.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Select a license for your dataset. (click to expand)
+          .idb-section-body
+            %p
+              Datasets are complex objects, and understanding how copyright law applies to datasets is similarly complex.
+            %p
+              For background on research data copyright and licensing, review
+              = succeed "." do
+                %a{href: guides_path(anchor: "license")} Research Data Copyright and Licensing
+            %p Your dataset license options in Illinois Data Bank are:
+            = render partial: "datasets/help/license_infographic"
+            %p
+              Find out more about
+              %a{href: "https://creativecommons.org/publicdomain/zero/1.0/", target: "_blank", rel: "noopener"} CC0
+              and
+              = succeed "." do
+                %a{href: "https://creativecommons.org/licenses/by/4.0/", target: "_blank", rel: "noopener"} CC BY
+            %p
+              %strong If you choose to use a license.txt file, upload it with your other dataset files.
+
+      %section#predeposit-organization.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Organize your dataset, especially if it has more than a few files. (click to expand)
+          .idb-section-body
+            = render partial: "datasets/grouping_panel"
+
+      %section#predeposit-zipping.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Zip or tar any folders or subdirectories before uploading them. (click to expand)
+          .idb-section-body
+            = render partial: "datasets/zipping_panel"
+
+      %section#predeposit-contact.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Select a long-term primary contact for your dataset. (click to expand)
+          .idb-section-body
+            = render partial: "datasets/select_contact_info"
+
+      %section#predeposit-delay.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title You may delay publication of your dataset. (click to expand)
+          .idb-section-body
+            %p
+              Due to publisher or other requirements, researchers may need to deposit a dataset but make it temporarily unavailable for download.
+            %p
+              For more guidance, review
+              = succeed "." do
+                %a{href: guides_path(anchor: "embargo")} Delaying publication (embargo) guidance
+            %p
+              By default, there is no publication delay. Your other options are:
+            = render partial: "datasets/help/embargo_infographic"
+
+      %section#predeposit-help.idb-section-card
+        %details.idb-section-disclosure
+          %summary
+            %h2.pre-deposit-accordion-title Help Options (click to expand)
+          .idb-section-body
+            %p The Research Data Service has data publishing experts and we are here to help.
+
+            %h3 Guides
+            %p
+              Guidance remains available throughout this process. Open
+              %a{href: guides_path} Guides
+              from the top navigation menu at any time.
+            %p
+              For context-specific help, use the help indicators shown near form elements.
+
+            %h3 Contact Us
+            %p
+              If you have questions or need assistance, submit our
+              %a{href: "https://forms.illinois.edu/sec/1628290621", target: "_blank", rel: "noopener"} consultation request form
+              or
+              = succeed "." do
+                %a{href: "mailto:databank@library.illinois.edu"} email us
+
+      %nav{aria: { label: "Pre-deposit actions" }}
+        = link_to "Continue", new_dataset_path, class: "idb-button-primary"
+        = " "
+        = link_to "Cancel", root_path, class: "idb-button-danger"

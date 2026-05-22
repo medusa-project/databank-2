@@ -24,6 +24,11 @@ class DatasetsController < ApplicationController
     @total_pages = @search.total_pages
   end
 
+  def pre_deposit
+    authorize! :create, Dataset
+    @title = "Pre-Deposit Considerations"
+  end
+
   def show
     authorize! :read, @dataset
     @version_group = DatasetVersionGroup.new(@dataset)
@@ -174,6 +179,7 @@ class DatasetsController < ApplicationController
   def new
     @dataset = Dataset.new
     authorize! :create, @dataset
+    @title = "Deposit Agreement"
   end
 
   def create
@@ -181,9 +187,23 @@ class DatasetsController < ApplicationController
     assign_depositor_fields(@dataset)
     authorize! :create, @dataset
 
+    agreement_submission = params[:agreement_submission] == "true"
+    @dataset.title = "Untitled Dataset" if agreement_submission && @dataset.title.blank?
+
+    if agreement_submission && !valid_deposit_agreement_submission?(@dataset)
+      @title = "Deposit Agreement"
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset created."
+      if agreement_submission
+        redirect_to edit_dataset_path(@dataset), notice: "Deposit agreement accepted. Continue with dataset metadata."
+      else
+        redirect_to dataset_path(@dataset), notice: "Dataset created."
+      end
     else
+      @title = "Deposit Agreement"
       render :new, status: :unprocessable_entity
     end
   end
@@ -194,10 +214,21 @@ class DatasetsController < ApplicationController
 
   def update
     authorize! :update, @dataset
-
-    if @dataset.update(dataset_params)
-      redirect_to dataset_path(@dataset), notice: "Dataset updated."
+    requested_org_mode = if dataset_params.key?(:org_creators)
+      ActiveModel::Type::Boolean.new.cast(dataset_params[:org_creators])
     else
+      @dataset.org_creators
+    end
+
+    org_mode_changed = requested_org_mode != @dataset.org_creators
+
+    begin
+      Dataset.transaction do
+        @dataset.update!(dataset_params)
+        @dataset.convert_creators_for_org_mode! if org_mode_changed
+      end
+      redirect_to dataset_path(@dataset), notice: "Dataset updated."
+    rescue ActiveRecord::RecordInvalid
       render :edit, status: :unprocessable_entity
     end
   end
@@ -387,13 +418,133 @@ class DatasetsController < ApplicationController
   end
 
   def dataset_params
-    params.require(:dataset).permit(:title, :description, :keywords, :subject, :license, :publisher)
+    params.require(:dataset).permit(
+      :title,
+      :description,
+      :keywords,
+      :subject,
+      :license,
+      :publisher,
+      :identifier,
+      :embargo,
+      :release_date,
+      :complete,
+      :search,
+      :dataset_version,
+      :is_test,
+      :is_import,
+      :medusa_dataset_dir,
+      :external_files_link,
+      :external_files_note,
+      :version_comment,
+      :have_permission,
+      :removed_private,
+      :agree,
+      :org_creators,
+      :corresponding_creator_name,
+      :corresponding_creator_email,
+      datafiles_attributes: [
+        :id,
+        :binary_name,
+        :binary_size,
+        :description,
+        :row_position,
+        :position,
+        :_destroy,
+        :binary
+      ],
+      creators_attributes: [
+        :id,
+        :name,
+        :family_name,
+        :given_name,
+        :institution_name,
+        :identifier,
+        :identifier_scheme,
+        :type_of,
+        :row_position,
+        :row_order,
+        :position,
+        :email,
+        :contact,
+        :is_contact,
+        :_destroy
+      ],
+      contributors_attributes: [
+        :id,
+        :name,
+        :family_name,
+        :given_name,
+        :institution_name,
+        :identifier,
+        :identifier_scheme,
+        :type_of,
+        :row_position,
+        :row_order,
+        :position,
+        :email,
+        :role,
+        :is_contact,
+        :_destroy
+      ],
+      funders_attributes: [
+        :id,
+        :code,
+        :name,
+        :identifier,
+        :identifier_scheme,
+        :grant,
+        :award_number,
+        :row_position,
+        :position,
+        :_destroy
+      ],
+      related_materials_attributes: [
+        :id,
+        :title,
+        :material_type,
+        :selected_type,
+        :availability,
+        :link,
+        :uri,
+        :uri_type,
+        :citation,
+        :datacite_list,
+        :note,
+        :feature,
+        :relation_type,
+        :row_position,
+        :position,
+        :_destroy
+      ]
+    )
   end
 
   def assign_depositor_fields(dataset)
     dataset.owner_uid      = current_user.uid
     dataset.depositor_name  = current_user.name
     dataset.depositor_email = current_user.email
+  end
+
+  def valid_deposit_agreement_submission?(dataset)
+    valid = true
+
+    if dataset.have_permission != "yes"
+      dataset.errors.add(:have_permission, "must be Yes to continue.")
+      valid = false
+    end
+
+    unless %w[yes na].include?(dataset.removed_private)
+      dataset.errors.add(:removed_private, "must be Yes or Not applicable to continue.")
+      valid = false
+    end
+
+    if dataset.agree != "yes"
+      dataset.errors.add(:agree, "must be Yes to continue.")
+      valid = false
+    end
+
+    valid
   end
 
   def public_datasets

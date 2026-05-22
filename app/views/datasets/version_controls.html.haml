@@ -5,7 +5,7 @@
     .dataset-show-titlebar
       %p.dataset-show-key= @dataset.key
       .dataset-show-actions
-        = link_to "Back to Dataset", dataset_path(@dataset), class: "ilw-button"
+        = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-primary"
 
   .dataset-show-grid
     %section.dataset-show-panel{aria: { label: "Version controls summary" }}
@@ -43,7 +43,7 @@
           Copy files from
           = link_to "#{@previous_version.title} (#{@previous_version.key})", dataset_path(@previous_version)
           into this draft version.
-        = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset, from: "version_controls"), method: :post, class: "ilw-button"
+        = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset, from: "version_controls"), method: :post, class: "idb-button-primary"
 
     - if @version_comparison.present?
       %section.dataset-show-panel{aria: { label: "Difference summary" }}
@@ -113,7 +113,7 @@
                   %br/
                   = f.text_area :review_note, rows: 2
                 %p
-                  = f.submit "Approve and Create Draft", class: "ilw-button"
+                  = f.submit "Approve and Create Draft", class: "idb-button-primary"
               = form_with url: reject_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
                 = hidden_field_tag :from, "version_controls"
                 %p
@@ -121,7 +121,7 @@
                   %br/
                   = f.text_area :review_note, rows: 2
                 %p
-                  = f.submit "Reject Request", class: "ilw-button"
+                  = f.submit "Reject Request", class: "idb-button-danger"
       - else
         %p No pending version requests for this dataset.
 

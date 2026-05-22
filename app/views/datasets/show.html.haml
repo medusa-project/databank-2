@@ -26,11 +26,11 @@
 
       - if logged_in? && can?(:update, @dataset)
         .dataset-show-actions
-          = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "ilw-button"
+          = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "idb-button-primary"
           - if @dataset.version_eligible?
-            = link_to "Request New Version", pre_version_dataset_path(@dataset), class: "ilw-button"
+            = link_to "Request New Version", pre_version_dataset_path(@dataset), class: "idb-button-primary"
             - if can?(:manage, Dataset)
-              = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "ilw-button"
+              = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
     - if @dataset.description.present?
       .dataset-show-abstract
@@ -49,7 +49,7 @@
             %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
             .dataset-show-persistent-controls
               %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
-              %button.ilw-button.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });"}
+              %button.idb-button-primary.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });"}
                 Copy
               %span#copy-status.sr-only{aria: { live: "polite" }}
 
@@ -65,7 +65,7 @@
             %strong This dataset is ready to publish.
 
         - unless @dataset.published?
-          = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "ilw-button"
+          = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
   .dataset-show-grid
     %section.dataset-show-panel{aria: { label: "Dataset metadata" }}
@@ -214,7 +214,7 @@
                   - if file_size.present?
                     %span.dataset-show-list-secondary= number_to_human_size(file_size)
                   - if can?(:read, @dataset)
-                    %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "ilw-button dataset-show-download-button"
+                    %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary dataset-show-download-button"
 
     - if @version_request_history.present?
       %section.dataset-show-panel{aria: { label: "Version request history" }}
@@ -237,13 +237,13 @@
     %section.dataset-show-panel{aria: { label: "Curator controls" }}
       %h2.dataset-show-section-title Curator Controls
       %p
-        = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "ilw-button"
+        = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
 
     %section.dataset-show-panel{aria: { label: "External delivery" }}
       %h2.dataset-show-section-title External Delivery
 
       %p
-        = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "ilw-button"
+        = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
 
       - if @latest_delivery_attempts.present?
         %ul.dataset-show-list
@@ -263,8 +263,8 @@
           Failed attempts:
           = total_failed
         %p
-          = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "ilw-button"
+          = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
         - @failed_delivery_counts.each do |integration, count|
           %p
             = "#{integration} failures: #{count}"
-            = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "ilw-button"
+            = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"

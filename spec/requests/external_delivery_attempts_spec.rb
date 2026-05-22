@@ -140,13 +140,13 @@ RSpec.describe "External delivery attempts index", type: :request do
 
     get admin_external_delivery_attempts_path, params: { per_page: 1, page: 1, sort: "created_at", direction: "desc" }
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("second")
-    expect(response.body).not_to include("first")
+    expect(response.body).to include("<td>second</td>")
+    expect(response.body).not_to include("<td>first</td>")
 
     get admin_external_delivery_attempts_path, params: { per_page: 1, page: 2, sort: "created_at", direction: "desc" }
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("first")
-    expect(response.body).not_to include("second")
+    expect(response.body).to include("<td>first</td>")
+    expect(response.body).not_to include("<td>second</td>")
   end
 
   it "exports filtered attempts as csv" do

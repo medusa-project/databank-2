@@ -96,6 +96,251 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.identifier).to eq("10.5555/#{dataset.key}")
   end
 
+  it "accepts nested metadata attributes in a single dataset create request" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Atomic Nested Dataset",
+        description: "Created with nested payload",
+        keywords: "nested,atomic",
+        subject: "Data Management",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        have_permission: "yes",
+        removed_private: "yes",
+        agree: "yes",
+        org_creators: false,
+        creators_attributes: [
+          {
+            given_name: "Alex",
+            family_name: "Researcher",
+            email: "alex@example.edu",
+            is_contact: true,
+            row_position: 1
+          }
+        ],
+        funders_attributes: [
+          {
+            name: "U.S. Department of Energy (DOE)",
+            identifier: "10.13039/100000015",
+            grant: "DE-55555",
+            row_position: 1
+          }
+        ],
+        related_materials_attributes: [
+          {
+            material_type: "Journal Article",
+            citation: "Research Group (2026) Companion article",
+            uri: "https://example.org/article",
+            relation_type: "IsSupplementTo",
+            row_position: 1
+          }
+        ]
+      }
+    }
+
+    dataset = Dataset.order(:created_at).last
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    expect(dataset.have_permission).to eq("yes")
+    expect(dataset.removed_private).to eq("yes")
+    expect(dataset.agree).to eq("yes")
+    expect(dataset.creators.count).to eq(1)
+    expect(dataset.funders.count).to eq(1)
+    expect(dataset.related_materials.count).to eq(1)
+    expect(dataset.corresponding_creator_name).to eq("Alex Researcher")
+    expect(dataset.corresponding_creator_email).to eq("alex@example.edu")
+    expect(dataset.creators.first.row_position).to eq(1)
+    expect(dataset.funders.first.grant).to eq("DE-55555")
+    expect(dataset.funders.first.award_number).to eq("DE-55555")
+    expect(dataset.related_materials.first.title).to eq("Research Group (2026) Companion article")
+  end
+
+  it "converts individual creators to contributors when org creator mode is enabled" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Creator Mode Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Creator Mode Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        org_creators: true,
+        creators_attributes: [
+          {
+            given_name: "Ada",
+            family_name: "Lovelace",
+            email: "ada@example.edu",
+            row_position: 1,
+            is_contact: true
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.org_creators).to be(true)
+    expect(dataset.creators.count).to eq(0)
+    expect(dataset.contributors.count).to eq(1)
+    expect(dataset.contributors.first.family_name).to eq("Lovelace")
+    expect(dataset.contributors.first.given_name).to eq("Ada")
+  end
+
+  it "converts contributors back to creators when org creator mode is disabled" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Creator Mode Roundtrip Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Creator Mode Roundtrip Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        org_creators: true,
+        creators_attributes: [
+          {
+            given_name: "Grace",
+            family_name: "Hopper",
+            email: "grace@example.edu",
+            row_position: 1,
+            is_contact: true
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Creator Mode Roundtrip Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        org_creators: false
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.org_creators).to be(false)
+    expect(dataset.contributors.count).to eq(0)
+    expect(dataset.creators.count).to eq(1)
+    expect(dataset.creators.first.family_name).to eq("Hopper")
+    expect(dataset.creators.first.given_name).to eq("Grace")
+  end
+
+  it "persists row positions from nested metadata updates" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Row Position Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Row Position Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        creators_attributes: [
+          { given_name: "First", family_name: "Creator", row_position: 2 },
+          { given_name: "Second", family_name: "Creator", row_position: 1 }
+        ],
+        funders_attributes: [
+          { name: "Funder One", row_position: 2 },
+          { name: "Funder Two", row_position: 1 }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.creators.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.creators.map(&:given_name)).to eq([ "Second", "First" ])
+    expect(dataset.funders.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.funders.map(&:name)).to eq([ "Funder Two", "Funder One" ])
+  end
+
+  it "returns ORCID lookup results for dataset creators" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "ORCID Lookup Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    payload = {
+      "expanded-result" => [
+        {
+          "orcid-id" => "0000-0002-1825-0097",
+          "family-names" => "Lovelace",
+          "given-names" => "Ada",
+          "institution-name" => "Analytical Engine Institute"
+        }
+      ]
+    }.to_json
+
+    response_double = instance_double("Net::HTTPResponse", body: payload)
+    allow(response_double).to receive(:is_a?).with(Net::HTTPSuccess).and_return(true)
+    allow(Net::HTTP).to receive(:start).and_return(response_double)
+
+    get orcid_lookup_dataset_creators_path(dataset), params: { family_name: "Lovelace", given_name: "Ada" }
+
+    expect(response).to have_http_status(:ok)
+    body = JSON.parse(response.body)
+    expect(body["results"]).to be_an(Array)
+    expect(body["results"].first["orcid"]).to eq("0000-0002-1825-0097")
+  end
+
   it "downloads using medusa storage metadata without attachment" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -150,6 +395,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("known-funders")
     expect(response.body).to include("U.S. Department of Energy (DOE)")
     expect(response.body).to include("10.13039/100000015")
+    expect(response.body).not_to include("<h2 class='idb-section-title'>Contributors</h2>")
   end
 
   it "keeps only one primary contact creator at a time" do

@@ -37,6 +37,21 @@ class RelatedMaterialsController < ApplicationController
   end
 
   def related_material_params
-    params.require(:related_material).permit(:title, :uri, :relation_type, :position)
+    params.require(:related_material).permit(
+      :title,
+      :material_type,
+      :selected_type,
+      :availability,
+      :link,
+      :uri,
+      :uri_type,
+      :citation,
+      :datacite_list,
+      :note,
+      :feature,
+      :relation_type,
+      :position,
+      :row_position
+    )
   end
 end
