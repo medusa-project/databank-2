@@ -1,0 +1,12 @@
+A new dataset version request has been submitted and is awaiting curator review.
+
+Dataset: <%= @dataset.title %> (<%= @dataset.key %>)
+Requester: <%= @version_request.requester_name %> (<%= @version_request.requester_email %>)
+Requested at: <%= @version_request.requested_at.utc.iso8601 %>
+
+Review this request in Version Controls:
+<%= version_controls_dataset_url(@dataset) %>
+
+<% if @version_request.comment.present? %>Request note:
+<%= @version_request.comment %>
+<% end %>

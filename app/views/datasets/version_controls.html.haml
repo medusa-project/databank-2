@@ -1,0 +1,163 @@
+- content_for :title, "Version Controls"
+
+%ilw-content.dataset-show-page
+  .dataset-show-summary
+    .dataset-show-titlebar
+      %p.dataset-show-key= @dataset.key
+      .dataset-show-actions
+        = link_to "Back to Dataset", dataset_path(@dataset), class: "ilw-button"
+
+  .dataset-show-grid
+    %section.dataset-show-panel{aria: { label: "Version controls summary" }}
+      %h2.dataset-show-section-title Version Controls
+      %dl.dataset-show-metadata
+        %dt Dataset
+        %dd= "#{@dataset.title} (#{@dataset.key})"
+
+        %dt Publication State
+        %dd= @dataset.publication_state.to_s
+
+        - if @previous_version.present?
+          %dt Previous Version
+          %dd= link_to "#{@previous_version.title} (#{@previous_version.key})", dataset_path(@previous_version)
+
+        - if @version_group.latest_published_version.present?
+          %dt Latest Published in Chain
+          %dd= link_to "#{@version_group.latest_published_version.title} (#{@version_group.latest_published_version.key})", dataset_path(@version_group.latest_published_version)
+
+    - if @dataset.draft? && @previous_version.nil?
+      %section.dataset-show-panel{aria: { label: "Previous version resolution" }}
+        %h2.dataset-show-section-title Previous Version Resolution
+        %p
+          No previous version found for this dataset.
+        - previous_material = @dataset.previous_version_material
+        - if previous_material&.uri.present?
+          %p
+            Version linkage URI:
+            = link_to(previous_material.uri, previous_material.uri)
+
+    - if @dataset.draft? && @previous_version.present?
+      %section.dataset-show-panel{aria: { label: "Version file copy controls" }}
+        %h2.dataset-show-section-title Version File Copy
+        %p
+          Copy files from
+          = link_to "#{@previous_version.title} (#{@previous_version.key})", dataset_path(@previous_version)
+          into this draft version.
+        = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset, from: "version_controls"), method: :post, class: "ilw-button"
+
+    - if @version_comparison.present?
+      %section.dataset-show-panel{aria: { label: "Difference summary" }}
+        %h2.dataset-show-section-title Difference Summary
+
+        %h3.dataset-show-section-subtitle Metadata
+        .dataset-show-table-wrap
+          %table.dataset-show-table
+            %thead
+              %tr
+                %th Field
+                %th Current
+                %th Previous
+            %tbody
+              - @version_comparison[:metadata_rows].each do |row|
+                %tr{ class: (row[:different] ? "dataset-show-version-selected" : nil) }
+                  %td= row[:label]
+                  %td= row[:current].presence || "(blank)"
+                  %td= row[:previous].presence || "(blank)"
+
+        %h3.dataset-show-section-subtitle Creators
+        %p
+          %strong Added:
+          = @version_comparison[:creators_added].presence&.join("; ") || "none"
+        %p
+          %strong Removed:
+          = @version_comparison[:creators_removed].presence&.join("; ") || "none"
+
+        %h3.dataset-show-section-subtitle Funders
+        %p
+          %strong Added:
+          = @version_comparison[:funders_added].presence&.join("; ") || "none"
+        %p
+          %strong Removed:
+          = @version_comparison[:funders_removed].presence&.join("; ") || "none"
+
+        %h3.dataset-show-section-subtitle Related Materials (non-version)
+        %p
+          %strong Added:
+          = @version_comparison[:related_materials_added].presence&.join("; ") || "none"
+        %p
+          %strong Removed:
+          = @version_comparison[:related_materials_removed].presence&.join("; ") || "none"
+
+        %h3.dataset-show-section-subtitle Files
+        %p
+          %strong Added:
+          = @version_comparison[:files_added].presence&.join("; ") || "none"
+        %p
+          %strong Removed:
+          = @version_comparison[:files_removed].presence&.join("; ") || "none"
+
+    %section.dataset-show-panel{aria: { label: "Pending version requests" }}
+      %h2.dataset-show-section-title Pending Version Requests
+      - if @pending_version_requests.any?
+        %ul.dataset-show-list
+          - @pending_version_requests.each do |request|
+            %li
+              %span.dataset-show-list-primary= "#{request.requester_name} (#{request.requester_email})"
+              %span.dataset-show-list-secondary= "Requested at #{request.requested_at.utc.iso8601}"
+              - if request.comment.present?
+                %span.dataset-show-list-tertiary= request.comment
+              = form_with url: approve_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
+                = hidden_field_tag :from, "version_controls"
+                %p
+                  = f.label :review_note, "Curator review note (optional)"
+                  %br/
+                  = f.text_area :review_note, rows: 2
+                %p
+                  = f.submit "Approve and Create Draft", class: "ilw-button"
+              = form_with url: reject_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
+                = hidden_field_tag :from, "version_controls"
+                %p
+                  = f.label :review_note, "Curator review note (optional)"
+                  %br/
+                  = f.text_area :review_note, rows: 2
+                %p
+                  = f.submit "Reject Request", class: "ilw-button"
+      - else
+        %p No pending version requests for this dataset.
+
+    %section.dataset-show-panel{aria: { label: "Reviewed version requests" }}
+      %h2.dataset-show-section-title Reviewed Version Requests
+
+      %h3.dataset-show-section-subtitle Approved Requests
+      - if @approved_version_requests.any?
+        %ul.dataset-show-list
+          - @approved_version_requests.each do |request|
+            %li
+              %span.dataset-show-list-primary= "Approved request from #{request.requester_name}"
+              %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
+              - if request.reviewed_at.present?
+                %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
+              - if request.reviewed_by_uid.present?
+                %span.dataset-show-list-tertiary= "Reviewed by #{request.reviewed_by_uid}"
+              - if request.review_note.present?
+                %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
+              - if request.approved_dataset.present?
+                %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
+      - else
+        %p No approved version requests yet.
+
+      %h3.dataset-show-section-subtitle Rejected Requests
+      - if @rejected_version_requests.any?
+        %ul.dataset-show-list
+          - @rejected_version_requests.each do |request|
+            %li
+              %span.dataset-show-list-primary= "Rejected request from #{request.requester_name}"
+              %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
+              - if request.reviewed_at.present?
+                %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
+              - if request.reviewed_by_uid.present?
+                %span.dataset-show-list-tertiary= "Reviewed by #{request.reviewed_by_uid}"
+              - if request.review_note.present?
+                %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
+      - else
+        %p No rejected version requests yet.

@@ -1,9 +1,17 @@
 - content_for :title, "Version Request Submitted"
 
 %ilw-content
+  %h2 Thank you!
   %h2 Your new version request has been submitted
   %p
-    A curator will review your request. Once approved, an editable draft version will be created for you.
+    Once a curator has approved your request, you will be able to edit your new version draft, add and remove files,
+    and submit your new version for pre-publication review. You should receive an email from a curator with a link to
+    your draft within 1-2 business days.
+
+  %p
+    If you have any questions, please
+    = succeed "." do
+      = link_to "contact the Research Data Service team", contact_path
 
   - if @version_request.present?
     %p

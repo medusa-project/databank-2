@@ -5,10 +5,12 @@ RSpec.describe "Datasets workflow", type: :request do
 
   around do |example|
     OmniAuth.config.test_mode = true
+    ActionMailer::Base.deliveries.clear
     example.run
   ensure
     OmniAuth.config.test_mode = false
     OmniAuth.config.mock_auth[:developer] = nil
+    ActionMailer::Base.deliveries.clear
   end
 
   it "allows a depositor to create edit and publish a dataset with contact creator" do
@@ -760,6 +762,7 @@ RSpec.describe "Datasets workflow", type: :request do
   end
 
   it "lets a depositor submit a version request and shows acknowledgement" do
+    User.create!(provider: "developer", uid: "admin@example.edu", email: "admin@example.edu", username: "admin", name: "Admin User", role: "admin")
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
     source = Dataset.create!(
@@ -788,11 +791,32 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(version_acknowledge_dataset_path(source, version_request_id: request.id))
 
     follow_redirect!
+    expect(response.body).to include("Thank you!")
     expect(response.body).to include("Your new version request has been submitted")
+    expect(response.body).to include("within 1-2 business days")
+    expect(response.body).to include("contact the Research Data Service team")
     expect(response.body).to include("Need to add corrected analysis files.")
 
     expect(request.status).to eq("pending")
     expect(request.requester_email).to eq("owner@example.edu")
+
+    subjects = ActionMailer::Base.deliveries.map(&:subject)
+    recipients = ActionMailer::Base.deliveries.flat_map(&:to)
+    expect(subjects).to include("Version request submitted for #{source.key}")
+    expect(subjects).to include("Your version request was received for #{source.key}")
+    expect(recipients).to include("admin@example.edu", "owner@example.edu")
+
+    curator_mail = ActionMailer::Base.deliveries.find { |message| message.subject == "Version request submitted for #{source.key}" }
+    expect(curator_mail).to be_present
+    expect(curator_mail.body.encoded).to include("awaiting curator review")
+    expect(curator_mail.body.encoded).to include("Requester: Owner User (owner@example.edu)")
+    expect(curator_mail.body.encoded).to include("/datasets/#{source.key}/version_controls")
+
+    acknowledgement_mail = ActionMailer::Base.deliveries.find { |message| message.subject == "Your version request was received for #{source.key}" }
+    expect(acknowledgement_mail).to be_present
+    expect(acknowledgement_mail.body.encoded).to include("Thank you!")
+    expect(acknowledgement_mail.body.encoded).to include("within 1-2 business days")
+    expect(acknowledgement_mail.body.encoded).to include("contact the Research Data Service team")
   end
 
   it "does not create a duplicate pending version request" do
@@ -870,6 +894,7 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get version_acknowledge_dataset_path(source, version_request_id: pending_request.id)
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("within 1-2 business days")
     expect(response.body).to include("Your new version request has been submitted")
 
     get version_acknowledge_dataset_path(source, version_request_id: approved_request.id)
@@ -939,6 +964,52 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(request.status).to eq("approved")
     expect(request.reviewed_by_uid).to eq("admin@example.edu")
     expect(request.approved_dataset_id).to eq(new_dataset.id)
+
+    follow_redirect!
+    expect(response.body).to include("Version request approved. Draft #{new_dataset.key} is ready for editing.")
+
+    subjects = ActionMailer::Base.deliveries.map(&:subject)
+    recipients = ActionMailer::Base.deliveries.flat_map(&:to)
+    expect(subjects).to include("Your version request was approved for #{source.key}")
+    expect(recipients).to include("owner@example.edu")
+
+    approved_mail = ActionMailer::Base.deliveries.find { |message| message.subject == "Your version request was approved for #{source.key}" }
+    expect(approved_mail).to be_present
+    expect(approved_mail.body.encoded).to include("You can now edit your new version draft")
+    expect(approved_mail.body.encoded).to include("/datasets/#{new_dataset.key}/edit")
+  end
+
+  it "redirects approve action back to version controls when initiated there" do
+    source = Dataset.create!(
+      title: "Approve Redirect Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900410"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need approved redirect",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("Version request approved. Draft")
   end
 
   it "allows an admin to reject a pending version request" do
@@ -980,7 +1051,123 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(request.approved_dataset_id).to be_nil
   end
 
-  it "shows optional curator review note fields on pending requests for admins" do
+  it "redirects reject action back to version controls when initiated there" do
+    source = Dataset.create!(
+      title: "Reject Redirect Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900411"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need rejected redirect",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post reject_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Rejected from controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("Version request rejected.")
+  end
+
+  it "redirects approve not-found errors back to version controls when initiated there" do
+    source = Dataset.create!(
+      title: "Approve Not Found Redirect Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900412"
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: 999_999), params: { from: "version_controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("No pending version request found.")
+  end
+
+  it "redirects reject not-found errors back to version controls when initiated there" do
+    source = Dataset.create!(
+      title: "Reject Not Found Redirect Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900413"
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post reject_version_request_dataset_path(source, version_request_id: 999_999), params: { from: "version_controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("No pending version request found.")
+  end
+
+  it "redirects approve processing errors back to version controls when initiated there" do
+    source = Dataset.create!(
+      title: "Approve Error Redirect Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900414"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need approved redirect error",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    allow_any_instance_of(DatasetVersionBuilder).to receive(:call).and_raise(StandardError, "boom")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    follow_redirect!
+    expect(response.body).to include("Could not approve the version request right now. Please try again.")
+    expect(response.body).not_to include("boom")
+  end
+
+  it "shows optional curator review note fields on version controls for admins" do
     source = Dataset.create!(
       title: "Admin Pending Queue Source",
       description: "Published source dataset.",
@@ -1005,7 +1192,17 @@ RSpec.describe "Datasets workflow", type: :request do
     )
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
     get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Curator Controls")
+    expect(response.body).to include("Version Controls")
+    expect(response.body).not_to include("Pending Version Requests")
+    expect(response.body).not_to include("Approve and Create Draft")
+    expect(response.body).not_to include("Reject Request")
+
+    get version_controls_dataset_path(source)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Pending Version Requests")
@@ -1708,6 +1905,335 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).to include("Admin Versions Draft")
+  end
+
+  it "shows version controls to admins" do
+    source = Dataset.create!(
+      title: "Version Controls Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100001"
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need to revise the dataset.",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version Controls")
+    expect(response.body).to include("Pending Version Requests")
+    expect(response.body).to include("Need to revise the dataset.")
+  end
+
+  it "shows reviewed requests grouped with reviewer metadata and newest-first ordering" do
+    source = Dataset.create!(
+      title: "Version Controls Reviewed Grouping Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100004"
+    )
+
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved older",
+      requested_at: 3.days.ago,
+      status: :approved,
+      reviewed_at: 2.days.ago,
+      reviewed_by_uid: "curator-1@example.edu",
+      review_note: "Older approved note"
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved newer",
+      requested_at: 2.days.ago,
+      status: :approved,
+      reviewed_at: 1.day.ago,
+      reviewed_by_uid: "curator-2@example.edu",
+      review_note: "Newer approved note"
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Rejected older",
+      requested_at: 2.days.ago,
+      status: :rejected,
+      reviewed_at: 1.day.ago,
+      reviewed_by_uid: "curator-3@example.edu",
+      review_note: "Older rejected note"
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Rejected newer",
+      requested_at: 1.day.ago,
+      status: :rejected,
+      reviewed_at: Time.current,
+      reviewed_by_uid: "curator-4@example.edu",
+      review_note: "Newer rejected note"
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Approved Requests")
+    expect(response.body).to include("Rejected Requests")
+    expect(response.body).to include("Reviewed by curator-2@example.edu")
+    expect(response.body).to include("Reviewed by curator-4@example.edu")
+
+    expect(response.body.index("Newer approved note")).to be < response.body.index("Older approved note")
+    expect(response.body.index("Newer rejected note")).to be < response.body.index("Older rejected note")
+  end
+
+  it "shows difference summary on version controls when previous version exists" do
+    previous = Dataset.create!(
+      title: "Comparison Source",
+      description: "Original description.",
+      keywords: "alpha,beta",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100010"
+    )
+    previous.creators.create!(name: "Creator Old", email: "old@example.edu", contact: true, position: 1)
+    previous.funders.create!(name: "Old Funder", identifier: "10.1234/old", award_number: "OLD-1", position: 1)
+    previous.related_materials.create!(title: "Old Material", uri: "https://example.org/old", relation_type: "IsSupplementTo", position: 1)
+    previous.datafiles.create!(binary_name: "old.csv", binary_size: 10)
+
+    current = Dataset.create!(
+      title: "Comparison Source Revised",
+      description: "Updated description.",
+      keywords: "alpha,gamma",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    current.related_materials.create!(
+      title: previous.title,
+      uri: previous.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+    current.creators.create!(name: "Creator New", email: "new@example.edu", contact: true, position: 1)
+    current.funders.create!(name: "New Funder", identifier: "10.1234/new", award_number: "NEW-1", position: 1)
+    current.related_materials.create!(title: "New Material", uri: "https://example.org/new", relation_type: "IsSupplementTo", position: 2)
+    current.datafiles.create!(binary_name: "new.csv", binary_size: 20)
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(current)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Difference Summary")
+    expect(response.body).to include("Comparison Source Revised")
+    expect(response.body).to include("Original description.")
+    expect(response.body).to include("Creator New")
+    expect(response.body).to include("Creator Old")
+    expect(response.body).to include("new.csv")
+    expect(response.body).to include("old.csv")
+  end
+
+  it "shows version file copy controls on version controls for draft versions" do
+    previous = Dataset.create!(
+      title: "Controls Copy Previous",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100020"
+    )
+
+    draft = Dataset.create!(
+      title: "Controls Copy Draft",
+      description: "Draft successor.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    draft.related_materials.create!(
+      title: previous.title,
+      uri: previous.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(draft)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Version File Copy")
+    expect(response.body).to include("Copy Files from Previous Version")
+  end
+
+  it "copies files from version controls and redirects back to version controls" do
+    previous = Dataset.create!(
+      title: "Controls Copy Redirect Previous",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100021"
+    )
+    previous.datafiles.create!(
+      binary_name: "remote.csv",
+      binary_size: 64,
+      description: "Storage source",
+      storage_root: "medusa",
+      storage_key: "path/to/remote.csv"
+    )
+
+    draft = Dataset.create!(
+      title: "Controls Copy Redirect Draft",
+      description: "Draft successor.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    draft.related_materials.create!(
+      title: previous.title,
+      uri: previous.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post copy_version_files_dataset_path(draft), params: { from: "version_controls" }
+
+    expect(response).to redirect_to(version_controls_dataset_path(draft))
+    follow_redirect!
+    expect(response.body).to include("Copied 1 file(s) from the previous version")
+    expect(draft.reload.datafiles.find_by!(storage_key: "path/to/remote.csv").binary_name).to eq("remote.csv")
+  end
+
+  it "shows unresolved previous-version notice on version controls when previous cannot be resolved" do
+    draft = Dataset.create!(
+      title: "Controls Unresolved Previous Draft",
+      description: "Draft successor with unresolved previous.",
+      keywords: "v2",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    draft.related_materials.create!(
+      title: "Unknown Previous",
+      uri: "https://doi.org/10.5555/IDB-UNKNOWN-PREVIOUS",
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(draft)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Previous Version Resolution")
+    expect(response.body).to include("No previous version found for this dataset.")
+    expect(response.body).to include("https://doi.org/10.5555/IDB-UNKNOWN-PREVIOUS")
+    expect(response.body).not_to include("Copy Files from Previous Version")
+  end
+
+  it "hides version controls from depositors" do
+    source = Dataset.create!(
+      title: "Version Controls Access Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100002"
+    )
+
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+    get version_controls_dataset_path(source)
+
+    expect(response).to redirect_to(root_path)
+    follow_redirect!
+    expect(response.body).to include("You are not authorized to perform this action.")
+  end
+
+  it "shows version controls entry link to admins on dataset show" do
+    source = Dataset.create!(
+      title: "Version Controls Link Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100003"
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Curator Controls")
+    expect(response.body).to include("Version Controls")
   end
 
   it "links newer-version banner to latest published version through an intermediate draft" do

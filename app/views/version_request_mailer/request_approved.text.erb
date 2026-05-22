@@ -1,0 +1,14 @@
+Your new version request has been approved.
+
+You can now edit your new version draft, add and remove files,
+and submit your new version for pre-publication review.
+
+Original dataset: <%= @dataset.title %> (<%= @dataset.key %>)
+Approved at: <%= @version_request.reviewed_at&.utc&.iso8601 %>
+
+Your draft is ready to edit:
+<%= edit_dataset_url(@approved_dataset) %>
+
+<% if @version_request.review_note.present? %>Curator note:
+<%= @version_request.review_note %>
+<% end %>

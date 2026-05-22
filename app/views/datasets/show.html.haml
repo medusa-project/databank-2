@@ -233,30 +233,10 @@
                 %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
 
   - if logged_in? && can?(:manage, Dataset)
-    - if @pending_version_requests.present?
-      %section.dataset-show-panel{aria: { label: "Pending version requests" }}
-        %h2.dataset-show-section-title Pending Version Requests
-        %ul.dataset-show-list
-          - @pending_version_requests.each do |request|
-            %li
-              %span.dataset-show-list-primary= "#{request.requester_name} (#{request.requester_email})"
-              %span.dataset-show-list-secondary= "Requested at #{request.requested_at.utc.iso8601}"
-              - if request.comment.present?
-                %span.dataset-show-list-tertiary= request.comment
-              = form_with url: approve_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
-                %p
-                  = f.label :review_note, "Curator review note (optional)"
-                  %br/
-                  = f.text_area :review_note, rows: 2
-                %p
-                  = f.submit "Approve and Create Draft", class: "ilw-button"
-              = form_with url: reject_version_request_dataset_path(@dataset, version_request_id: request.id), method: :post, local: true do |f|
-                %p
-                  = f.label :review_note, "Curator review note (optional)"
-                  %br/
-                  = f.text_area :review_note, rows: 2
-                %p
-                  = f.submit "Reject Request", class: "ilw-button"
+    %section.dataset-show-panel{aria: { label: "Curator controls" }}
+      %h2.dataset-show-section-title Curator Controls
+      %p
+        = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "ilw-button"
 
     %section.dataset-show-panel{aria: { label: "External delivery" }}
       %h2.dataset-show-section-title External Delivery

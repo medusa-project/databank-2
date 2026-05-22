@@ -1,0 +1,17 @@
+Thank you!
+
+Your new version request has been submitted.
+
+Once a curator has approved your request, you will be able to edit your new version draft, add and remove files,
+and submit your new version for pre-publication review. You should receive an email from a curator with a link to
+your draft within 1-2 business days.
+
+If you have any questions, please contact the Research Data Service team.
+
+Dataset: <%= @dataset.title %> (<%= @dataset.key %>)
+Requested at: <%= @version_request.requested_at.utc.iso8601 %>
+Status: <%= @version_request.status.titleize %>
+
+<% if @version_request.comment.present? %>Your request note:
+<%= @version_request.comment %>
+<% end %>

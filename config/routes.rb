@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   resources :datasets do
     member do
       get :pre_version
+      get :version_controls
       post :submit_version_request
       get :version_acknowledge
       post :copy_version_files
