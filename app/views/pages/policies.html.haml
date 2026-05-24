@@ -1,4 +1,27 @@
 - content_for :title, "Policies"
 
-%ilw-content
-  %p.ilw-lede This page is coming soon. Access and use policies are under construction.
+%ilw-content.idb-page-sections
+  .idb-sections-layout
+    %nav.idb-sections-toc{aria: { label: "Policies table of contents" }, data: { controller: "toc", action: "click->toc#navigate" }}
+      %h2.idb-sections-toc-title Policies
+      %ul
+        %li= link_to "Policy Framework and Definitions", "#policies-top"
+        %li= link_to "Access and Use", "#access_and_use"
+        %li= link_to "Accession", "#accession_policy"
+        %li= link_to "Deposit Agreement", "#deposit_agreement"
+        %li= link_to "Preservation", "#preservation_policy"
+        %li= link_to "Review Procedures", "#preservation_review"
+        %li= link_to "Withdrawal", "#withdrawal_guidelines"
+        %li= link_to "Review Guidelines", "#preservation_guidelines"
+
+    .idb-sections-content
+      %section#policies-top.idb-section-card
+        %h1.idb-section-title Illinois Data Bank Policy Framework and Definitions
+        = render "pages/policies/framework_and_definitions"
+      = render "pages/policies/access_and_use"
+      = render "pages/policies/accession"
+      = render "pages/policies/deposit_agreement"
+      = render "pages/policies/preservation"
+      = render "pages/policies/preservation_review"
+      = render "pages/policies/withdrawal_guidelines"
+      = render "pages/policies/preservation_guidelines"
