@@ -6,7 +6,7 @@
     %ul
       - if logged_in?
         %li
-          %a{href: datasets_path} My Datasets
+          %a{href: datasets_path}= current_user.name
         %li
           = link_to "Sign out", logout_path, data: { turbo_method: :delete }
       - else

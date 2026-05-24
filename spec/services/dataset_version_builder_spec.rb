@@ -54,7 +54,7 @@ RSpec.describe DatasetVersionBuilder do
       previous_link = new_dataset.related_materials.find_by!(relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION)
       expect(previous_link.uri).to eq("https://doi.org/10.5555/IDB-1112223")
 
-      successor_link = previous.related_materials.where(relation_type: RelatedMaterial::VERSION_NEW_RELATION).order(:created_at).last
+      successor_link = previous.related_materials.where(relation_type: RelatedMaterial::VERSION_NEW_RELATION).reorder(created_at: :desc).first
       expect(successor_link.uri).to eq("https://example.test/datasets/#{new_dataset.key}")
     end
 

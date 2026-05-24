@@ -213,10 +213,12 @@ module Migration
         title = material["material_type"].to_s.strip if title.blank?
         next if title.blank?
 
+        uri = normalized_material_uri(material)
+
         {
           title: title,
-          relation_type: material["material_type"].presence || material["relation_type"],
-          uri: normalized_material_uri(material),
+          relation_type: normalized_relation_type(material, uri),
+          uri: uri,
           position: (material["row_position"] || material["position"] || (index + 1)).to_i,
           source_created_at: material["created_at"],
           source_updated_at: material["updated_at"]
@@ -246,6 +248,17 @@ module Migration
         normalized = normalize_http_uri(value)
         return normalized if normalized.present?
       end
+      nil
+    end
+
+    def normalized_relation_type(material, uri)
+      candidate = material["relation_type"].presence || material["material_type"].presence
+      return candidate if RelatedMaterial::RELATION_TYPE_OPTIONS.include?(candidate)
+
+      # Legacy sample payloads often use material_type values like "Article".
+      # For URI-linked entries, default to a supported relationship type.
+      return "IsSupplementTo" if uri.present?
+
       nil
     end
 
