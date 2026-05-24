@@ -1,0 +1,99 @@
+%section#dataset-creators.idb-section-card
+  %details.idb-section-disclosure{open: true, data: { deposit_form_target: "creatorDisclosure" }}
+    %summary
+      %h2.idb-section-title Creators
+    .idb-section-body
+      - if can?(:manage, dataset)
+        %p
+          %button.idb-button-secondary{type: "button", data: { action: "deposit-form#switchCreatorMode", mode: "person" }}
+            Use Individual Creators
+          = " "
+          %button.idb-button-secondary{type: "button", data: { action: "deposit-form#switchCreatorMode", mode: "institution" }}
+            Use Organization Creators
+        %p
+          %strong Curator note:
+          Switching creator type deletes creator records of the other type and saves the form.
+
+      - creators_for_mode = creator_mode_org ? dataset.institutional_creators : dataset.individual_creators
+      - if creators_for_mode.empty?
+        - dataset.creators.build(type_of: default_creator_type, row_position: 1)
+        - creators_for_mode = creator_mode_org ? dataset.institutional_creators : dataset.individual_creators
+
+      - if creator_mode_org
+        %p One primary long-term contact must be selected from the organizational author list.
+
+        %table.idb-compact-table.idb-compact-table-org
+          %thead
+            %tr
+              %th
+              %th Organization Name(s)
+              %th Email
+              %th Primary Contact
+              %th
+          %tbody.idb-nested-rows{id: "creator-rows"}
+            - creators_for_mode.each_with_index do |creator, index|
+              = f.fields_for :creators, creator do |cf|
+                %tr.idb-nested-row{data: { deposit_form_target: "creatorRow" }}
+                  %td.idb-drag-cell
+                    %span{aria: { hidden: true }} ≡
+                  %td
+                    = cf.hidden_field :id if cf.object.persisted?
+                    = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
+                    = cf.hidden_field :row_position, value: (cf.object.row_position || cf.object.position || (index + 1))
+                    = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
+                    = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
+                    = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                    = cf.text_field :institution_name, value: (cf.object.institution_name.presence || cf.object.name), placeholder: "[Organization Name]"
+                  %td
+                    = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]"
+                  %td.idb-contact-cell
+                    %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                  %td.idb-row-actions.idb-creator-row-actions
+                    %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row up", aria: { label: "Move creator row up" }, data: { action: "deposit-form#moveRowUp" }} Up
+                    %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row down", aria: { label: "Move creator row down" }, data: { action: "deposit-form#moveRowDown" }} Down
+                    %button.idb-button-danger.idb-compact-action{type: "button", title: "Remove creator row", aria: { label: "Remove creator row" }, data: { action: "deposit-form#removeRow" }} Del
+                    %button.idb-button-success.idb-compact-action.idb-add-creator-row{type: "button", title: "Add creator row", aria: { label: "Add creator row" }, data: { action: "deposit-form#addCreatorRow" }, hidden: index != creators_for_mode.length - 1} Add
+      - else
+        %p One primary long-term contact must be selected from the individual author list.
+
+        %table.idb-compact-table.idb-compact-table-individual
+          %thead
+            %tr
+              %th
+              %th Family Name(s)
+              %th Given Name(s)
+              %th ORCID
+              %th
+              %th Email
+              %th Primary Contact
+              %th
+          %tbody.idb-nested-rows{id: "creator-rows"}
+            - creators_for_mode.each_with_index do |creator, index|
+              = f.fields_for :creators, creator do |cf|
+                %tr.idb-nested-row{data: { deposit_form_target: "creatorRow" }}
+                  %td.idb-drag-cell
+                    %span{aria: { hidden: true }} ≡
+                  %td
+                    = cf.hidden_field :id if cf.object.persisted?
+                    = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
+                    = cf.hidden_field :row_position, value: (cf.object.row_position || cf.object.position || (index + 1))
+                    = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
+                    = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
+                    = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                    = cf.text_field :family_name, placeholder: "[e.g.: Smith]"
+                  %td
+                    = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]"
+                  %td
+                    = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
+                    = cf.hidden_field :identifier_scheme, value: "ORCID"
+                  %td
+                    %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
+                  %td
+                    = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]"
+                  %td.idb-contact-cell
+                    %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                  %td.idb-row-actions.idb-creator-row-actions
+                    %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row up", aria: { label: "Move creator row up" }, data: { action: "deposit-form#moveRowUp" }} Up
+                    %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row down", aria: { label: "Move creator row down" }, data: { action: "deposit-form#moveRowDown" }} Down
+                    %button.idb-button-danger.idb-compact-action{type: "button", title: "Remove creator row", aria: { label: "Remove creator row" }, data: { action: "deposit-form#removeRow" }} Del
+                    %button.idb-button-success.idb-compact-action.idb-add-creator-row{type: "button", title: "Add creator row", aria: { label: "Add creator row" }, data: { action: "deposit-form#addCreatorRow" }, hidden: index != creators_for_mode.length - 1} Add

@@ -212,7 +212,7 @@ export default class extends Controller {
         })
         .join("")
 
-      this.orcidResultsTarget.innerHTML = `<p class=\"idb-orcid-results-count\">${countLabel}</p><table class=\"idb-orcid-results-table\"><thead><tr><th>Identifier (click link for details)</th><th>Affiliation</th><th>Select</th></tr></thead><tbody>${rows}</tbody></table>`
+this.orcidResultsTarget.innerHTML = `<p class="idb-orcid-results-count">${countLabel}</p><table class="idb-orcid-results-table"><colgroup><col class="idb-orcid-col-identifier"><col class="idb-orcid-col-affiliation"><col class="idb-orcid-col-select"></colgroup><thead><tr><th>Identifier</th><th>Affiliation</th><th>Select</th></tr></thead><tbody>${rows}</tbody></table>`
     } catch (_error) {
       this.orcidResultsTarget.textContent = "ORCID lookup unavailable."
     }

@@ -1,0 +1,76 @@
+%section#dataset-core-metadata.idb-section-card
+  %h2.idb-section-title Core Metadata
+  %p
+    %label{for: "citation-preview"} Citation Preview
+    %span#citation-preview
+      = dataset.creators.map(&:display_name).reject(&:blank?).join("; ").presence || "[Creator List]"
+      = " "
+      = "(#{Time.current.year}):"
+      = " "
+      = dataset.title.presence || "[The Title]."
+      University of Illinois Urbana-Champaign.
+  .idb-metadata-grid
+    .idb-grid-col-6
+      = f.label :title, "Dataset Title"
+      = f.text_field :title, required: true
+
+    .idb-grid-col-6
+      = f.label :license
+      = f.select :license, options_for_select([["CC0", "CC0"], ["CC BY 4.0", "CC-BY-4.0"], ["Other", "other"]], dataset.license), { include_blank: "Select..." }
+
+    .idb-grid-col-12
+      = f.label :description, "Dataset Description"
+      = f.text_area :description, rows: 3
+
+    .idb-grid-col-6
+      = f.label :keywords, "Keywords"
+      = f.text_field :keywords, placeholder: "semicolon separated list"
+
+    .idb-grid-col-4
+      = f.label :embargo, "Publication Delay (embargo)"
+      = f.select :embargo, options_for_select([["No Publication Delay", "none"], ["File Only Publication Delay", "file"], ["Metadata and File Publication Delay", "metadata"]], dataset.embargo.presence || "none")
+
+    .idb-grid-col-2
+      = f.label :release_date, "Release Date"
+      = f.date_field :release_date
+
+    .idb-grid-col-6
+      = f.label :subject
+      = f.text_field :subject
+
+    .idb-grid-col-6
+      = f.label :publisher
+      = f.text_field :publisher
+
+    - if can?(:manage, dataset)
+      .idb-grid-col-6
+        = f.label :identifier, "Specified DOI"
+        = f.text_field :identifier, placeholder: "Leave blank for auto-generate"
+
+      .idb-grid-col-3.idb-grid-checkbox
+        = f.check_box :is_import
+        = f.label :is_import, "Imported DOI"
+
+      .idb-grid-col-3.idb-grid-checkbox
+        = f.check_box :is_test
+        = f.label :is_test, "Test DOI"
+
+      .idb-grid-col-2
+        = f.label :dataset_version, "Version"
+        = f.text_field :dataset_version
+
+      .idb-grid-col-10
+        = f.label :version_comment, "Version Comment"
+        = f.text_area :version_comment, rows: 1
+
+      .idb-grid-col-6
+        = f.label :external_files_link, "Link to Externally Stored Files"
+        = f.text_field :external_files_link, placeholder: "https://example.edu/path"
+
+      .idb-grid-col-6
+        = f.label :medusa_dataset_dir, "URL in Medusa"
+        = f.text_field :medusa_dataset_dir, placeholder: "/cfs_directories/number"
+
+      .idb-grid-col-12
+        = f.label :external_files_note, "Access Notes for Externally Stored Files"
+        = f.text_area :external_files_note, rows: 2

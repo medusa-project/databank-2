@@ -1,4 +1,5 @@
 - content_for :title, "Edit Dataset"
+- content_for :include_orcid_css, true
 
 - previous_version = @dataset.previous_version_dataset
 - next_version = @dataset.version_successor
@@ -9,17 +10,6 @@
 
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-layout
-    %nav.idb-sections-toc{aria: { label: "Dataset form sections" }}
-      %h2.idb-sections-toc-title Edit Sections
-      %ul
-        %li= link_to "Core Metadata", "#dataset-core-metadata"
-        %li= link_to "Creators", "#dataset-creators"
-        %li= link_to "Funders", "#dataset-funders"
-        %li= link_to "Related Materials", "#dataset-related-materials"
-        - if previous_version_visible.present? || next_version_visible.present? || previous_version_material.present? || next_version_material.present?
-          %li= link_to "Version Lineage", "#dataset-version-lineage"
-        %li= link_to "Files", "#dataset-files"
-
     .idb-sections-content
       = render "form", dataset: @dataset, submit_label: "Update Dataset"
 

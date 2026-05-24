@@ -21,6 +21,10 @@
 	gap: 1rem;
 }
 
+.dataset-form-page .idb-sections-layout {
+	grid-template-columns: 1fr;
+}
+
 .idb-sections-toc {
 	position: sticky;
 	top: 1rem;

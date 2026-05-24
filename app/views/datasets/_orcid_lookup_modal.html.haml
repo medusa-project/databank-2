@@ -1,0 +1,20 @@
+%dialog#orcid-lookup-dialog{aria: { labelledby: "orcid-lookup-title", describedby: "orcid-lookup-help" }, data: { deposit_form_target: "orcidDialog", action: "cancel->deposit-form#onOrcidDialogCancel close->deposit-form#onOrcidDialogClose" }}
+  .idb-orcid-modal
+    .idb-orcid-modal-header
+      %h3#orcid-lookup-title ORCID Lookup
+      %p#orcid-lookup-help Search by family and/or given name.
+    .idb-orcid-modal-body
+      .idb-orcid-modal-fields
+        .idb-orcid-field
+          %label{for: "orcid-family-name"} Family Name
+          %input#orcid-family-name{type: "text", data: { deposit_form_target: "orcidFamilyName" }}
+        .idb-orcid-field
+          %label{for: "orcid-given-name"} Given Name
+          %input#orcid-given-name{type: "text", data: { deposit_form_target: "orcidGivenName" }}
+        .idb-orcid-field-actions
+          %button.idb-button-primary{type: "button", data: { action: "deposit-form#searchOrcid" }} Search
+      .idb-orcid-results{aria: { live: "polite" }, data: { deposit_form_target: "orcidResults" }}
+    .idb-orcid-modal-footer
+      %button.idb-button-danger{type: "button", data: { action: "deposit-form#closeOrcidLookup" }} Cancel
+      = " "
+      %button.idb-button-success{type: "button", data: { action: "deposit-form#applyOrcidSelection" }} Apply Selected ORCID

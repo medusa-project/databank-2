@@ -33,6 +33,8 @@
     = stylesheet_link_tag "datasets_index", "data-turbo-track": "reload"
     = stylesheet_link_tag "toolkit_overrides", "data-turbo-track": "reload"
     = stylesheet_link_tag "welcome", "data-turbo-track": "reload"
+    - if content_for?(:include_orcid_css)
+      = stylesheet_link_tag "orcid", "data-turbo-track": "reload"
     = javascript_importmap_tags
     = csrf_meta_tags
     = csp_meta_tag
