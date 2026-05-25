@@ -55,7 +55,7 @@
           %div{class: "ilw-notice ilw-notice--#{css}", role: "alert"}
             = sanitize(value)
         - if page_title.present? && !content_for?(:hide_page_title)
-          %ilw-page-title
+          .idb-page-title
             - if content_for?(:page_title)
               = yield(:page_title)
             - else

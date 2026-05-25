@@ -321,6 +321,7 @@
 
 .dataset-show-citation {
   border: 1px solid var(--idb-border);
+  border-radius: 0.5rem;
   background: linear-gradient(180deg, #f9fbfd 0%, #f2f6fb 100%);
   padding: 1rem;
 }
@@ -482,7 +483,11 @@
 
 .dataset-show-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--idb-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
 .dataset-show-table th,
@@ -498,6 +503,22 @@
   border-bottom: 1px solid var(--idb-border);
   font-weight: 700;
   color: var(--idb-text);
+}
+
+.dataset-show-table thead th:first-child {
+  border-top-left-radius: 0.5rem;
+}
+
+.dataset-show-table thead th:last-child {
+  border-top-right-radius: 0.5rem;
+}
+
+.dataset-show-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 0.5rem;
+}
+
+.dataset-show-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 0.5rem;
 }
 
 .dataset-show-version-selected {

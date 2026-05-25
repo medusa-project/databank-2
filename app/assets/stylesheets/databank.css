@@ -12,6 +12,24 @@
 	padding-inline: var(--idb-page-gutter);
 }
 
+.idb-page-title {
+	margin: 0.9rem 0 1rem;
+}
+
+.idb-page-title h1 {
+	margin: 0;
+	font-family: var(--il-font-heading);
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--il-blue);
+}
+
+.idb-rounded-section {
+	border-radius: 0.5rem;
+	overflow: hidden;
+}
+
 /* -----------------------------------------------------------------------
  * Option 2 section cards + sticky TOC
  * ----------------------------------------------------------------------- */
