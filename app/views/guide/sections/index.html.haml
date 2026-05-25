@@ -1,0 +1,35 @@
+- content_for :title, "Guide Sections"
+- content_for :include_actiontext_css, true
+
+%ilw-content
+  .idb-section-card
+    %h2.idb-section-title Guide CMS
+    %p Manage guide sections, then edit related items and subitems.
+    %p
+      = link_to "Manage Sections", guide_sections_path, class: "btn btn-primary idb"
+      = link_to "Manage Items", guide_items_path, class: "btn btn-default idb"
+      = link_to "Manage Subitems", guide_subitems_path, class: "btn btn-default idb"
+
+  .idb-section-card
+    .idb-row-actions
+      = link_to "New Section", new_guide_section_path, class: "btn btn-success idb"
+
+    %table.table.table-striped.table-bordered
+      %caption.sr-only Guide sections list
+      %thead
+        %tr
+          %th Label
+          %th Anchor
+          %th Order
+          %th Public
+          %th Actions
+      %tbody
+        - @guide_sections.each do |section|
+          %tr
+            %td= section.label
+            %td= section.anchor
+            %td= section.ordinal
+            %td= section.public? ? "Yes" : "No"
+            %td
+              = link_to "Edit", edit_guide_section_path(section), class: "btn btn-info btn-sm idb"
+              = link_to "Delete", guide_section_path(section), method: :delete, data: { confirm: "Delete this section?" }, class: "btn btn-danger btn-sm idb"

@@ -35,6 +35,22 @@
 	padding: 0.75rem;
 }
 
+.guides-page .idb-sections-layout {
+	align-items: start;
+}
+
+.guides-page .idb-sections-toc {
+	max-height: calc(100vh - 2rem);
+	overflow: auto;
+	overscroll-behavior: contain;
+}
+
+.guides-page .idb-sections-toc a[aria-current="location"] {
+	color: var(--il-blue);
+	text-decoration: underline;
+	text-underline-offset: 0.12rem;
+}
+
 .idb-sections-toc-title {
 	margin: 0;
 	font-family: var(--il-font-sans);
@@ -67,6 +83,17 @@
 
 .dataset-form-page .idb-sections-content {
 	gap: 0.75rem;
+}
+
+.guides-page .idb-sections-toc ul ul {
+	margin-top: 0;
+	margin-left: 0.9rem;
+}
+
+.guides-page .idb-sections-toc ul ul a {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+	font-weight: 500;
 }
 
 .idb-section-card {
@@ -136,6 +163,38 @@
 
 .idb-section-body {
 	padding-top: 0.5rem;
+}
+
+.guides-page .guide-item,
+.guides-page .guide-subitem {
+	scroll-margin-top: 1rem;
+}
+
+.guides-page .guide-item {
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--il-storm-85);
+}
+
+.guides-page .guide-subitem {
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px dashed var(--il-storm-85);
+}
+
+.guides-page .guide-rich-text > :first-child {
+	margin-top: 0;
+}
+
+.guides-page .guide-rich-text > :last-child {
+	margin-bottom: 0;
+}
+
+.guides-page .guide-rich-text img {
+	display: block;
+	max-width: min(100%, 48rem);
+	height: auto;
+	margin: 0.75rem 0;
 }
 
 .dataset-form-page .idb-section-body {

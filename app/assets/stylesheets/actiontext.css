@@ -1,0 +1,13 @@
+/* Basic editor rendering for ActionText/Trix in guides CMS. */
+trix-editor {
+	min-height: 12rem;
+	background: #ffffff;
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.35rem;
+}
+
+trix-toolbar {
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.35rem;
+	background: var(--il-storm-95);
+}

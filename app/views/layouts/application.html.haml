@@ -35,6 +35,8 @@
     = stylesheet_link_tag "welcome", "data-turbo-track": "reload"
     - if content_for?(:include_orcid_css)
       = stylesheet_link_tag "orcid", "data-turbo-track": "reload"
+    - if content_for?(:include_actiontext_css)
+      = stylesheet_link_tag "actiontext", "data-turbo-track": "reload"
     = javascript_importmap_tags
     = csrf_meta_tags
     = csp_meta_tag

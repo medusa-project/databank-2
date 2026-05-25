@@ -1,0 +1,37 @@
+- content_for :title, "Guide Items"
+- content_for :include_actiontext_css, true
+
+%ilw-content
+  .idb-section-card
+    %h2.idb-section-title Guide CMS
+    %p Manage second-level guide items.
+    %p
+      = link_to "Manage Sections", guide_sections_path, class: "btn btn-default idb"
+      = link_to "Manage Items", guide_items_path, class: "btn btn-primary idb"
+      = link_to "Manage Subitems", guide_subitems_path, class: "btn btn-default idb"
+
+  .idb-section-card
+    .idb-row-actions
+      = link_to "New Item", new_guide_item_path, class: "btn btn-success idb"
+
+    %table.table.table-striped.table-bordered
+      %caption.sr-only Guide items list
+      %thead
+        %tr
+          %th Section
+          %th Label
+          %th Anchor
+          %th Order
+          %th Public
+          %th Actions
+      %tbody
+        - @guide_items.each do |item|
+          %tr
+            %td= item.guide_section&.label || "(missing section)"
+            %td= item.label
+            %td= item.anchor
+            %td= item.ordinal
+            %td= item.public? ? "Yes" : "No"
+            %td
+              = link_to "Edit", edit_guide_item_path(item), class: "btn btn-info btn-sm idb"
+              = link_to "Delete", guide_item_path(item), method: :delete, data: { confirm: "Delete this item?" }, class: "btn btn-danger btn-sm idb"

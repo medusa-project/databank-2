@@ -10,9 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_22_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_24_234200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "action_text_rich_texts", force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
+  end
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
@@ -173,6 +183,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_210000) do
     t.index ["dataset_id"], name: "index_funders_on_dataset_id"
   end
 
+  create_table "guide_items", force: :cascade do |t|
+    t.string "anchor"
+    t.datetime "created_at", null: false
+    t.string "heading"
+    t.string "label"
+    t.integer "ordinal"
+    t.boolean "public", default: false, null: false
+    t.bigint "section_id"
+    t.datetime "updated_at", null: false
+    t.index ["anchor"], name: "index_guide_items_on_anchor"
+    t.index ["section_id"], name: "index_guide_items_on_section_id"
+  end
+
+  create_table "guide_sections", force: :cascade do |t|
+    t.string "anchor"
+    t.datetime "created_at", null: false
+    t.string "heading"
+    t.string "label"
+    t.integer "ordinal"
+    t.boolean "public", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["anchor"], name: "index_guide_sections_on_anchor"
+  end
+
+  create_table "guide_subitems", force: :cascade do |t|
+    t.string "anchor"
+    t.datetime "created_at", null: false
+    t.string "heading"
+    t.bigint "item_id"
+    t.string "label"
+    t.integer "ordinal"
+    t.boolean "public", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["anchor"], name: "index_guide_subitems_on_anchor"
+    t.index ["item_id"], name: "index_guide_subitems_on_item_id"
+  end
+
   create_table "migration_runs", force: :cascade do |t|
     t.string "bundle_path"
     t.string "checksum_path"
@@ -261,6 +308,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_210000) do
   add_foreign_key "datafiles", "datasets"
   add_foreign_key "external_delivery_attempts", "datasets"
   add_foreign_key "funders", "datasets"
+  add_foreign_key "guide_items", "guide_sections", column: "section_id"
+  add_foreign_key "guide_subitems", "guide_items", column: "item_id"
   add_foreign_key "related_materials", "datasets"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"

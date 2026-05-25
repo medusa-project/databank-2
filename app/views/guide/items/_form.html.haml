@@ -1,0 +1,36 @@
+= form_with model: @guide_item, class: "guide-cms-form" do |f|
+  - if @guide_item.errors.any?
+    .ilw-notice.ilw-notice--error{role: "alert"}
+      %h2= "#{pluralize(@guide_item.errors.count, 'error')} prevented this item from being saved"
+      %ul
+        - @guide_item.errors.full_messages.each do |msg|
+          %li= msg
+
+  .idb-metadata-grid
+    .idb-grid-col-6
+      = f.label :section_id, "Parent Section"
+      = f.collection_select :section_id, @guide_sections, :id, :label, { prompt: "Select section" }, class: "form-control", required: true
+    .idb-grid-col-6
+      = f.label :label, "Label"
+      = f.text_field :label, class: "form-control", required: true
+    .idb-grid-col-6
+      = f.label :anchor, "Anchor"
+      = f.text_field :anchor, class: "form-control", required: true
+    .idb-grid-col-4
+      = f.label :ordinal, "Display Order"
+      = f.number_field :ordinal, class: "form-control", min: 1
+    .idb-grid-col-8
+      = f.label :heading, "Heading"
+      = f.text_field :heading, class: "form-control"
+    .idb-grid-col-12
+      .checkbox
+        %label
+          = f.check_box :public
+          Publicly visible
+    .idb-grid-col-12
+      = f.label :body, "Body"
+      = f.rich_text_area :body, aria: { label: "Body" }
+
+  .idb-row-actions
+    = f.submit "Save Item", class: "btn btn-primary idb"
+    = link_to "Cancel", guide_items_path, class: "btn btn-default idb"

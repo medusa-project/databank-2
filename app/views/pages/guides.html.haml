@@ -1,4 +1,58 @@
 - content_for :title, "Guides"
 
-%ilw-content
-  %p.ilw-lede This page is coming soon. Submission guides and documentation are under construction.
+%ilw-content.guides-page.idb-page-sections
+  - if can?(:manage, Guide::Section)
+    .idb-section-card
+      %h2.idb-section-title Guide CMS
+      %p Curator tools for editing sections, items, and subitems.
+      = link_to "Open Guide CMS", guide_sections_path, class: "btn btn-primary idb"
+
+  .idb-sections-layout
+    %nav.idb-sections-toc{aria: { label: "Guides table of contents" }, data: { controller: "toc", action: "click->toc#navigate" }}
+      %h2.idb-sections-toc-title On This Page
+      %ul
+        - @guide_sections.each do |section|
+          - section_items = section.ordered_children.select(&:public)
+          - section_id = guide_anchor_id(section)
+          %li
+            = link_to guide_nav_label(section), "##{section_id}"
+            - if section_items.any?
+              %ul
+                - section_items.each do |item|
+                  - item_subitems = item.ordered_children.select(&:public)
+                  - item_id = guide_anchor_id(item)
+                  %li
+                    = link_to guide_nav_label(item), "##{item_id}"
+                    - if item_subitems.any?
+                      %ul
+                        - item_subitems.each do |subitem|
+                          - subitem_id = guide_anchor_id(subitem)
+                          %li= link_to guide_nav_label(subitem), "##{subitem_id}"
+
+    .idb-sections-content
+      - if @guide_sections.empty?
+        %section.idb-section-card
+          %p.ilw-lede Submission guides are not available yet.
+      - else
+        - @guide_sections.each do |section|
+          - section_items = section.ordered_children.select(&:public)
+          - section_id = guide_anchor_id(section)
+          %section.idb-section-card.guide-section{id: section_id, tabindex: "-1"}
+            %h2.idb-section-title= guide_nav_label(section)
+            - if section.body.present?
+              .idb-section-body.guide-rich-text= section.body
+
+            - section_items.each do |item|
+              - item_subitems = item.ordered_children.select(&:public)
+              - item_id = guide_anchor_id(item)
+              %article.guide-item{id: item_id, tabindex: "-1"}
+                %h3= guide_nav_label(item)
+                - if item.body.present?
+                  .guide-rich-text= item.body
+
+                - item_subitems.each do |subitem|
+                  - subitem_id = guide_anchor_id(subitem)
+                  %article.guide-subitem{id: subitem_id, tabindex: "-1"}
+                    %h4= guide_nav_label(subitem)
+                    - if subitem.body.present?
+                      .guide-rich-text= subitem.body

@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-05-25T00:00:00Z",
+  "bundle_file": "legacy_datasets.ndjson",
+  "record_count": 2,
+  "sha256": "52301a9e54601efdff9f2312f520a59c42e3de04b019343894c96eed5e83df25",
+  "include_tests": false,
+  "since": null,
+  "until": null
+}

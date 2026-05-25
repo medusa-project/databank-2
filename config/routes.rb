@@ -41,6 +41,12 @@ Rails.application.routes.draw do
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts
 
+  namespace :guide do
+    resources :sections, except: :show
+    resources :items, except: :show
+    resources :subitems, except: :show
+  end
+
   # Static / nav pages
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
