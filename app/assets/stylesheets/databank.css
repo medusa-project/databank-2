@@ -1019,7 +1019,7 @@ input[type="reset"]:disabled {
  * ----------------------------------------------------------------------- */
 .idb-button-primary,
 .idb-button-secondary,
-.idb-button-danger {
+.idb-button-danger,
 .idb-button-success {
 	display: inline-flex;
 	align-items: center;
@@ -1125,7 +1125,7 @@ a.idb-button-success:active {
 .idb-button-secondary:focus,
 .idb-button-secondary:focus-visible,
 .idb-button-danger:focus,
-.idb-button-danger:focus-visible {
+.idb-button-danger:focus-visible,
 .idb-button-success:focus,
 .idb-button-success:focus-visible {
 	outline: 2px solid var(--il-harvest);
