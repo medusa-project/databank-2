@@ -23,6 +23,13 @@ function rake(task, env = {}) {
   execSync(cmd, { cwd: ROOT, stdio: "inherit" });
 }
 
+function railsRunner(script) {
+  const escaped = script.replace(/'/g, "'\\''");
+  const cmd = `${RAILS_ENV} bundle exec rails runner '${escaped}'`;
+  console.log("[global-setup] normalize guide rich text");
+  execSync(cmd, { cwd: ROOT, stdio: "inherit" });
+}
+
 module.exports = async function globalSetup() {
   const datasetBundleDir = path.join(ROOT, "playwright", "fixtures", "datasets_mini_bundle");
   rake("migration:bundle:import", {
@@ -37,4 +44,14 @@ module.exports = async function globalSetup() {
     DIR: guidesBundleDir,
     REPLACE_ALL: "true",
   });
+
+  railsRunner(`
+    records = ActionText::RichText.where(record_type: ["Guide::Section", "Guide::Item", "Guide::Subitem"], name: "body")
+    records.find_each do |rt|
+      sanitized = Migration::GuidesHtmlSanitizer.sanitize_html(rt.body.to_s)
+      next if sanitized == rt.body.to_s
+
+      rt.update!(body: sanitized)
+    end
+  `);
 };

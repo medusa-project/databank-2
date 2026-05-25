@@ -8,6 +8,11 @@ RSpec.describe Migration::GuidesBundleImportService do
   let(:manifest_path) { tmp_root.join("manifest.json") }
 
   before do
+    ActionText::RichText.where(record_type: [ "Guide::Section", "Guide::Item", "Guide::Subitem" ], name: "body").delete_all
+    Guide::Subitem.delete_all
+    Guide::Item.delete_all
+    Guide::Section.delete_all
+
     FileUtils.rm_rf(tmp_root)
     FileUtils.mkdir_p(tmp_root)
   end
@@ -122,6 +127,7 @@ RSpec.describe Migration::GuidesBundleImportService do
       <a href="javascript:alert(1)" target="_blank">bad link</a>
       <a href="https://example.org" target="_blank">good link</a>
       <img src="data:text/html;base64,abc" alt="bad image" />
+      <img src="/dataset_title.png" />
     HTML
     write_bundle_and_artifacts(payloads)
 
@@ -139,6 +145,7 @@ RSpec.describe Migration::GuidesBundleImportService do
     expect(section_html).not_to include("javascript:")
     expect(section_html).to include("href=\"https://example.org\"")
     expect(section_html).not_to include("data:text/html")
+    expect(section_html).to include("alt=\"Dataset Title\"")
   end
 
   private

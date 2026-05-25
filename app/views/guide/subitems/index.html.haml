@@ -4,36 +4,43 @@
 %ilw-content
   .idb-section-card
     %h2.idb-section-title Guide CMS
-    %p Manage third-level guide subitems.
-    %p
-      = link_to "Manage Sections", guide_sections_path, class: "btn btn-default idb"
-      = link_to "Manage Items", guide_items_path, class: "btn btn-default idb"
-      = link_to "Manage Subitems", guide_subitems_path, class: "btn btn-primary idb"
+    - if @guide_item
+      %p= "Manage subitems for item: #{@guide_item.label}"
+      %p
+        = link_to "Manage Subitems", guide_subitems_path(item_id: @guide_item.id), class: "idb-button-primary"
+        - if @guide_item.section_id.present?
+          = link_to "Back to Items", guide_items_path(section_id: @guide_item.section_id), class: "idb-button-secondary"
+        - else
+          = link_to "Back to Items", guide_items_path, class: "idb-button-secondary"
+    - else
+      %p Select an item to manage its subitems.
+      %ul
+        - @guide_items.each do |item|
+          %li
+            %span= item.label
+            = link_to "Manage Subitems", guide_subitems_path(item_id: item.id), class: "idb-button-primary"
 
-  .idb-section-card
-    .idb-row-actions
-      = link_to "New Subitem", new_guide_subitem_path, class: "btn btn-success idb"
+  - if @guide_item
+    .idb-section-card
+      .idb-row-actions
+        = link_to "New Subitem", new_guide_subitem_path(item_id: @guide_item.id), class: "btn btn-success idb"
 
-    %table.table.table-striped.table-bordered
-      %caption.sr-only Guide subitems list
-      %thead
-        %tr
-          %th Section
-          %th Item
-          %th Label
-          %th Anchor
-          %th Order
-          %th Public
-          %th Actions
-      %tbody
-        - @guide_subitems.each do |subitem|
+      %table.table.table-striped.table-bordered
+        %caption.sr-only Guide subitems list
+        %thead
           %tr
-            %td= subitem.guide_item&.guide_section&.label || "(missing section)"
-            %td= subitem.guide_item&.label || "(missing item)"
-            %td= subitem.label
-            %td= subitem.anchor
-            %td= subitem.ordinal
-            %td= subitem.public? ? "Yes" : "No"
-            %td
-              = link_to "Edit", edit_guide_subitem_path(subitem), class: "btn btn-info btn-sm idb"
-              = link_to "Delete", guide_subitem_path(subitem), method: :delete, data: { confirm: "Delete this subitem?" }, class: "btn btn-danger btn-sm idb"
+            %th Label
+            %th Anchor
+            %th Order
+            %th Public
+            %th Actions
+        %tbody
+          - @guide_subitems.each do |subitem|
+            %tr
+              %td= subitem.label
+              %td= subitem.anchor
+              %td= subitem.ordinal
+              %td= subitem.public? ? "Yes" : "No"
+              %td
+                = link_to "Edit", edit_guide_subitem_path(subitem), class: "btn btn-info btn-sm idb"
+                = link_to "Delete", guide_subitem_path(subitem), method: :delete, data: { confirm: "Delete this subitem?" }, class: "btn btn-danger btn-sm idb"

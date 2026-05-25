@@ -33,4 +33,4 @@
 
   .idb-row-actions
     = f.submit "Save Subitem", class: "btn btn-primary idb"
-    = link_to "Cancel", guide_subitems_path, class: "btn btn-default idb"
+    = link_to "Cancel", (@cancel_path || guide_items_path), class: "btn btn-default idb"

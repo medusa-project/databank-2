@@ -4,11 +4,9 @@
 %ilw-content
   .idb-section-card
     %h2.idb-section-title Guide CMS
-    %p Manage guide sections, then edit related items and subitems.
+    %p Manage top-level guide sections.
     %p
-      = link_to "Manage Sections", guide_sections_path, class: "btn btn-primary idb"
-      = link_to "Manage Items", guide_items_path, class: "btn btn-default idb"
-      = link_to "Manage Subitems", guide_subitems_path, class: "btn btn-default idb"
+      = link_to "Manage Sections", guide_sections_path, class: "idb-button-primary"
 
   .idb-section-card
     .idb-row-actions
@@ -31,5 +29,6 @@
             %td= section.ordinal
             %td= section.public? ? "Yes" : "No"
             %td
+              = link_to "Manage Items", guide_items_path(section_id: section.id), class: "idb-button-primary"
               = link_to "Edit", edit_guide_section_path(section), class: "btn btn-info btn-sm idb"
               = link_to "Delete", guide_section_path(section), method: :delete, data: { confirm: "Delete this section?" }, class: "btn btn-danger btn-sm idb"

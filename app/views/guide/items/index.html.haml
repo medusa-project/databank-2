@@ -4,34 +4,41 @@
 %ilw-content
   .idb-section-card
     %h2.idb-section-title Guide CMS
-    %p Manage second-level guide items.
-    %p
-      = link_to "Manage Sections", guide_sections_path, class: "btn btn-default idb"
-      = link_to "Manage Items", guide_items_path, class: "btn btn-primary idb"
-      = link_to "Manage Subitems", guide_subitems_path, class: "btn btn-default idb"
+    - if @guide_section
+      %p= "Manage items for section: #{@guide_section.label}"
+      %p
+        = link_to "Manage Items", guide_items_path(section_id: @guide_section.id), class: "idb-button-primary"
+        = link_to "Back to Sections", guide_sections_path, class: "idb-button-secondary"
+    - else
+      %p Select a section to manage its items.
+      %ul
+        - @guide_sections.each do |section|
+          %li
+            %span= section.label
+            = link_to "Manage Items", guide_items_path(section_id: section.id), class: "idb-button-primary"
 
-  .idb-section-card
-    .idb-row-actions
-      = link_to "New Item", new_guide_item_path, class: "btn btn-success idb"
+  - if @guide_section
+    .idb-section-card
+      .idb-row-actions
+        = link_to "New Item", new_guide_item_path(section_id: @guide_section.id), class: "btn btn-success idb"
 
-    %table.table.table-striped.table-bordered
-      %caption.sr-only Guide items list
-      %thead
-        %tr
-          %th Section
-          %th Label
-          %th Anchor
-          %th Order
-          %th Public
-          %th Actions
-      %tbody
-        - @guide_items.each do |item|
+      %table.table.table-striped.table-bordered
+        %caption.sr-only Guide items list
+        %thead
           %tr
-            %td= item.guide_section&.label || "(missing section)"
-            %td= item.label
-            %td= item.anchor
-            %td= item.ordinal
-            %td= item.public? ? "Yes" : "No"
-            %td
-              = link_to "Edit", edit_guide_item_path(item), class: "btn btn-info btn-sm idb"
-              = link_to "Delete", guide_item_path(item), method: :delete, data: { confirm: "Delete this item?" }, class: "btn btn-danger btn-sm idb"
+            %th Label
+            %th Anchor
+            %th Order
+            %th Public
+            %th Actions
+        %tbody
+          - @guide_items.each do |item|
+            %tr
+              %td= item.label
+              %td= item.anchor
+              %td= item.ordinal
+              %td= item.public? ? "Yes" : "No"
+              %td
+                = link_to "Manage Subitems", guide_subitems_path(item_id: item.id), class: "idb-button-primary"
+                = link_to "Edit", edit_guide_item_path(item), class: "btn btn-info btn-sm idb"
+                = link_to "Delete", guide_item_path(item), method: :delete, data: { confirm: "Delete this item?" }, class: "btn btn-danger btn-sm idb"
