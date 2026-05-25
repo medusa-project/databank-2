@@ -372,10 +372,17 @@
   color: var(--idb-text);
 }
 
-.dataset-show-panel > .dataset-show-section-title {
+.dataset-show-disclosure > summary {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--idb-border);
   background: var(--idb-panel-accent);
+}
+
+.dataset-show-disclosure[open] > summary {
+  border-bottom: 1px solid var(--idb-border);
+}
+
+.dataset-show-disclosure > .idb-section-body {
+  padding-top: 0;
 }
 
 .dataset-show-metadata {
@@ -394,6 +401,36 @@
 .dataset-show-metadata dd {
   margin: 0;
   color: var(--idb-text);
+}
+
+.dataset-show-metadata-nested {
+  grid-column: 1 / -1;
+}
+
+.dataset-show-nested-disclosure {
+  border: 1px solid var(--idb-border);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+
+.dataset-show-nested-disclosure > summary {
+  padding: 0.55rem 0.75rem;
+  background: #f7fafc;
+}
+
+.dataset-show-nested-disclosure[open] > summary {
+  border-bottom: 1px solid var(--idb-border);
+}
+
+.dataset-show-nested-title {
+  font-weight: 700;
+  color: var(--idb-text);
+}
+
+.dataset-show-nested-summary-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .dataset-show-list {
@@ -461,19 +498,32 @@
 
 .dataset-show-file-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) max-content auto;
   gap: 1rem;
-  align-items: start;
+  align-items: center;
 }
 
-.dataset-show-file-main {
+.dataset-show-file-name {
   min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-.dataset-show-file-meta {
-  display: grid;
-  gap: 0.4rem;
-  justify-items: end;
+.dataset-show-file-size {
+  margin-top: 0;
+  text-align: right;
+  white-space: nowrap;
+  width: max-content;
+  justify-self: end;
+}
+
+.dataset-show-download-cell {
+  margin-top: 0;
+}
+
+.dataset-show-file-description {
+  display: block;
+  margin-top: 0.25rem;
 }
 
 .dataset-show-table-wrap {
@@ -548,7 +598,18 @@
     grid-template-columns: 1fr;
   }
 
-  .dataset-show-file-meta {
-    justify-items: start;
+  .dataset-show-file-size {
+    text-align: left;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 960px) {
+  .dataset-show-file-row {
+    grid-template-columns: minmax(0, 1fr) max-content auto;
+  }
+
+  .dataset-show-file-size {
+    text-align: right;
+    justify-self: end;
   }
 }

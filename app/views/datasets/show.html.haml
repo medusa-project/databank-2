@@ -66,171 +66,197 @@
 
   .dataset-show-grid
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Dataset metadata" }}
-      %h2.dataset-show-section-title Metadata
-      %dl.dataset-show-metadata
-        - if @dataset.description.present?
-          %dt Dataset Description
-          %dd= simple_format(@dataset.description)
+      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+        %summary
+          %h2.dataset-show-section-title Metadata
+        .idb-section-body
+          %dl.dataset-show-metadata
+            - if @dataset.description.present?
+              %dt Dataset Description
+              %dd= simple_format(@dataset.description)
 
-        - if @dataset.subject.present?
-          %dt Subject
-          %dd= link_to @dataset.subject, datasets_path(subjects: [@dataset.subject])
+            - if @dataset.subject.present?
+              %dt Subject
+              %dd= link_to @dataset.subject, datasets_path(subjects: [@dataset.subject])
 
-        - if @dataset.keywords.present?
-          %dt Keywords
-          %dd= @dataset.keywords
+            - if @dataset.keywords.present?
+              %dt Keywords
+              %dd= @dataset.keywords
 
-        - if @dataset.license.present?
-          %dt License
-          %dd= @dataset.license
+            - if @dataset.license.present?
+              %dt License
+              %dd= @dataset.license
 
-        - @dataset.funders.each do |funder|
-          %dt Funder
-          - funder_bits = [funder.name, funder.identifier.presence, (funder.award_number.present? ? "Award #{funder.award_number}" : nil)].compact
-          %dd= funder_bits.join(" | ")
+            - @dataset.funders.each do |funder|
+              %dt Funder
+              - funder_bits = [funder.name, funder.identifier.presence, (funder.award_number.present? ? "Award #{funder.award_number}" : nil)].compact
+              %dd= funder_bits.join(" | ")
 
-        - if primary_contact_name.present?
-          %dt Corresponding Creator
-          %dd= primary_contact_name
+            - if primary_contact_name.present?
+              %dt Corresponding Creator
+              %dd= primary_contact_name
 
-        - if additional_contacts.any?
-          %dt Additional Contact(s)
-          %dd= additional_contacts.join("; ")
+            - if additional_contacts.any?
+              %dt Additional Contact(s)
+              %dd= additional_contacts.join("; ")
 
-        - if @dataset.publisher.present?
-          %dt Publisher
-          %dd= @dataset.publisher
+            - if @dataset.publisher.present?
+              %dt Publisher
+              %dd= @dataset.publisher
 
-        - if can?(:manage, @dataset)
-          %dt Depositor
-          %dd= @dataset.depositor_name
+            - if can?(:manage, @dataset)
+              %dt Depositor
+              %dd= @dataset.depositor_name
 
-          %dt Depositor Email
-          %dd= @dataset.depositor_email
+              %dt Depositor Email
+              %dd= @dataset.depositor_email
 
-        - if download_count.positive?
-          %dt Downloaded
-          %dd= pluralize(download_count, "time")
+            - if download_count.positive?
+              %dt Downloaded
+              %dd= pluralize(download_count, "time")
 
-        - if related_materials.any?
-          %dt= "Related Materials (#{related_materials.count})"
-          %dd
-            %ul.dataset-show-list
-              - related_materials.each do |material|
-                %li
-                  - if material.uri.present?
-                    %span.dataset-show-list-primary= link_to material.title, material.uri
-                  - else
-                    %span.dataset-show-list-primary= material.title
-                  - if material.relation_type.present?
-                    %span.dataset-show-list-secondary= material.relation_type
+            - if related_materials.any?
+              %dt.sr-only Related Materials
+              %dd.dataset-show-metadata-nested
+                %details.idb-section-disclosure.dataset-show-nested-disclosure
+                  %summary
+                    %span.dataset-show-nested-summary-label
+                      %span.dataset-show-nested-title Related Materials
+                      %span.dataset-show-badge= related_materials.count
+                  .idb-section-body
+                    %ul.dataset-show-list
+                      - related_materials.each do |material|
+                        %li
+                          - if material.uri.present?
+                            %span.dataset-show-list-primary= link_to material.title, material.uri
+                          - else
+                            %span.dataset-show-list-primary= material.title
+                          - if material.relation_type.present?
+                            %span.dataset-show-list-secondary= material.relation_type
 
-        - if cited_by_materials.any?
-          %dt= "Cited By (#{cited_by_materials.count})"
-          %dd
-            %ul.dataset-show-list
-              - cited_by_materials.each do |material|
-                %li
-                  - if material.uri.present?
-                    %span.dataset-show-list-primary= link_to material.title, material.uri
-                  - else
-                    %span.dataset-show-list-primary= material.title
-                  - if material.relation_type.present?
-                    %span.dataset-show-list-secondary= material.relation_type
+            - if cited_by_materials.any?
+              %dt.sr-only Cited By
+              %dd.dataset-show-metadata-nested
+                %details.idb-section-disclosure.dataset-show-nested-disclosure
+                  %summary
+                    %span.dataset-show-nested-summary-label
+                      %span.dataset-show-nested-title Cited By
+                      %span.dataset-show-badge= cited_by_materials.count
+                  .idb-section-body
+                    %ul.dataset-show-list
+                      - cited_by_materials.each do |material|
+                        %li
+                          - if material.uri.present?
+                            %span.dataset-show-list-primary= link_to material.title, material.uri
+                          - else
+                            %span.dataset-show-list-primary= material.title
+                          - if material.relation_type.present?
+                            %span.dataset-show-list-secondary= material.relation_type
 
     - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:manage, @dataset) }
     - if visible_version_entries.any?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Versions in Illinois Data Bank" }}
-        %h2.dataset-show-section-title= visible_version_entries.length > 1 ? "Versions in Illinois Data Bank" : "Versions"
-        .dataset-show-table-wrap
-          %table.dataset-show-table
-            %thead
-              %tr
-                %th Dataset
-                %th DOI
-                %th State
-            %tbody
-              - visible_version_entries.each do |entry|
-                %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
-                  %td= link_to "#{entry[:title]} (#{entry[:key]})", dataset_path(entry[:dataset])
-                  %td
-                    - if entry[:doi].present?
-                      = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
-                    - else
-                      not yet set
-                  %td= entry[:publication_state].to_s
+        %details.idb-section-disclosure.dataset-show-disclosure{open: (visible_version_entries.length > 1)}
+          %summary
+            %h2.dataset-show-section-title= visible_version_entries.length > 1 ? "Versions in Illinois Data Bank" : "Versions"
+          .idb-section-body
+            .dataset-show-table-wrap
+              %table.dataset-show-table
+                %thead
+                  %tr
+                    %th Dataset
+                    %th DOI
+                    %th State
+                %tbody
+                  - visible_version_entries.each do |entry|
+                    %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
+                      %td= link_to "#{entry[:title]} (#{entry[:key]})", dataset_path(entry[:dataset])
+                      %td
+                        - if entry[:doi].present?
+                          = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
+                        - else
+                          not yet set
+                      %td= entry[:publication_state].to_s
 
     - if @dataset.datafiles.any?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Files" }}
-        %h2.dataset-show-section-title Files
-        %ul.dataset-show-file-list
-          - @dataset.datafiles.each do |datafile|
-            - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
-            %li
-              .dataset-show-file-row
-                .dataset-show-file-main
-                  %span.dataset-show-list-primary= datafile.binary_name.presence || datafile.web_id
+        %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+          %summary
+            %h2.dataset-show-section-title Files
+          .idb-section-body
+            %ul.dataset-show-file-list
+              - @dataset.datafiles.each do |datafile|
+                - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+                %li
+                  .dataset-show-file-row
+                    %span.dataset-show-list-primary.dataset-show-file-name= datafile.binary_name.presence || datafile.web_id
+                    %span.dataset-show-list-secondary.dataset-show-file-size= file_size.present? ? number_to_human_size(file_size) : "-"
+                    - if can?(:read, @dataset)
+                      %span.dataset-show-download.dataset-show-download-cell= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary dataset-show-download-button"
                   - if datafile.description.present?
-                    %span.dataset-show-list-tertiary= datafile.description
-                .dataset-show-file-meta
-                  - if file_size.present?
-                    %span.dataset-show-list-secondary= number_to_human_size(file_size)
-                  - if can?(:read, @dataset)
-                    %span.dataset-show-download= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary dataset-show-download-button"
+                    %span.dataset-show-list-tertiary.dataset-show-file-description= datafile.description
 
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Change log" }}
-      %h2.dataset-show-section-title Change Log
-      - if @version_request_history.present?
-        %ul.dataset-show-list
-          - @version_request_history.each do |request|
-            %li
-              %span.dataset-show-list-primary= "#{request.status.titleize} request from #{request.requester_name}"
-              %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
-              - if request.comment.present?
-                %span.dataset-show-list-tertiary= request.comment
-              - if request.reviewed_at.present?
-                %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
-              - if request.review_note.present?
-                %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
-              - if request.approved_dataset.present?
-                %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
-      - else
-        .dataset-show-table-wrap
-          %p
-            No change log entries available.
+      %details.idb-section-disclosure.dataset-show-disclosure
+        %summary
+          %h2.dataset-show-section-title Change Log
+        .idb-section-body
+          - if @version_request_history.present?
+            %ul.dataset-show-list
+              - @version_request_history.each do |request|
+                %li
+                  %span.dataset-show-list-primary= "#{request.status.titleize} request from #{request.requester_name}"
+                  %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
+                  - if request.comment.present?
+                    %span.dataset-show-list-tertiary= request.comment
+                  - if request.reviewed_at.present?
+                    %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
+                  - if request.review_note.present?
+                    %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
+                  - if request.approved_dataset.present?
+                    %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
+          - else
+            .dataset-show-table-wrap
+              %p
+                No change log entries available.
 
   - if logged_in? && can?(:manage, Dataset)
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator controls" }}
-      %h2.dataset-show-section-title Curator Controls
-      %p
-        = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
+      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+        %summary
+          %h2.dataset-show-section-title Curator Controls
+        .idb-section-body
+          %p
+            = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
 
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "External delivery" }}
-      %h2.dataset-show-section-title External Delivery
-
-      %p
-        = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
-
-      - if @latest_delivery_attempts.present?
-        %ul.dataset-show-list
-          - @latest_delivery_attempts.each do |integration, attempt|
-            %li
-              %span.dataset-show-list-primary= "#{integration}: #{attempt.status}"
-              %span.dataset-show-list-secondary= "Attempt #{attempt.attempt} at #{attempt.created_at.utc.iso8601}"
-              - if attempt.error_message.present?
-                %span.dataset-show-list-tertiary= attempt.error_message
-      - else
-        %p
-          No external delivery attempts recorded yet.
-
-      - total_failed = @failed_delivery_counts.values.sum
-      - if total_failed.positive?
-        %p
-          Failed attempts:
-          = total_failed
-        %p
-          = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
-        - @failed_delivery_counts.each do |integration, count|
+      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+        %summary
+          %h2.dataset-show-section-title External Delivery
+        .idb-section-body
           %p
-            = "#{integration} failures: #{count}"
-            = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"
+            = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
+
+          - if @latest_delivery_attempts.present?
+            %ul.dataset-show-list
+              - @latest_delivery_attempts.each do |integration, attempt|
+                %li
+                  %span.dataset-show-list-primary= "#{integration}: #{attempt.status}"
+                  %span.dataset-show-list-secondary= "Attempt #{attempt.attempt} at #{attempt.created_at.utc.iso8601}"
+                  - if attempt.error_message.present?
+                    %span.dataset-show-list-tertiary= attempt.error_message
+          - else
+            %p
+              No external delivery attempts recorded yet.
+
+          - total_failed = @failed_delivery_counts.values.sum
+          - if total_failed.positive?
+            %p
+              Failed attempts:
+              = total_failed
+            %p
+              = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
+            - @failed_delivery_counts.each do |integration, count|
+              %p
+                = "#{integration} failures: #{count}"
+                = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"
