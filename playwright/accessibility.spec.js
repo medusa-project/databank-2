@@ -32,10 +32,21 @@ async function signInAs(page, role) {
 
 async function createDataset(page) {
   await page.goto("/datasets/new");
-  await page.locator('input[name="dataset[title]"]').fill(`A11y Dataset ${Date.now()}`);
-  await page.getByRole("button", { name: "Create Dataset", exact: true }).click();
-  await expect(page).toHaveURL(/\/datasets\//);
-  return page.url();
+  await page.locator("#owner-yes").check();
+  await page.locator("#private-yes").check();
+  await page.locator("#agree-yes").check();
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(page).toHaveURL(/\/datasets\/[^/]+\/edit$/);
+
+  const editUrl = page.url();
+  const key = editUrl.match(/\/datasets\/([^/]+)\/edit/)?.[1];
+  expect(key, `Expected dataset key in edit URL: ${editUrl}`).toBeTruthy();
+
+  return {
+    key,
+    editUrl,
+    showUrl: `/datasets/${key}`,
+  };
 }
 
 async function createGuideSection(page) {
@@ -71,6 +82,29 @@ async function createGuideSubitem(page, itemEditHref) {
   await expect(page).toHaveURL(/\/guide\/subitems/);
   const editLink = page.locator('a[href*="/guide/subitems/"][href*="/edit"]').last();
   return editLink.getAttribute("href");
+}
+
+async function createFeaturedResearcher(page) {
+  await page.goto("/featured_researchers/new");
+  await page.locator('input[name="featured_researcher[name]"]').fill(`A11y Spotlight ${Date.now()}`);
+  await page.locator('textarea[name="featured_researcher[bio]"]').fill("Accessibility-focused spotlight bio.");
+  await page
+    .locator('input[name="featured_researcher[question]"]')
+    .fill("Why did you choose Illinois Data Bank?");
+  await page
+    .locator('textarea[name="featured_researcher[testimonial]"]')
+    .fill("Because it provides stable public access to research data.");
+  await page
+    .locator('input[name="featured_researcher[dataset_url]"]')
+    .fill("https://example.test/dataset");
+  await page
+    .locator('input[name="featured_researcher[article_url]"]')
+    .fill("https://example.test/article");
+
+  await page.getByRole("button", { name: "Save and Preview" }).click();
+  await expect(page).toHaveURL(/\/featured_researchers\/\d+\/preview/);
+
+  return page.url();
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +144,10 @@ test.describe("public pages", () => {
     await expectNoA11yViolations(page, "/contact");
   });
 
+  test("researcher spotlights index", async ({ page }) => {
+    await expectNoA11yViolations(page, "/researcher_spotlights");
+  });
+
   test("404 page", async ({ page }) => {
     await expectNoA11yViolations(page, "/this-page-does-not-exist");
   });
@@ -133,29 +171,22 @@ test.describe("depositor pages", () => {
   });
 
   test("dataset show after create", async ({ page }) => {
-    const url = await createDataset(page);
-    const results = await new AxeBuilder({ page }).include("main").analyze();
-    expect(
-      results.violations,
-      `Violations on dataset show: ${JSON.stringify(results.violations, null, 2)}`,
-    ).toEqual([]);
+    const { showUrl } = await createDataset(page);
+    await expectNoA11yViolations(page, showUrl);
   });
 
   test("dataset edit form", async ({ page }) => {
-    const url = await createDataset(page);
-    const key = url.match(/\/datasets\/([^/]+)/)?.[1];
+    const { key } = await createDataset(page);
     await expectNoA11yViolations(page, `/datasets/${key}/edit`);
   });
 
   test("dataset pre-version page", async ({ page }) => {
-    const url = await createDataset(page);
-    const key = url.match(/\/datasets\/([^/]+)/)?.[1];
+    const { key } = await createDataset(page);
     await expectNoA11yViolations(page, `/datasets/${key}/pre_version`);
   });
 
   test("dataset version controls page", async ({ page }) => {
-    const url = await createDataset(page);
-    const key = url.match(/\/datasets\/([^/]+)/)?.[1];
+    const { key } = await createDataset(page);
     await expectNoA11yViolations(page, `/datasets/${key}/version_controls`);
   });
 });
@@ -221,5 +252,40 @@ test.describe("admin pages", () => {
     const itemHref = await createGuideItem(page, sectionHref);
     const subitemHref = await createGuideSubitem(page, itemHref);
     await expectNoA11yViolations(page, subitemHref);
+  });
+
+  test("researcher spotlights index", async ({ page }) => {
+    await expectNoA11yViolations(page, "/featured_researchers");
+  });
+
+  test("researcher spotlights new form", async ({ page }) => {
+    await expectNoA11yViolations(page, "/featured_researchers/new");
+  });
+
+  test("researcher spotlights preview", async ({ page }) => {
+    const previewUrl = await createFeaturedResearcher(page);
+    const results = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      results.violations,
+      `Violations on researcher spotlight preview: ${JSON.stringify(results.violations, null, 2)}`,
+    ).toEqual([]);
+    await expect(page).toHaveURL(previewUrl);
+  });
+
+  test("researcher spotlights edit form", async ({ page }) => {
+    const previewUrl = await createFeaturedResearcher(page);
+    const spotlightId = previewUrl.match(/\/featured_researchers\/(\d+)\/preview/)?.[1];
+    await expectNoA11yViolations(page, `/featured_researchers/${spotlightId}/edit`);
+  });
+
+  test("researcher spotlights show page", async ({ page }) => {
+    const previewUrl = await createFeaturedResearcher(page);
+    const spotlightId = previewUrl.match(/\/featured_researchers\/(\d+)\/preview/)?.[1];
+    await page.goto(`/featured_researchers/${spotlightId}`);
+    const results = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      results.violations,
+      `Violations on researcher spotlight show: ${JSON.stringify(results.violations, null, 2)}`,
+    ).toEqual([]);
   });
 });

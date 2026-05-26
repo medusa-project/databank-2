@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_24_234200) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_26_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -166,6 +166,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_24_234200) do
     t.index ["dataset_id"], name: "index_external_delivery_attempts_on_dataset_id"
     t.index ["integration"], name: "index_external_delivery_attempts_on_integration"
     t.index ["status"], name: "index_external_delivery_attempts_on_status"
+  end
+
+  create_table "featured_researchers", force: :cascade do |t|
+    t.string "article_url"
+    t.text "bio"
+    t.datetime "created_at", null: false
+    t.string "dataset_url"
+    t.boolean "is_active", default: false, null: false
+    t.string "name", null: false
+    t.string "photo_url"
+    t.text "question"
+    t.text "testimonial"
+    t.datetime "updated_at", null: false
+    t.index ["is_active"], name: "index_featured_researchers_on_is_active"
   end
 
   create_table "funders", force: :cascade do |t|

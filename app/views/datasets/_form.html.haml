@@ -122,10 +122,12 @@
             %thead
               %tr
                 %th
+                  %span.sr-only Reorder
                 %th Organization Name(s)
                 %th Email
                 %th Primary Contact
                 %th
+                  %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
               - creators_for_mode.each_with_index do |creator, index|
                 = f.fields_for :creators, creator do |cf|
@@ -156,13 +158,16 @@
             %thead
               %tr
                 %th
+                  %span.sr-only Reorder
                 %th Family Name(s)
                 %th Given Name(s)
                 %th ORCID
                 %th
+                  %span.sr-only ORCID Lookup
                 %th Email
                 %th Primary Contact
                 %th
+                  %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
               - creators_for_mode.each_with_index do |creator, index|
                 = f.fields_for :creators, creator do |cf|

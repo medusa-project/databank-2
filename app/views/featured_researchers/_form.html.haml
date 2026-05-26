@@ -1,0 +1,46 @@
+= form_with model: @featured_researcher, class: "featured-researcher-form" do |f|
+  - if @featured_researcher.errors.any?
+    .ilw-notice.ilw-notice--error{role: "alert"}
+      %h2= "#{pluralize(@featured_researcher.errors.count, 'error')} prevented this researcher spotlight from being saved"
+      %ul
+        - @featured_researcher.errors.full_messages.each do |msg|
+          %li= msg
+
+  .idb-metadata-grid
+    .idb-grid-col-6
+      = f.label :name, "Name"
+      = f.text_field :name, class: "form-control", required: true
+
+    .idb-grid-col-6
+      = f.label :photo_url, "Photo URL"
+      = f.url_field :photo_url, class: "form-control", placeholder: "https://..."
+
+    .idb-grid-col-6
+      = f.label :dataset_url, "Dataset URL"
+      = f.url_field :dataset_url, class: "form-control", placeholder: "https://..."
+
+    .idb-grid-col-6
+      = f.label :article_url, "Article URL"
+      = f.url_field :article_url, class: "form-control", placeholder: "https://..."
+
+    .idb-grid-col-12
+      = f.label :bio, "Biography"
+      = f.text_area :bio, class: "form-control", rows: 6
+
+    .idb-grid-col-12
+      = f.label :question, "Testimonial Prompt"
+      = f.text_field :question, class: "form-control"
+
+    .idb-grid-col-12
+      = f.label :testimonial, "Testimonial"
+      = f.text_area :testimonial, class: "form-control", rows: 5
+
+    .idb-grid-col-12
+      .checkbox
+        %label
+          = f.check_box :is_active
+          Publish this spotlight
+
+  .idb-row-actions
+    = f.submit "Save and Preview", class: "idb-button-primary"
+    = link_to "Cancel", featured_researchers_path, class: "idb-button-default"

@@ -41,3 +41,6 @@
 !/working/.keep
 /migration_bundles/*
 !/migration_bundles/.keep
+!/migration_bundles/datasets/.keep
+!/migration_bundles/guides/.keep
+!/migration_bundles/featured_researchers/.keep

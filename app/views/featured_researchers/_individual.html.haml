@@ -1,0 +1,52 @@
+- heading_id = "featured-researcher-#{featured_researcher.id}"
+
+%article.featured-researcher-entry{aria: { labelledby: heading_id }}
+  .featured-researcher-photo
+    - if featured_researcher.photo_url.present?
+      .photo-preview
+        %img.featured-img{src: featured_researcher.photo_url, alt: "Headshot of #{featured_researcher.name}"}
+    - else
+      .no-image-available
+        No photo available.
+
+  .featured-researcher-main
+    %h2.spotlight-name{id: heading_id}
+      = link_to featured_researcher.name, featured_researcher_path(featured_researcher)
+
+    - if featured_researcher.bio.present?
+      .featured-rich-text= spotlight_rich_text(featured_researcher.bio)
+
+    - if featured_researcher.question.present? || featured_researcher.testimonial.present?
+      .featured-comment
+        - if featured_researcher.question.present?
+          .more-elbow
+            %strong= featured_researcher.question
+        - if featured_researcher.testimonial.present?
+          .elbow.featured-rich-text= spotlight_rich_text(featured_researcher.testimonial)
+
+  .featured-researcher-links
+    - if featured_researcher.dataset_url.present?
+      = link_to "dataset", featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{featured_researcher.name}" }
+    - if featured_researcher.article_url.present?
+      = link_to "article", featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{featured_researcher.name}" }
+
+  - if can?(:manage, featured_researcher)
+    .featured-researcher-admin.curator-only
+      %p.featured-status
+        %strong Status:
+        = featured_researcher.is_active? ? "Published" : "Not Published"
+
+      = form_with model: featured_researcher, method: :patch, class: "featured-admin-form" do |f|
+        = f.hidden_field :name, value: featured_researcher.name
+        = f.hidden_field :question, value: featured_researcher.question
+        = f.hidden_field :dataset_url, value: featured_researcher.dataset_url
+        = f.hidden_field :article_url, value: featured_researcher.article_url
+        = f.hidden_field :bio, value: featured_researcher.bio
+        = f.hidden_field :testimonial, value: featured_researcher.testimonial
+        = f.hidden_field :photo_url, value: featured_researcher.photo_url
+        = f.hidden_field :is_active, value: !featured_researcher.is_active?
+        = f.submit(featured_researcher.is_active? ? "Unpublish" : "Publish", class: "idb-button-warning")
+
+      = link_to "Preview", preview_featured_researcher_path(featured_researcher), class: "idb-button-primary"
+      = link_to "Edit", edit_featured_researcher_path(featured_researcher), class: "idb-button-success"
+      = link_to "Delete", featured_researcher_path(featured_researcher), method: :delete, data: { confirm: "Are you sure?" }, class: "idb-button-danger"

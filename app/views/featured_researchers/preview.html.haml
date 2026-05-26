@@ -1,0 +1,10 @@
+- content_for :title, (@featured_researcher.name.presence || "Researcher Spotlight Preview")
+
+%ilw-content.featured-researchers-page
+  .idb-section-card
+    %h2.idb-section-title Researcher Spotlight Preview
+    = render "individual", featured_researcher: @featured_researcher
+
+    .idb-row-actions
+      = link_to "List Researcher Spotlights", featured_researchers_path, class: "idb-button-info"
+      = link_to "Edit Researcher Spotlight", edit_featured_researcher_path(@featured_researcher), class: "idb-button-success"

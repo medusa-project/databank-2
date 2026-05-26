@@ -141,9 +141,20 @@
 }
 
 .featured-buttons {
-	display: flex;
+	display: grid;
 	gap: 0.5rem;
 	margin: 0.5rem 0 0.75rem;
+}
+
+.welcome-spotlight .featured-buttons .idb-button-primary,
+.welcome-spotlight .featured-buttons .idb-button-default {
+	width: 100%;
+	justify-content: center;
+}
+
+.welcome-spotlight-all {
+	width: 100%;
+	justify-content: center;
 }
 
 .featured-comment {

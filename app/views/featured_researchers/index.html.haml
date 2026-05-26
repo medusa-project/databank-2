@@ -1,0 +1,16 @@
+- content_for :title, "Researcher Spotlights"
+
+%ilw-content.featured-researchers-page
+  .idb-section-card
+    %h2.idb-section-title Researcher Spotlights
+
+    - if @featured_researchers.any?
+      .featured-researcher-list
+        - @featured_researchers.each do |featured_researcher|
+          = render "individual", featured_researcher: featured_researcher
+    - else
+      %p No researcher spotlights are currently available.
+
+    - if can?(:manage, FeaturedResearcher)
+      .idb-row-actions
+        = link_to "New Researcher Spotlight", new_featured_researcher_path, class: "idb-button-primary"

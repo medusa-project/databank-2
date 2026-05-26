@@ -29,27 +29,36 @@
 
   .welcome-spotlight
     %h2 Researcher Spotlight
-    .featured-bio
-      .photo-preview
-        %img{src: "https://uofi.box.com/shared/static/09a7yq9bgzlformr3k33ocfoqw4632jy.png",
-             class: "img-responsive",
-             alt: "Headshot of Lindsay Clark"}
-      %strong Lindsay Clark
+    - if @featured_researcher.present?
+      .featured-bio
+        - if @featured_researcher.photo_url.present?
+          .photo-preview
+            %img{src: @featured_researcher.photo_url,
+                 class: "img-responsive",
+                 alt: "Headshot of #{@featured_researcher.name}"}
+        %strong= @featured_researcher.name
+        - if @featured_researcher.bio.present?
+          .featured-rich-text= spotlight_rich_text(@featured_researcher.bio)
+
+      .featured-buttons
+        - if @featured_researcher.dataset_url.present?
+          = link_to "dataset", @featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{@featured_researcher.name}" }
+        - if @featured_researcher.article_url.present?
+          = link_to "article", @featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{@featured_researcher.name}" }
+
+      - if @featured_researcher.question.present? || @featured_researcher.testimonial.present?
+        .featured-comment
+          - if @featured_researcher.question.present?
+            %strong= @featured_researcher.question
+          - if @featured_researcher.testimonial.present?
+            .elbow.featured-rich-text= spotlight_rich_text(@featured_researcher.testimonial)
+
+      %hr
       %p
-        I am a plant geneticist with particular interests in polyploidy, population genetics, and the development of novel algorithms and software for the analysis of molecular markers. I am currently a research specialist in the lab of Prof. Erik Sacks in the Department of Crop Sciences at the University of Illinois, Urbana-Champaign.
-
-    .featured-buttons
-      %button.idb-button-secondary{type: "button", disabled: true, "aria-label": "dataset link coming soon"}
-        dataset (coming soon)
-      %button.idb-button-secondary{type: "button", disabled: true, "aria-label": "article link coming soon"}
-        article (coming soon)
-
-    .featured-comment
-      %strong How did you decide the Data Bank was the best place to put the data?
-      .elbow
-        %p
-          The Data Bank is free, and it allows any type of data, which is great. We liked that we could put essentially any information in there that we wanted.
-
-    %hr
-    %p
-      %a{href: "/researcher_spotlights"} See all researcher spotlights
+        = link_to "See all researcher spotlights", researcher_spotlights_path, class: "idb-button-default welcome-spotlight-all"
+    - else
+      %p
+        The Illinois Data Bank features researchers who deposit data. Check back soon for our next spotlight.
+      %hr
+      %p
+        = link_to "See all researcher spotlights", researcher_spotlights_path, class: "idb-button-default welcome-spotlight-all"

@@ -101,28 +101,28 @@ a.idb-button-primary:active {
 .idb-button-danger {
 	background-color: #d9534f;
 	border-color: #d43f3a;
-	color: #ffffff;
+	color: #000000;
 }
 
 /* Success — Bootstrap 3 btn-success green */
 .idb-button-success {
 	background-color: #5cb85c;
 	border-color: #4cae4c;
-	color: #ffffff;
+	color: #13294b;
 }
 
 /* Info — Bootstrap 3 btn-info teal */
 .idb-button-info {
 	background-color: #5bc0de;
 	border-color: #46b8da;
-	color: #ffffff;
+	color: #13294b;
 }
 
 /* Warning — Bootstrap 3 btn-warning amber */
 .idb-button-warning {
 	background-color: #f0ad4e;
 	border-color: #eea236;
-	color: #ffffff;
+	color: #13294b;
 }
 
 /* Default — Bootstrap 3 btn-default neutral */
@@ -135,9 +135,9 @@ a.idb-button-primary:active {
 .idb-button-danger:hover,
 .idb-button-danger:focus,
 .idb-button-danger:focus-visible {
-	background-color: #c9302c;
+	background-color: #d9534f;
 	border-color: #ac2925;
-	color: #ffffff;
+	color: #000000;
 }
 
 .idb-button-success:hover,
@@ -145,7 +145,7 @@ a.idb-button-primary:active {
 .idb-button-success:focus-visible {
 	background-color: #449d44;
 	border-color: #398439;
-	color: #ffffff;
+	color: #13294b;
 }
 
 .idb-button-info:hover,
@@ -153,7 +153,7 @@ a.idb-button-primary:active {
 .idb-button-info:focus-visible {
 	background-color: #31b0d5;
 	border-color: #269abc;
-	color: #ffffff;
+	color: #13294b;
 }
 
 .idb-button-warning:hover,
@@ -161,7 +161,7 @@ a.idb-button-primary:active {
 .idb-button-warning:focus-visible {
 	background-color: #ec971f;
 	border-color: #d58512;
-	color: #ffffff;
+	color: #13294b;
 }
 
 .idb-button-default:hover,
@@ -178,7 +178,7 @@ a.idb-button-danger:hover,
 a.idb-button-danger:focus,
 a.idb-button-danger:focus-visible,
 a.idb-button-danger:active {
-	color: #ffffff;
+	color: #000000;
 	text-decoration: none;
 }
 
@@ -188,7 +188,7 @@ a.idb-button-success:hover,
 a.idb-button-success:focus,
 a.idb-button-success:focus-visible,
 a.idb-button-success:active {
-	color: #ffffff;
+	color: #13294b;
 	text-decoration: none;
 }
 
@@ -198,7 +198,7 @@ a.idb-button-info:hover,
 a.idb-button-info:focus,
 a.idb-button-info:focus-visible,
 a.idb-button-info:active {
-	color: #ffffff;
+	color: #13294b;
 	text-decoration: none;
 }
 
@@ -208,7 +208,7 @@ a.idb-button-warning:hover,
 a.idb-button-warning:focus,
 a.idb-button-warning:focus-visible,
 a.idb-button-warning:active {
-	color: #ffffff;
+	color: #13294b;
 	text-decoration: none;
 }
 

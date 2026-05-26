@@ -47,6 +47,13 @@ Rails.application.routes.draw do
     resources :subitems, except: :show
   end
 
+  resources :featured_researchers do
+    member do
+      get :preview
+    end
+  end
+  get "/researcher_spotlights", to: "featured_researchers#index", as: :researcher_spotlights
+
   # Static / nav pages
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
