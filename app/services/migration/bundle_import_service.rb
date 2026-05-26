@@ -3,14 +3,15 @@ require "digest"
 
 module Migration
   class BundleImportService
-    attr_reader :bundle_path, :overwrite, :dry_run, :checksum_path, :manifest_path
+    attr_reader :bundle_path, :overwrite, :dry_run, :checksum_path, :manifest_path, :report_path
 
-    def initialize(bundle_path:, overwrite: false, dry_run: false, checksum_path: nil, manifest_path: nil)
+    def initialize(bundle_path:, overwrite: false, dry_run: false, checksum_path: nil, manifest_path: nil, report_path: nil)
       @bundle_path = Pathname(bundle_path)
       @overwrite = overwrite
       @dry_run = dry_run
       @checksum_path = checksum_path.present? ? Pathname(checksum_path) : nil
       @manifest_path = manifest_path.present? ? Pathname(manifest_path) : nil
+      @report_path = resolve_report_path(report_path)
     end
 
     def call
@@ -56,10 +57,19 @@ module Migration
 
       verify_expected_record_count!(processed_count)
 
+      summary[:processed_count] = processed_count
+      summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_count") }
+      summary[:checksum] = safe_expected_checksum
+      write_report_artifact!(summary)
+
       summary
     rescue StandardError => e
       summary[:validation_error] = e.message if defined?(summary)
       summary[:failed] += 1 if defined?(summary)
+      summary[:processed_count] = processed_count if defined?(processed_count) && defined?(summary)
+      summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_count") } if defined?(summary)
+      summary[:checksum] = safe_expected_checksum if defined?(summary)
+      write_report_artifact!(summary) if defined?(summary)
       summary || {
         bundle_path: bundle_path.to_s,
         created: 0,
@@ -120,6 +130,45 @@ module Migration
       return @manifest_data if defined?(@manifest_data)
 
       @manifest_data = manifest_path ? JSON.parse(File.read(manifest_path)) : nil
+    end
+
+    def safe_manifest_value
+      yield
+    rescue StandardError
+      nil
+    end
+
+    def safe_expected_checksum
+      expected_checksum
+    rescue StandardError
+      nil
+    end
+
+    def default_report_path
+      bundle_path.dirname.join("import_report.json")
+    end
+
+    def resolve_report_path(report_path)
+      return default_report_path unless report_path.present?
+
+      path = Pathname(report_path)
+      path.absolute? ? path : bundle_path.dirname.join(path)
+    end
+
+    def write_report_artifact!(summary)
+      Migration::RunReportWriter.new(
+        report_path: report_path,
+        report: {
+          generated_at: Time.current.utc.iso8601,
+          import_type: "dataset_bundle",
+          bundle_path: summary[:bundle_path],
+          checksum_path: checksum_path&.to_s,
+          manifest_path: manifest_path&.to_s,
+          summary: summary
+        }
+      ).call
+    rescue StandardError => e
+      summary[:report_error] = e.message if summary.respond_to?(:[]=)
     end
 
     def secure_compare(a, b)

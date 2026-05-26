@@ -1,6 +1,8 @@
+require "json"
+
 module Migration
   class RunRecorder
-    def initialize(run_type:, label: nil, source_since: nil, source_until: nil, bundle_path: nil, checksum_path: nil, manifest_path: nil, details: {})
+    def initialize(run_type:, label: nil, source_since: nil, source_until: nil, bundle_path: nil, checksum_path: nil, manifest_path: nil, report_path: nil, details: {})
       @run_type = run_type
       @label = label
       @source_since = source_since
@@ -8,6 +10,7 @@ module Migration
       @bundle_path = bundle_path
       @checksum_path = checksum_path
       @manifest_path = manifest_path
+      @report_path = report_path
       @details = details
     end
 
@@ -22,7 +25,7 @@ module Migration
         checksum_path: checksum_path,
         manifest_path: manifest_path,
         started_at: Time.current,
-        details: details
+        details: details.merge(report_path: report_path&.to_s)
       )
     end
 
@@ -39,13 +42,16 @@ module Migration
         expected_count: summary[:expected_record_count],
         validation_error: summary[:validation_error],
         completed_at: Time.current,
-        details: run.details.merge(summary: compact_summary(summary))
+        details: run.details.merge(
+          summary: compact_summary(summary),
+          report_artifact: report_artifact_details
+        )
       )
     end
 
     private
 
-    attr_reader :run_type, :label, :source_since, :source_until, :bundle_path, :checksum_path, :manifest_path, :details
+    attr_reader :run_type, :label, :source_since, :source_until, :bundle_path, :checksum_path, :manifest_path, :report_path, :details
 
     def final_status(summary)
       return "failed" if summary[:validation_error].present?
@@ -68,6 +74,40 @@ module Migration
         checksum: summary[:checksum],
         source_since: summary[:source_since],
         source_until: summary[:source_until]
+      }
+    end
+
+    def report_artifact_details
+      return nil if report_path.blank?
+
+      payload = JSON.parse(File.read(report_path))
+      {
+        path: report_path.to_s,
+        generated_at: payload["generated_at"],
+        import_type: payload["import_type"],
+        bundle_path: payload["bundle_path"],
+        checksum_path: payload["checksum_path"],
+        manifest_path: payload["manifest_path"],
+        summary: compact_report_summary(payload["summary"] || {})
+      }
+    rescue StandardError => e
+      {
+        path: report_path.to_s,
+        error: e.message
+      }
+    end
+
+    def compact_report_summary(summary)
+      {
+        created: summary["created"],
+        updated: summary["updated"],
+        skipped_existing: summary["skipped_existing"],
+        would_create: summary["would_create"],
+        would_update: summary["would_update"],
+        failed: summary["failed"],
+        processed_count: summary["processed_count"],
+        expected_record_count: summary["expected_record_count"],
+        validation_error: summary["validation_error"]
       }
     end
   end

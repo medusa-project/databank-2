@@ -3,17 +3,18 @@ require "digest"
 require "set"
 
 module Migration
-  class GuidesBundleImportService
-    attr_reader :bundle_path, :dry_run, :checksum_path, :manifest_path, :replace_all, :report_path
+  class FeaturedResearchersBundleImportService
+    attr_reader :bundle_path, :dry_run, :checksum_path, :manifest_path, :replace_all, :overwrite, :report_path
 
-    VALID_TYPES = [ "Guide::Section", "Guide::Item", "Guide::Subitem" ].freeze
+    VALID_TYPE = "FeaturedResearcher".freeze
 
-    def initialize(bundle_path:, dry_run: false, checksum_path: nil, manifest_path: nil, replace_all: true, report_path: nil)
+    def initialize(bundle_path:, dry_run: false, checksum_path: nil, manifest_path: nil, replace_all: true, overwrite: false, report_path: nil)
       @bundle_path = Pathname(bundle_path)
       @dry_run = dry_run
       @checksum_path = checksum_path.present? ? Pathname(checksum_path) : nil
       @manifest_path = manifest_path.present? ? Pathname(manifest_path) : nil
       @replace_all = replace_all
+      @overwrite = overwrite
       @report_path = resolve_report_path(report_path)
     end
 
@@ -36,10 +37,14 @@ module Migration
       payloads = parse_payloads(summary)
       verify_expected_record_count!(payloads.size)
       verify_manifest_counts!(payloads)
-      verify_hierarchy!(payloads)
+      verify_unique_ids!(payloads)
 
       if dry_run
-        summary[:would_create] = payloads.size
+        payloads.each_with_index do |payload, idx|
+          status = dry_run_status(payload)
+          increment_summary(summary, status)
+          summary[:records] << { line: idx + 1, status: status, id: payload.dig("attributes", "id") }
+        end
         summary[:processed_count] = payloads.size
         summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_count") }
         summary[:checksum] = safe_expected_checksum
@@ -48,15 +53,21 @@ module Migration
       end
 
       ActiveRecord::Base.transaction do
-        clear_existing_guides! if replace_all
+        clear_existing_featured_researchers! if replace_all
 
         payloads.each_with_index do |payload, idx|
-          import_payload!(payload)
-          summary[:created] += 1
-          summary[:records] << { line: idx + 1, status: :created, type: payload.fetch("type"), id: payload.fetch("attributes").fetch("id") }
+          result = import_payload!(payload)
+          increment_summary(summary, result[:status])
+          summary[:records] << {
+            line: idx + 1,
+            status: result[:status],
+            id: result[:id],
+            name: result[:name],
+            message: result[:message]
+          }
         end
 
-        reset_guide_sequences!
+        reset_featured_researcher_sequence!
       end
 
       summary[:processed_count] = payloads.size
@@ -123,8 +134,8 @@ module Migration
         type = payload["type"].to_s
         attributes = payload["attributes"]
 
-        unless VALID_TYPES.include?(type)
-          raise ArgumentError, "unsupported guide record type at line #{line_number}: #{type}"
+        unless type == VALID_TYPE
+          raise ArgumentError, "unsupported spotlight record type at line #{line_number}: #{type}"
         end
 
         unless attributes.is_a?(Hash)
@@ -152,122 +163,102 @@ module Migration
     def verify_manifest_counts!(payloads)
       return unless manifest_data && manifest_data["counts"].is_a?(Hash)
 
-      actual = payloads.each_with_object(Hash.new(0)) { |payload, counts| counts[payload["type"]] += 1 }
-      expected = manifest_data["counts"].transform_values(&:to_i)
+      expected = manifest_data["counts"][VALID_TYPE]
+      return if expected.nil?
 
-      [ "Guide::Section", "Guide::Item", "Guide::Subitem" ].each do |type|
-        next if expected[type].to_i == actual[type].to_i
+      actual = payloads.count
+      return if expected.to_i == actual
 
-        raise ArgumentError, "manifest count mismatch for #{type}"
-      end
+      raise ArgumentError, "manifest count mismatch for #{VALID_TYPE}"
     end
 
-    def verify_hierarchy!(payloads)
-      section_ids = payloads.filter { |p| p["type"] == "Guide::Section" }.map { |p| p["attributes"]["id"].to_i }.to_set
-      item_records = payloads.filter { |p| p["type"] == "Guide::Item" }
-      item_ids = item_records.map { |p| p["attributes"]["id"].to_i }.to_set
+    def verify_unique_ids!(payloads)
+      ids = payloads.map { |payload| payload.dig("attributes", "id").to_i }
+      duplicates = ids.tally.select { |_id, count| count > 1 }
+      return if duplicates.empty?
 
-      item_records.each do |item|
-        section_id = item.fetch("attributes").fetch("section_id", nil)
-        raise ArgumentError, "item missing section_id for id=#{item.dig("attributes", "id")}" if section_id.blank?
-        raise ArgumentError, "item references unknown section_id=#{section_id}" unless section_ids.include?(section_id.to_i)
-      end
+      raise ArgumentError, "duplicate spotlight ids in bundle: #{duplicates.keys.sort.join(", ")}"
+    end
 
-      payloads.filter { |p| p["type"] == "Guide::Subitem" }.each do |subitem|
-        item_id = subitem.fetch("attributes").fetch("item_id", nil)
-        raise ArgumentError, "subitem missing item_id for id=#{subitem.dig("attributes", "id")}" if item_id.blank?
-        raise ArgumentError, "subitem references unknown item_id=#{item_id}" unless item_ids.include?(item_id.to_i)
-      end
+    def dry_run_status(payload)
+      return :would_create if replace_all
+
+      attrs = payload.fetch("attributes")
+      id = attrs.fetch("id").to_i
+      existing = FeaturedResearcher.find_by(id: id)
+      return :would_create if existing.nil?
+      return :would_update if overwrite
+
+      :skipped_existing
     end
 
     def import_payload!(payload)
-      type = payload.fetch("type")
-      attrs = payload.fetch("attributes").dup
-      body = attrs.delete("body")
+      attrs = normalized_attributes(payload.fetch("attributes"))
+      id = attrs.fetch(:id)
 
-      case type
-      when "Guide::Section"
-        import_section!(attrs, body)
-      when "Guide::Item"
-        import_item!(attrs, body)
-      when "Guide::Subitem"
-        import_subitem!(attrs, body)
+      if replace_all
+        record = FeaturedResearcher.create!(attrs)
+        return { status: :created, id: record.id, name: record.name, message: "created" }
+      end
+
+      record = FeaturedResearcher.find_by(id: id)
+      if record.nil?
+        record = FeaturedResearcher.create!(attrs)
+        { status: :created, id: record.id, name: record.name, message: "created" }
+      elsif overwrite
+        record.update!(attrs.except(:id))
+        { status: :updated, id: record.id, name: record.name, message: "updated" }
       else
-        raise ArgumentError, "unsupported type: #{type}"
+        { status: :skipped_existing, id: record.id, name: record.name, message: "skipped existing" }
       end
     end
 
-    def import_section!(attrs, body)
-      record = Guide::Section.create!(
-        id: attrs["id"],
-        anchor: attrs["anchor"],
-        label: attrs["label"],
-        ordinal: attrs["ordinal"],
-        public: attrs["public"],
-        heading: attrs["heading"],
-        created_at: parse_time(attrs["created_at"]),
-        updated_at: parse_time(attrs["updated_at"])
-      )
-      assign_body!(record, body)
+    def normalized_attributes(attrs)
+      id = attrs.fetch("id").to_i
+      raise ArgumentError, "invalid spotlight id: #{attrs["id"].inspect}" if id <= 0
+
+      {
+        id: id,
+        name: squish_or_nil(attrs["name"]),
+        question: squish_or_nil(attrs["question"]),
+        testimonial: squish_or_nil(attrs["testimonial"]),
+        bio: squish_or_nil(attrs["bio"]),
+        photo_url: strip_or_nil(attrs["photo_url"]),
+        dataset_url: strip_or_nil(attrs["dataset_url"]),
+        article_url: strip_or_nil(attrs["article_url"]),
+        is_active: ActiveModel::Type::Boolean.new.cast(attrs["is_active"]),
+        created_at: parse_time!(attrs["created_at"], "created_at", id),
+        updated_at: parse_time!(attrs["updated_at"], "updated_at", id)
+      }
     end
 
-    def import_item!(attrs, body)
-      record = Guide::Item.create!(
-        id: attrs["id"],
-        section_id: attrs["section_id"],
-        anchor: attrs["anchor"],
-        label: attrs["label"],
-        ordinal: attrs["ordinal"],
-        public: attrs["public"],
-        heading: attrs["heading"],
-        created_at: parse_time(attrs["created_at"]),
-        updated_at: parse_time(attrs["updated_at"])
-      )
-      assign_body!(record, body)
+    def strip_or_nil(value)
+      str = value.to_s.strip
+      str.present? ? str : nil
     end
 
-    def import_subitem!(attrs, body)
-      record = Guide::Subitem.create!(
-        id: attrs["id"],
-        item_id: attrs["item_id"],
-        anchor: attrs["anchor"],
-        label: attrs["label"],
-        ordinal: attrs["ordinal"],
-        public: attrs["public"],
-        heading: attrs["heading"],
-        created_at: parse_time(attrs["created_at"]),
-        updated_at: parse_time(attrs["updated_at"])
-      )
-      assign_body!(record, body)
+    def squish_or_nil(value)
+      str = value.to_s.strip
+      str.present? ? str : nil
     end
 
-    def assign_body!(record, body)
-      return if body.blank?
+    def parse_time!(value, field, id)
+      raise ArgumentError, "missing #{field} for spotlight id=#{id}" if value.blank?
 
-      record.body = Migration::GuidesHtmlSanitizer.sanitize_html(body)
-      record.save!
-    end
+      parsed = Time.zone.parse(value.to_s)
+      raise ArgumentError, "invalid #{field} for spotlight id=#{id}" if parsed.nil?
 
-    def parse_time(value)
-      return nil if value.blank?
-
-      Time.zone.parse(value.to_s)
+      parsed
     rescue ArgumentError
-      nil
+      raise ArgumentError, "invalid #{field} for spotlight id=#{id}"
     end
 
-    def clear_existing_guides!
-      ActionText::RichText.where(record_type: VALID_TYPES, name: "body").delete_all
-      Guide::Subitem.delete_all
-      Guide::Item.delete_all
-      Guide::Section.delete_all
+    def clear_existing_featured_researchers!
+      FeaturedResearcher.delete_all
     end
 
-    def reset_guide_sequences!
-      connection = ActiveRecord::Base.connection
-      connection.reset_pk_sequence!(Guide::Section.table_name)
-      connection.reset_pk_sequence!(Guide::Item.table_name)
-      connection.reset_pk_sequence!(Guide::Subitem.table_name)
+    def reset_featured_researcher_sequence!
+      ActiveRecord::Base.connection.reset_pk_sequence!(FeaturedResearcher.table_name)
     end
 
     def manifest_data
@@ -275,7 +266,7 @@ module Migration
 
       @manifest_data = manifest_path ? JSON.parse(File.read(manifest_path)) : nil
       if @manifest_data && @manifest_data["format_version"].present? && @manifest_data["format_version"].to_i != 1
-        raise ArgumentError, "unsupported guides bundle format_version"
+        raise ArgumentError, "unsupported spotlights bundle format_version"
       end
       @manifest_data
     end
@@ -308,7 +299,7 @@ module Migration
         report_path: report_path,
         report: {
           generated_at: Time.current.utc.iso8601,
-          import_type: "guides_bundle",
+          import_type: "featured_researchers_bundle",
           bundle_path: summary[:bundle_path],
           checksum_path: checksum_path&.to_s,
           manifest_path: manifest_path&.to_s,
@@ -327,6 +318,18 @@ module Migration
       result = 0
       l.zip(r) { |x, y| result |= (x ^ y) }
       result.zero?
+    end
+
+    def increment_summary(summary, status)
+      case status
+      when :created then summary[:created] += 1
+      when :updated then summary[:updated] += 1
+      when :skipped_existing then summary[:skipped_existing] += 1
+      when :would_create then summary[:would_create] += 1
+      when :would_update then summary[:would_update] += 1
+      else
+        summary[:failed] += 1
+      end
     end
   end
 end

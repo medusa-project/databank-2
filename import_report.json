@@ -1,0 +1,217 @@
+{
+  "generated_at": "2026-05-26T20:06:01Z",
+  "import_type": "featured_researchers_bundle",
+  "bundle_path": "/workspaces/databank-2/migration_bundles/spotlights/prod_spotlight_20260526T183059Z/legacy_featured_researchers.ndjson",
+  "checksum_path": "/workspaces/databank-2/migration_bundles/spotlights/prod_spotlight_20260526T183059Z/legacy_featured_researchers.ndjson.sha256",
+  "manifest_path": "/workspaces/databank-2/migration_bundles/spotlights/prod_spotlight_20260526T183059Z/manifest.json",
+  "summary": {
+    "bundle_path": "/workspaces/databank-2/migration_bundles/spotlights/prod_spotlight_20260526T183059Z/legacy_featured_researchers.ndjson",
+    "created": 0,
+    "updated": 0,
+    "skipped_existing": 0,
+    "would_create": 39,
+    "would_update": 0,
+    "failed": 0,
+    "validation_error": null,
+    "records": [
+      {
+        "line": 1,
+        "status": "would_create",
+        "id": 1
+      },
+      {
+        "line": 2,
+        "status": "would_create",
+        "id": 2
+      },
+      {
+        "line": 3,
+        "status": "would_create",
+        "id": 3
+      },
+      {
+        "line": 4,
+        "status": "would_create",
+        "id": 4
+      },
+      {
+        "line": 5,
+        "status": "would_create",
+        "id": 5
+      },
+      {
+        "line": 6,
+        "status": "would_create",
+        "id": 6
+      },
+      {
+        "line": 7,
+        "status": "would_create",
+        "id": 7
+      },
+      {
+        "line": 8,
+        "status": "would_create",
+        "id": 8
+      },
+      {
+        "line": 9,
+        "status": "would_create",
+        "id": 9
+      },
+      {
+        "line": 10,
+        "status": "would_create",
+        "id": 10
+      },
+      {
+        "line": 11,
+        "status": "would_create",
+        "id": 11
+      },
+      {
+        "line": 12,
+        "status": "would_create",
+        "id": 12
+      },
+      {
+        "line": 13,
+        "status": "would_create",
+        "id": 13
+      },
+      {
+        "line": 14,
+        "status": "would_create",
+        "id": 15
+      },
+      {
+        "line": 15,
+        "status": "would_create",
+        "id": 16
+      },
+      {
+        "line": 16,
+        "status": "would_create",
+        "id": 18
+      },
+      {
+        "line": 17,
+        "status": "would_create",
+        "id": 19
+      },
+      {
+        "line": 18,
+        "status": "would_create",
+        "id": 20
+      },
+      {
+        "line": 19,
+        "status": "would_create",
+        "id": 21
+      },
+      {
+        "line": 20,
+        "status": "would_create",
+        "id": 22
+      },
+      {
+        "line": 21,
+        "status": "would_create",
+        "id": 23
+      },
+      {
+        "line": 22,
+        "status": "would_create",
+        "id": 24
+      },
+      {
+        "line": 23,
+        "status": "would_create",
+        "id": 25
+      },
+      {
+        "line": 24,
+        "status": "would_create",
+        "id": 27
+      },
+      {
+        "line": 25,
+        "status": "would_create",
+        "id": 30
+      },
+      {
+        "line": 26,
+        "status": "would_create",
+        "id": 31
+      },
+      {
+        "line": 27,
+        "status": "would_create",
+        "id": 32
+      },
+      {
+        "line": 28,
+        "status": "would_create",
+        "id": 33
+      },
+      {
+        "line": 29,
+        "status": "would_create",
+        "id": 35
+      },
+      {
+        "line": 30,
+        "status": "would_create",
+        "id": 39
+      },
+      {
+        "line": 31,
+        "status": "would_create",
+        "id": 40
+      },
+      {
+        "line": 32,
+        "status": "would_create",
+        "id": 41
+      },
+      {
+        "line": 33,
+        "status": "would_create",
+        "id": 42
+      },
+      {
+        "line": 34,
+        "status": "would_create",
+        "id": 43
+      },
+      {
+        "line": 35,
+        "status": "would_create",
+        "id": 44
+      },
+      {
+        "line": 36,
+        "status": "would_create",
+        "id": 45
+      },
+      {
+        "line": 37,
+        "status": "would_create",
+        "id": 46
+      },
+      {
+        "line": 38,
+        "status": "would_create",
+        "id": 47
+      },
+      {
+        "line": 39,
+        "status": "would_create",
+        "id": 48
+      }
+    ],
+    "processed_count": 39,
+    "expected_record_count": 39,
+    "checksum": "2633fc474f1d3460a7d069865069f323601e1a372fd5a3dede0f2e4c78f73393"
+  }
+}
