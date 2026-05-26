@@ -1,10 +1,6 @@
 - content_for :title, "Dataset Search"
 
 %ilw-content.datasets-search-page
-  - if logged_in?
-    %p.datasets-deposit-cta
-      %a.idb-button-primary{href: new_dataset_path} Deposit a New Dataset
-
   = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
     .datasets-toolbar
       .datasets-query-controls

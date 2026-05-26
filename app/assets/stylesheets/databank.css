@@ -406,17 +406,6 @@
 	height: 100%;
 }
 
-.idb-row-actions-inline .idb-button-primary,
-.idb-row-actions-inline .idb-button-secondary,
-.idb-row-actions-inline .idb-button-danger,
-.idb-row-actions-inline .idb-button-success {
-	width: 100%;
-	padding: 0.35rem 0.45rem;
-	min-height: 2rem;
-	font-size: 0.82rem;
-	line-height: 1.1;
-	white-space: nowrap;
-}
 
 .idb-nested-row {
 	border: 1px solid var(--il-storm-90);
@@ -550,14 +539,6 @@
 	min-height: 88px;
 }
 
-.dataset-form-page .idb-button-primary,
-.dataset-form-page .idb-button-secondary,
-.dataset-form-page .idb-button-danger,
-.dataset-form-page .idb-button-success {
-	min-height: 2.15rem;
-	padding: 0.4rem 0.75rem;
-	font-size: 0.9rem;
-}
 
 .idb-agreement-grid {
 	display: grid;
@@ -808,9 +789,6 @@
 		justify-content: stretch;
 	}
 
-	.idb-orcid-modal-footer .idb-button-primary {
-		width: 100%;
-	}
 }
 
 /* -----------------------------------------------------------------------
@@ -980,189 +958,6 @@ select:focus {
 textarea {
 	resize: vertical;
 	min-height: 120px;
-}
-
-/* -----------------------------------------------------------------------
- * Buttons (Tailwind-styled; toolkit web component buttons use toolkit_overrides.css)
- * ----------------------------------------------------------------------- */
-button,
-input[type="button"],
-input[type="submit"],
-input[type="reset"],
-.button {
-	font-family: var(--il-font-sans);
-	font-size: 1rem;
-	font-weight: 600;
-	color: #ffffff;
-	background-color: var(--il-blue);
-	border: 1px solid var(--il-blue);
-	border-radius: 4px;
-	padding: 0.625rem 1.25rem;
-	cursor: pointer;
-	transition: background-color 0.2s ease, border-color 0.2s ease;
-	text-decoration: none;
-	display: inline-block;
-}
-
-button:hover,
-input[type="button"]:hover,
-input[type="submit"]:hover,
-input[type="reset"]:hover,
-.button:hover {
-	background-color: var(--il-blue-50);
-	border-color: var(--il-blue-50);
-}
-
-button:focus,
-input[type="button"]:focus,
-input[type="submit"]:focus,
-input[type="reset"]:focus,
-.button:focus {
-	outline: 2px solid var(--il-orange);
-	outline-offset: 2px;
-}
-
-button:disabled,
-input[type="button"]:disabled,
-input[type="submit"]:disabled,
-input[type="reset"]:disabled {
-	background-color: var(--il-storm-70);
-	border-color: var(--il-storm-70);
-	cursor: not-allowed;
-	opacity: 0.6;
-}
-
-/* -----------------------------------------------------------------------
- * Illinois Data Bank custom button classes
- * ----------------------------------------------------------------------- */
-.idb-button-primary,
-.idb-button-secondary,
-.idb-button-danger,
-.idb-button-success {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 2.5rem;
-	padding: 0.5rem 1rem;
-	border-radius: 4px;
-	font-family: var(--il-font-sans);
-	font-size: 1rem;
-	font-weight: 700;
-	line-height: 1.2;
-	text-decoration: none;
-	cursor: pointer;
-	border: 1px solid transparent;
-	transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.idb-button-primary {
-	background-color: var(--il-blue);
-	border-color: var(--il-blue);
-	color: #ffffff;
-}
-
-.idb-button-primary:hover,
-.idb-button-primary:focus,
-.idb-button-primary:focus-visible {
-	background-color: var(--il-blue-50);
-	border-color: var(--il-blue-50);
-	color: #ffffff;
-}
-
-a.idb-button-primary,
-a.idb-button-primary:visited,
-a.idb-button-primary:hover,
-a.idb-button-primary:focus,
-a.idb-button-primary:focus-visible,
-a.idb-button-primary:active {
-	color: #ffffff;
-	text-decoration: none;
-}
-
-.idb-button-danger {
-	background-color: var(--il-altgeld);
-	border-color: var(--il-altgeld);
-	color: #ffffff;
-}
-.idb-button-success {
-	background-color: #2e7d32;
-	border-color: #2e7d32;
-	color: #ffffff;
-}
-
-.idb-button-danger:hover,
-.idb-button-danger:focus,
-.idb-button-danger:focus-visible {
-	background-color: var(--il-orange-40);
-	border-color: var(--il-orange-40);
-	color: #ffffff;
-}
-.idb-button-success:hover,
-.idb-button-success:focus,
-.idb-button-success:focus-visible {
-	background-color: #1b5e20;
-	border-color: #1b5e20;
-	color: #ffffff;
-}
-
-a.idb-button-danger,
-a.idb-button-danger:visited,
-a.idb-button-danger:hover,
-a.idb-button-danger:focus,
-a.idb-button-danger:focus-visible,
-a.idb-button-danger:active {
-	color: #ffffff;
-	text-decoration: none;
-}
-a.idb-button-success,
-a.idb-button-success:visited,
-a.idb-button-success:hover,
-a.idb-button-success:focus,
-a.idb-button-success:focus-visible,
-a.idb-button-success:active {
-	color: #ffffff;
-	text-decoration: none;
-}
-
-.idb-button-secondary {
-	background-color: var(--il-storm-95);
-	border-color: var(--il-storm-80);
-	color: var(--il-blue);
-}
-
-.idb-button-secondary:hover,
-.idb-button-secondary:focus,
-.idb-button-secondary:focus-visible {
-	background-color: var(--il-storm-80);
-	border-color: var(--il-storm-70);
-	color: var(--il-blue);
-}
-
-.idb-button-primary:focus,
-.idb-button-primary:focus-visible,
-.idb-button-secondary:focus,
-.idb-button-secondary:focus-visible,
-.idb-button-danger:focus,
-.idb-button-danger:focus-visible,
-.idb-button-success:focus,
-.idb-button-success:focus-visible {
-	outline: 2px solid var(--il-harvest);
-	outline-offset: 2px;
-}
-
-button.idb-button-primary:disabled,
-button.idb-button-secondary:disabled,
-button.idb-button-danger:disabled,
-button.idb-button-success:disabled,
-input.idb-button-primary:disabled,
-input.idb-button-secondary:disabled,
-input.idb-button-danger:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
-}
-input.idb-button-success:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
 }
 
 /* -----------------------------------------------------------------------
