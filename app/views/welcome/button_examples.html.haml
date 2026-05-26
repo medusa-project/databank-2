@@ -1,0 +1,73 @@
+- content_for :title, "Button Examples"
+
+%ilw-content.button-examples-page
+  %section{ "aria-labelledby" => "button-examples-heading" }
+    %h1#button-examples-heading Button Examples
+    %p This temporary page demonstrates each available button style.
+
+  %section{ "aria-labelledby" => "button-examples-standard" }
+    %h2#button-examples-standard Standard Buttons
+    %p
+      Success uses
+      %code --il-arches-darker-1
+      , info uses
+      %code --il-storm
+      , and warning uses
+      %code --il-altgeld
+      (all AA-safe with white text).
+    %p
+      %button.idb-button-primary{ type: "button" } Primary Button
+    %p
+      %button.idb-button-secondary{ type: "button" } Secondary Button
+    %p
+      %button.idb-button-danger{ type: "button" } Danger Button
+    %p
+      %button.idb-button-success{ type: "button" } Success Button (--il-arches-darker-1)
+    %p
+      %button.idb-button-info{ type: "button" } Info Button (--il-storm)
+    %p
+      %button.idb-button-warning{ type: "button" } Warning Button (--il-altgeld)
+    %p
+      %button.idb-button-default{ type: "button" } Default Button
+    %p
+      %a.idb-button-link{ href: "#" } Link Button
+
+  %section{ "aria-labelledby" => "button-examples-additional" }
+    %h2#button-examples-additional Additional Toolkit Button Examples
+    %p These temporary samples are distinct from the current named variants.
+    %p
+      %button.idb-button-primary.idb-button-demo-one{ type: "button" } One
+    %p
+      %button.idb-button-primary.idb-button-demo-two{ type: "button" } Two
+    %p
+      %button.idb-button-primary.idb-button-demo-three{ type: "button" } Three
+    %p
+      %button.idb-button-primary.idb-button-demo-four{ type: "button" } Four
+    %p
+      %button.idb-button-primary.idb-button-demo-five{ type: "button" } Five
+
+  %section{ "aria-labelledby" => "button-examples-anchor" }
+    %h2#button-examples-anchor Anchor Button Variants
+    %p
+      %a.idb-button-primary{ href: "#" } Primary Link Button
+    %p
+      %a.idb-button-secondary{ href: "#" } Secondary Link Button
+    %p
+      %a.idb-button-danger{ href: "#" } Danger Link Button
+    %p
+      %a.idb-button-success{ href: "#" } Success Link Button
+    %p
+      %a.idb-button-info{ href: "#" } Info Link Button
+    %p
+      %a.idb-button-warning{ href: "#" } Warning Link Button
+    %p
+      %a.idb-button-default{ href: "#" } Default Link Button
+
+  %section{ "aria-labelledby" => "button-examples-native" }
+    %h2#button-examples-native Native Button Elements
+    %p
+      %button{ type: "button" } Native Button
+    %p
+      %input{ type: "submit", value: "Native Submit" }
+    %p
+      %input{ type: "button", value: "Native Input Button" }

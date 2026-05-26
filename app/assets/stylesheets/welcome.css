@@ -26,7 +26,7 @@
 	padding: 0 15px;
 	border: 1px solid #fed9bf;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
-	max-width: 500px;
+	max-width: 640px;
 	z-index: 2;
 }
 
@@ -68,7 +68,7 @@
 }
 
 #welcome-body {
-	padding: 5px var(--ilw-margin--side, max(1.875rem, calc(50vw - 35.625rem)));
+	padding: 5px 1.875rem;
 	font-family: var(--il-font-sans, "Source Sans Pro", Arial, sans-serif);
 	color: var(--ilw-text--color, #333);
 }

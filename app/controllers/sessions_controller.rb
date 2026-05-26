@@ -12,7 +12,7 @@ class SessionsController < ApplicationController
 
     user = User.from_omniauth(auth)
     session[:user_id] = user.id
-    redirect_to root_path, notice: "Signed in as #{user.name}."
+    redirect_to root_path
   end
 
   def destroy

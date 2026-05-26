@@ -98,31 +98,32 @@ a.idb-button-primary:active {
 }
 
 /* Danger — red, matching Bootstrap 3 btn-danger */
+/* Danger — darkened red, sufficient contrast for white text (WCAG AA) */
 .idb-button-danger {
-	background-color: #d9534f;
-	border-color: #d43f3a;
-	color: #000000;
+	background-color: #c0392b;
+	border-color: #a93226;
+	color: #ffffff;
 }
 
-/* Success — Bootstrap 3 btn-success green */
+/* Success — Toolkit arches dark */
 .idb-button-success {
-	background-color: #5cb85c;
-	border-color: #4cae4c;
-	color: #13294b;
+	background-color: var(--il-arches-darker-1);
+	border-color: var(--il-arches-darker-2);
+	color: #ffffff;
 }
 
-/* Info — Bootstrap 3 btn-info teal */
+/* Info — Toolkit storm dark neutral */
 .idb-button-info {
-	background-color: #5bc0de;
-	border-color: #46b8da;
-	color: #13294b;
+	background-color: var(--il-storm);
+	border-color: var(--il-storm-30);
+	color: #ffffff;
 }
 
-/* Warning — Bootstrap 3 btn-warning amber */
+/* Warning — Toolkit altgeld suite */
 .idb-button-warning {
-	background-color: #f0ad4e;
-	border-color: #eea236;
-	color: #13294b;
+	background-color: var(--il-altgeld);
+	border-color: var(--il-altgeld-darker-1);
+	color: #ffffff;
 }
 
 /* Default — Bootstrap 3 btn-default neutral */
@@ -135,33 +136,33 @@ a.idb-button-primary:active {
 .idb-button-danger:hover,
 .idb-button-danger:focus,
 .idb-button-danger:focus-visible {
-	background-color: #d9534f;
-	border-color: #ac2925;
-	color: #000000;
+	background-color: #a93226;
+	border-color: #922b21;
+	color: #ffffff;
 }
 
 .idb-button-success:hover,
 .idb-button-success:focus,
 .idb-button-success:focus-visible {
-	background-color: #449d44;
-	border-color: #398439;
-	color: #13294b;
+	background-color: var(--il-arches-darker-2);
+	border-color: var(--il-blue-darker-1);
+	color: #ffffff;
 }
 
 .idb-button-info:hover,
 .idb-button-info:focus,
 .idb-button-info:focus-visible {
-	background-color: #31b0d5;
-	border-color: #269abc;
-	color: #13294b;
+	background-color: var(--il-storm-30);
+	border-color: var(--il-storm-10);
+	color: #ffffff;
 }
 
 .idb-button-warning:hover,
 .idb-button-warning:focus,
 .idb-button-warning:focus-visible {
-	background-color: #ec971f;
-	border-color: #d58512;
-	color: #13294b;
+	background-color: var(--il-altgeld-darker-1);
+	border-color: var(--il-altgeld-darker-1);
+	color: #ffffff;
 }
 
 .idb-button-default:hover,
@@ -173,12 +174,20 @@ a.idb-button-primary:active {
 }
 
 a.idb-button-danger,
-a.idb-button-danger:visited,
+a.idb-button-danger:visited {
+	background-color: var(--il-orange-40);
+	border-color: var(--il-altgeld-darker-1);
+	color: #ffffff;
+	text-decoration: none;
+}
+
 a.idb-button-danger:hover,
 a.idb-button-danger:focus,
 a.idb-button-danger:focus-visible,
 a.idb-button-danger:active {
-	color: #000000;
+	background-color: var(--il-altgeld-darker-1);
+	border-color: var(--il-blue-darker-1);
+	color: #ffffff;
 	text-decoration: none;
 }
 
@@ -188,7 +197,7 @@ a.idb-button-success:hover,
 a.idb-button-success:focus,
 a.idb-button-success:focus-visible,
 a.idb-button-success:active {
-	color: #13294b;
+	color: #ffffff;
 	text-decoration: none;
 }
 
@@ -198,7 +207,7 @@ a.idb-button-info:hover,
 a.idb-button-info:focus,
 a.idb-button-info:focus-visible,
 a.idb-button-info:active {
-	color: #13294b;
+	color: #ffffff;
 	text-decoration: none;
 }
 
@@ -208,7 +217,7 @@ a.idb-button-warning:hover,
 a.idb-button-warning:focus,
 a.idb-button-warning:focus-visible,
 a.idb-button-warning:active {
-	color: #13294b;
+	color: #ffffff;
 	text-decoration: none;
 }
 
@@ -310,6 +319,77 @@ input.idb-button-warning:disabled,
 input.idb-button-default:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+/* Temporary demo-only variants for button_examples page */
+.idb-button-demo-one {
+	background-color: var(--il-industrial-darker-2);
+	border-color: var(--il-industrial-darker-1);
+	color: #ffffff;
+}
+
+.idb-button-demo-one:hover,
+.idb-button-demo-one:focus,
+.idb-button-demo-one:focus-visible {
+	background-color: var(--il-industrial-darker-1);
+	border-color: var(--il-industrial);
+	color: #ffffff;
+}
+
+.idb-button-demo-two {
+	background-color: var(--il-blue-lighter-1);
+	border-color: var(--il-blue-30);
+	color: #ffffff;
+}
+
+.idb-button-demo-two:hover,
+.idb-button-demo-two:focus,
+.idb-button-demo-two:focus-visible {
+	background-color: var(--il-blue-30);
+	border-color: var(--il-blue-darker-1);
+	color: #ffffff;
+}
+
+.idb-button-demo-three {
+	background-color: var(--il-arches-70);
+	border-color: var(--il-arches-50);
+	color: var(--il-blue-10);
+}
+
+.idb-button-demo-three:hover,
+.idb-button-demo-three:focus,
+.idb-button-demo-three:focus-visible {
+	background-color: var(--il-arches-80);
+	border-color: var(--il-arches-60);
+	color: var(--il-blue-10);
+}
+
+.idb-button-demo-four {
+	background-color: var(--il-harvest);
+	border-color: var(--il-orange-40);
+	color: var(--il-blue-10);
+}
+
+.idb-button-demo-four:hover,
+.idb-button-demo-four:focus,
+.idb-button-demo-four:focus-visible {
+	background-color: var(--il-arches-90);
+	border-color: var(--il-orange-40);
+	color: var(--il-blue-10);
+}
+
+.idb-button-demo-five {
+	background-color: var(--il-blue-80);
+	border-color: var(--il-blue-50);
+	color: var(--il-blue-10);
+}
+
+.idb-button-demo-five:hover,
+.idb-button-demo-five:focus,
+.idb-button-demo-five:focus-visible {
+	background-color: var(--il-blue-90);
+	border-color: var(--il-blue-50);
+	color: var(--il-blue-10);
 }
 
 .idb-row-actions-inline .idb-button-primary,

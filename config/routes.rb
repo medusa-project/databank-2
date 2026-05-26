@@ -55,6 +55,7 @@ Rails.application.routes.draw do
   get "/researcher_spotlights", to: "featured_researchers#index", as: :researcher_spotlights
 
   # Static / nav pages
+  get "/button_examples", to: "welcome#button_examples", as: :button_examples
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides

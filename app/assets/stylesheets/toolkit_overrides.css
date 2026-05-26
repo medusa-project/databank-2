@@ -285,7 +285,6 @@ footer address {
   margin-bottom: 10px;
 }
 
-il-footer {
-  --il-footer-padding-left: 5rem;
-  --il-footer-padding-right: 5rem;
+ilw-footer {
+  --ilw-margin--side: 1.875rem;
 }
