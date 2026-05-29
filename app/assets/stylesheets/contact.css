@@ -1,0 +1,104 @@
+/* Contact page styles loaded only on /contact for parity with legacy app. */
+
+.contact-page {
+	color: #333333;
+	font-family: var(--il-font-sans);
+	max-width: 84rem;
+	margin-inline: auto;
+	padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.contact-page .contact-header {
+	text-align: center;
+	font-size: clamp(1.85rem, 1.5rem + 1.2vw, 2.25rem);
+	line-height: 1.12;
+	font-weight: 500;
+	margin-top: clamp(1rem, 2vw, 1.25rem);
+	margin-bottom: clamp(0.5rem, 1vw, 0.625rem);
+	color: #333333;
+}
+
+.contact-page .inset-section h2 {
+	font-size: clamp(1.55rem, 1.3rem + 0.9vw, 1.875rem);
+	line-height: 1.12;
+	font-weight: 500;
+	margin-top: clamp(1rem, 2vw, 1.25rem);
+	margin-bottom: clamp(0.5rem, 1vw, 0.625rem);
+	color: #333333;
+}
+
+.contact-page .inset-section p {
+	font-size: clamp(1rem, 0.95rem + 0.35vw, 1.125rem);
+	line-height: 1.4286;
+	margin-top: 0;
+	margin-bottom: clamp(0.5rem, 0.8vw, 0.625rem);
+	margin-left: clamp(0.25rem, 1vw, 0.625rem);
+	color: #333333;
+}
+
+.contact-page .large-text {
+	font-size: clamp(1rem, 0.95rem + 0.35vw, 1.125rem);
+	line-height: 1.4286;
+	margin-top: 0;
+	margin-bottom: clamp(0.5rem, 0.8vw, 0.625rem);
+	color: #333333;
+}
+
+.contact-page .contact-separator {
+	font-weight: 500;
+}
+
+.contact-page a.underline,
+.contact-page a.underline:visited {
+	text-decoration: underline;
+}
+
+.contact-page a.intense,
+.contact-page a.intense:visited,
+.contact-page a.intense:link,
+.contact-page a.intense:active {
+	color: #dd3403;
+}
+
+.contact-page a.intense:hover,
+.contact-page a.intense:focus {
+	color: #dd3403;
+	font-weight: 700;
+	background-color: #d7e8ef;
+}
+
+.contact-page .glyphicon.glyphicon-info-sign::before {
+	content: "i";
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1em;
+	height: 1em;
+	margin-right: 0.35em;
+	border-radius: 50%;
+	border: 0.0625rem solid currentColor;
+	font-size: 0.85em;
+	font-weight: 700;
+	line-height: 1;
+	vertical-align: middle;
+}
+
+@media (max-width: 48rem) {
+	.contact-page {
+		padding-inline: 0.75rem;
+	}
+
+	.contact-page .contact-header {
+		text-align: left;
+	}
+
+	.contact-page .inset-section p {
+		margin-left: 0;
+	}
+}
+
+@media (min-width: 75rem) {
+	.contact-page .inset-section {
+		max-width: 78rem;
+	}
+}
