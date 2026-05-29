@@ -16,7 +16,7 @@ gem "stimulus-rails"
 # Tailwind CSS via CLI
 gem "tailwindcss-rails"
 # HAML templates
-gem "haml-rails", "~> 2.1"
+gem "haml-rails", "~> 3.0"
 # Authorization
 gem "cancancan", "~> 3.6"
 # OmniAuth authentication
