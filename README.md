@@ -1,8 +1,5 @@
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
-
 ## Optional DataCite DOI Integration
 
 Dataset publish uses a fallback DOI generator by default. To enable live
@@ -252,22 +249,91 @@ Run the full test suite:
 bundle exec rspec
 ```
 
-Things you may want to cover:
+## Annotated Pre-Commit Checklist
 
-* Ruby version
+Use this checklist before pushing a branch. It is ordered from fastest checks
+to slower checks.
 
-* System dependencies
+### 1) CI parity checks (required)
 
-* Configuration
+These are the checks that map directly to GitHub Actions and should pass before
+you push.
 
-* Database creation
+1. Ruby lint
 
-* Database initialization
+```sh
+bin/rubocop -f github
+```
 
-* How to run the test suite
+Why: mirrors the `lint` job in CI.
 
-* Services (job queues, cache servers, search engines, etc.)
+2. Rails security scan
 
-* Deployment instructions
+```sh
+bin/brakeman --no-pager
+```
 
-* ...
+Why: mirrors the `scan_ruby` Brakeman step in CI.
+
+3. Gem vulnerability audit
+
+```sh
+bin/bundler-audit
+```
+
+Why: mirrors the `scan_ruby` gem audit step in CI.
+
+4. JavaScript dependency audit
+
+```sh
+bin/importmap audit
+```
+
+Why: mirrors the `scan_js` job in CI.
+
+Tip: run all CI parity checks via one command:
+
+```sh
+bin/ci
+```
+
+### 2) Local-only quality checks (recommended)
+
+These are not currently required by GitHub Actions, but they are strongly
+recommended before opening or updating a PR.
+
+1. Full backend test suite (RSpec)
+
+```sh
+bundle exec rspec
+```
+
+Why: catches behavior regressions CI may not catch if tests are not part of the
+workflow.
+
+2. End-to-end browser tests (Playwright)
+
+```sh
+npm run test:e2e
+```
+
+Why: validates key user flows in a real browser locally.
+
+3. Accessibility scan (axe + Playwright)
+
+```sh
+npm run test:e2e:a11y
+```
+
+Why: catches accessibility issues earlier and supports WCAG-focused work.
+
+### 3) Final sanity checks
+
+1. Confirm branch and staged changes
+
+```sh
+git status --short
+git branch --show-current
+```
+
+2. Push only after all required checks pass locally.
