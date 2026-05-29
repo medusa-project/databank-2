@@ -42,9 +42,9 @@
 
       .featured-buttons
         - if @featured_researcher.dataset_url.present?
-          = link_to "dataset", @featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{@featured_researcher.name}" }
+          = external_https_link_to "dataset", @featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{@featured_researcher.name}" }
         - if @featured_researcher.article_url.present?
-          = link_to "article", @featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{@featured_researcher.name}" }
+          = external_https_link_to "article", @featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{@featured_researcher.name}" }
 
       - if @featured_researcher.question.present? || @featured_researcher.testimonial.present?
         .featured-comment
