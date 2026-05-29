@@ -2,8 +2,14 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - 'playwright/**'
+      - 'playwright.config.js'
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'playwright/**'
+      - 'playwright.config.js'
 
 jobs:
   scan_ruby:
@@ -36,6 +42,7 @@ jobs:
         with:
           bundler-cache: true
 
+      # Playwright browser/e2e tests are intentionally run locally only.
       - name: Scan for security vulnerabilities in JavaScript dependencies
         run: bin/importmap audit
 

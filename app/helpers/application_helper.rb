@@ -1,4 +1,11 @@
 module ApplicationHelper
+  def external_https_link_to(label, url, **options)
+    safe_url = safe_https_url(url)
+    return if safe_url.blank?
+
+    link_to(label, safe_url, **options)
+  end
+
   def dataset_persistent_url(dataset)
     return if dataset.identifier.blank?
 
@@ -24,5 +31,16 @@ module ApplicationHelper
 
   def dataset_primary_contact_name(dataset)
     dataset.creators.find(&:contact?)&.name
+  end
+
+  private
+
+  def safe_https_url(url)
+    uri = URI.parse(url.to_s)
+    return if uri.scheme.blank? || !%w[http https].include?(uri.scheme.downcase) || uri.host.blank?
+
+    uri.to_s
+  rescue URI::InvalidURIError
+    nil
   end
 end
