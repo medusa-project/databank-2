@@ -344,7 +344,7 @@ class DatasetsController < ApplicationController
   def set_dataset
     @dataset = Dataset.find_by!(key: params[:id])
 
-    unless @dataset.published? || logged_in?
+    unless @dataset.publicly_readable_now? || logged_in?
       redirect_to login_path, alert: "Please sign in to continue."
     end
   end
@@ -550,10 +550,10 @@ class DatasetsController < ApplicationController
 
     if logged_in?
       owned   = Dataset.where(depositor_email: current_user.email)
-      public  = Dataset.published
+      public  = Dataset.publicly_readable_now
       Dataset.where(id: owned).or(Dataset.where(id: public))
     else
-      Dataset.published
+      Dataset.publicly_readable_now
     end
   end
 

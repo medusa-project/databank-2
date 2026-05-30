@@ -1,4 +1,6 @@
 class DatafilesController < ApplicationController
+  skip_before_action :authenticate_user!, only: :download
+
   before_action :set_dataset
   before_action :set_datafile, only: %i[update destroy download]
 
@@ -30,6 +32,11 @@ class DatafilesController < ApplicationController
   end
 
   def download
+    unless can?(:update, @dataset) || @dataset.files_publicly_readable_now?
+      head :forbidden
+      return
+    end
+
     if @datafile.binary.attached?
       send_data(
         @datafile.binary.download,
