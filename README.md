@@ -13,7 +13,7 @@ DataCite registration, set these environment variables:
 If `DATACITE_STRICT=true`, publish raises on DataCite failures instead of
 falling back to generated DOI values.
 
-## Optional Shibboleth Header Callback
+## Shibboleth Header Callback
 
 The route `/auth/shibboleth/callback` supports reverse-proxy header mode for
 Shibboleth deployments. If OmniAuth auth hash is not present for this provider,
@@ -26,7 +26,7 @@ the callback reads identity headers:
 This allows stage/production integration behind SSO middleware while keeping
 developer provider auth for local development.
 
-## Optional Ingest Event Publishing (RabbitMQ / Medusa Scaffold)
+## Ingest Event Publishing (RabbitMQ / Medusa Scaffold)
 
 On successful dataset publish, the app enqueues an ingest event job.
 
@@ -40,7 +40,7 @@ Set these variables to enable RabbitMQ publish:
 If not enabled or if publish to RabbitMQ fails, the app logs a warning and
 continues serving the user request.
 
-## Optional Globus Transfer Submission
+## Globus Transfer Submission
 
 On successful dataset publish, the app also enqueues a Globus transfer job.
 
@@ -249,7 +249,28 @@ Run the full test suite:
 bundle exec rspec
 ```
 
-## Annotated Pre-Commit Checklist
+### Coverage Baseline and Rationale
+
+This project now uses SimpleCov and generates coverage output in `coverage/`.
+
+Current baseline (full `bundle exec rspec` run):
+
+- line coverage: `84.02%` (`2224 / 2647`)
+
+Why coverage can reasonably be below 80% in the short term:
+
+- several integration-heavy surfaces are intentionally thin wrappers around external systems (for example DataCite and migration pipelines)
+- some controller/UI flows currently rely on request-level rendering assertions where broad branch coverage is expensive and brittle
+- migration/import code paths include operational guard rails that are hard to fully simulate in unit tests without over-mocking
+
+Coverage policy for this repo:
+
+- treat `80%` as a medium-term target, not an immediate hard gate
+- each feature branch should add tests for meaningful behavior changes, especially service logic and permission rules
+- prioritize low-covered core code with operational risk (migration services, auth/access control, publish/version workflows) before chasing cosmetic line gains
+
+
+## Pre-Commit Checklist
 
 Use this checklist before pushing a branch. It is ordered from fastest checks
 to slower checks.
