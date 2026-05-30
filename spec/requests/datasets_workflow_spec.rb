@@ -1680,6 +1680,8 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9900410"
     )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
 
     request = source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -1692,11 +1694,105 @@ RSpec.describe "Datasets workflow", type: :request do
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
-    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls" }
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls" }
+    }.to change(Dataset, :count).by(1)
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(new_dataset).to be_draft
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Source Primary", "Source Secondary" ])
+    expect(new_dataset.creators.find_by!(name: "Source Primary").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Source Secondary").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Primary")
+    expect(new_dataset.corresponding_creator_email).to eq("primary@example.edu")
+
+    request.reload
+    expect(request.status).to eq("approved")
+    expect(request.review_note).to eq("Approved from controls")
+    expect(request.approved_dataset_id).to eq(new_dataset.id)
 
     expect(response).to redirect_to(version_controls_dataset_path(source))
     follow_redirect!
     expect(response.body).to include("Version request approved. Draft")
+    expect(response.body).to include("Draft created: #{new_dataset.key}")
+  end
+
+  it "clears corresponding creator fields when approved from version controls and nested edits remove all contacts" do
+    source = Dataset.create!(
+      title: "Approve Controls Contact Clear Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900411"
+    )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need approved redirect contact clear",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls for clear" }
+
+    request.reload
+    version = Dataset.find(request.approved_dataset_id)
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    expect(version.corresponding_creator_name).to eq("Source Primary")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: "Source Primary")
+    version_secondary = version.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(false)
+    expect(version_secondary.reload.is_contact).to be(false)
+    expect(version.corresponding_creator_name).to be_nil
+    expect(version.corresponding_creator_email).to be_nil
   end
 
   it "allows an admin to reject a pending version request" do
