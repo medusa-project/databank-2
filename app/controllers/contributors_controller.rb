@@ -56,6 +56,6 @@ class ContributorsController < ApplicationController
     contributor.position = contributor_params[:position]
     contributor.row_position = contributor_params[:row_position]
     contributor.row_order = contributor_params[:row_order]
-    contributor.is_contact = contributor_params[:is_contact]
+    contributor.is_contact = ActiveModel::Type::Boolean.new.cast(contributor_params[:is_contact]) || false
   end
 end
