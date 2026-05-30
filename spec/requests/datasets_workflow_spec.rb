@@ -2787,6 +2787,93 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body.index("Newer rejected note")).to be < response.body.index("Older rejected note")
   end
 
+  it "keeps approved request metadata and draft links visible after contact edits on the approved draft" do
+    source = Dataset.create!(
+      title: "Reviewed Request Robustness Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100005"
+    )
+
+    approved_draft = Dataset.create!(
+      title: "Reviewed Request Robustness Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    primary = approved_draft.creators.create!(name: "Draft Primary", email: "primary@example.edu", contact: true, row_position: 1)
+    secondary = approved_draft.creators.create!(name: "Draft Secondary", email: "secondary@example.edu", contact: false, row_position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved request with linked draft",
+      requested_at: Time.current,
+      status: :approved,
+      reviewed_at: Time.current,
+      reviewed_by_uid: "curator-5@example.edu",
+      review_note: "Reviewed with linked draft",
+      approved_dataset: approved_draft
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    patch dataset_path(approved_draft), params: {
+      dataset: {
+        title: approved_draft.title,
+        description: approved_draft.description,
+        keywords: approved_draft.keywords,
+        subject: approved_draft.subject,
+        license: approved_draft.license,
+        publisher: approved_draft.publisher,
+        creators_attributes: [
+          {
+            id: primary.id,
+            name: primary.name,
+            email: primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: secondary.id,
+            name: secondary.name,
+            email: secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(approved_draft))
+    expect(approved_draft.reload.corresponding_creator_name).to eq("Draft Secondary")
+
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Reviewed by curator-5@example.edu")
+    expect(response.body).to include("Review note: Reviewed with linked draft")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).to include(edit_dataset_path(approved_draft))
+
+    request.reload
+    expect(request.approved_dataset_id).to eq(approved_draft.id)
+  end
+
   it "shows difference summary on version controls when previous version exists" do
     previous = Dataset.create!(
       title: "Comparison Source",
