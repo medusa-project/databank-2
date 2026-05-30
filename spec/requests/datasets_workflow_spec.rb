@@ -2761,6 +2761,8 @@ RSpec.describe "Datasets workflow", type: :request do
       identifier: "10.5555/IDB-9100011"
     )
     previous.creators.create!(name: "Creator Same", email: "same@example.edu", contact: true, position: 1)
+    previous.funders.create!(name: "Funder Same", identifier: "10.1234/same", award_number: "SAME-1", position: 1)
+    previous.related_materials.create!(title: "Material Same", uri: "https://example.org/same", relation_type: "IsSupplementTo", position: 1)
 
     current = Dataset.create!(
       title: "Creator Contact Diff Source",
@@ -2781,6 +2783,8 @@ RSpec.describe "Datasets workflow", type: :request do
       position: 1
     )
     current.creators.create!(name: "Creator Same", email: "same@example.edu", contact: false, position: 1)
+    current.funders.create!(name: "Funder Same", identifier: "10.1234/same", award_number: "SAME-1", position: 1)
+    current.related_materials.create!(title: "Material Same", uri: "https://example.org/same", relation_type: "IsSupplementTo", position: 2)
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
     get version_controls_dataset_path(current)
@@ -2798,6 +2802,24 @@ RSpec.describe "Datasets workflow", type: :request do
 
     expect(added_line).to eq("Added: none")
     expect(removed_line).to eq("Removed: none")
+
+    funders_heading = document.css("h3").find { |heading| heading.text.squish == "Funders" }
+    expect(funders_heading).to be_present
+
+    funders_added_line = funders_heading.xpath("following-sibling::p[1]").text.squish
+    funders_removed_line = funders_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(funders_added_line).to eq("Added: none")
+    expect(funders_removed_line).to eq("Removed: none")
+
+    materials_heading = document.css("h3").find { |heading| heading.text.squish == "Related Materials (non-version)" }
+    expect(materials_heading).to be_present
+
+    materials_added_line = materials_heading.xpath("following-sibling::p[1]").text.squish
+    materials_removed_line = materials_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(materials_added_line).to eq("Added: none")
+    expect(materials_removed_line).to eq("Removed: none")
   end
 
   it "shows version file copy controls on version controls for draft versions" do
