@@ -71,6 +71,20 @@ RSpec.describe Dataset, type: :model do
       expect(current.version_eligible?).to be(false)
     end
 
+    it "resolves an unpublished successor when asked for any successor" do
+      current = create_dataset(publication_state: :published, identifier: "10.5555/IDB-6000006", key: "IDB-6000006", title: "Current")
+      draft_successor = create_dataset(title: "Draft Successor", publication_state: :draft)
+      draft_successor.related_materials.create!(
+        title: current.title,
+        uri: current.persistent_url,
+        relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+        position: 1
+      )
+
+      expect(current.next_version_dataset).to be_nil
+      expect(current.next_version_dataset_any).to eq(draft_successor)
+    end
+
     it "does not treat a draft successor as a newer published version" do
       current = create_dataset(publication_state: :published, identifier: "10.5555/IDB-6000005", key: "IDB-6000005", title: "Current")
       draft_successor = create_dataset(title: "Draft Successor", publication_state: :draft)

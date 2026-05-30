@@ -1865,6 +1865,63 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(version_controls_dataset_path(source))
     follow_redirect!
     expect(response.body).to include("Version request rejected.")
+
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Reviewed by admin@example.edu")
+    expect(response.body).to include("Review note: Rejected from controls")
+    expect(response.body).not_to include("Draft created:")
+  end
+
+  it "shows approved and rejected version requests in the correct version controls sections after action-driven reviews" do
+    source = Dataset.create!(
+      title: "Version Controls Action Flow Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900412"
+    )
+
+    first_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approve this one",
+      requested_at: 2.days.ago,
+      status: :pending
+    )
+    second_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Reject this one",
+      requested_at: 1.day.ago,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: first_request.id), params: { from: "version_controls", review_note: "Approved from action flow" }
+    approved_draft = Dataset.order(:created_at).last
+
+    post reject_version_request_dataset_path(source, version_request_id: second_request.id), params: { from: "version_controls", review_note: "Rejected from action flow" }
+
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Approved request from Owner User")
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Reviewed by admin@example.edu")
+    expect(response.body).to include("Review note: Approved from action flow")
+    expect(response.body).to include("Review note: Rejected from action flow")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).to include(edit_dataset_path(approved_draft))
+    expect(response.body).not_to include("Draft created: #{source.key}")
   end
 
   it "redirects approve not-found errors back to version controls when initiated there" do
@@ -2119,6 +2176,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Pending request from Owner User")
     expect(response.body).to include("Rejected request from Owner User")
     expect(response.body).to include("Please include detailed change scope")
+    expect(response.body.index("Rejected request from Owner User")).to be < response.body.index("Pending request from Owner User")
   end
 
   it "hides version request history from non-owners" do
@@ -2728,6 +2786,18 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9100004"
     )
+    approved_draft = Dataset.create!(
+      title: "Reviewed Grouping Approved Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
 
     source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -2738,7 +2808,8 @@ RSpec.describe "Datasets workflow", type: :request do
       status: :approved,
       reviewed_at: 2.days.ago,
       reviewed_by_uid: "curator-1@example.edu",
-      review_note: "Older approved note"
+      review_note: "Older approved note",
+      approved_dataset: approved_draft
     )
     source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -2782,6 +2853,8 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Rejected Requests")
     expect(response.body).to include("Reviewed by curator-2@example.edu")
     expect(response.body).to include("Reviewed by curator-4@example.edu")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).not_to include("Draft created: #{source.key}")
 
     expect(response.body.index("Newer approved note")).to be < response.body.index("Older approved note")
     expect(response.body.index("Newer rejected note")).to be < response.body.index("Older rejected note")
@@ -2801,6 +2874,8 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9100005"
     )
+    source.creators.create!(name: "Draft Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Draft Secondary", email: "secondary@example.edu", contact: false, position: 2)
 
     approved_draft = Dataset.create!(
       title: "Reviewed Request Robustness Draft",
@@ -2813,6 +2888,18 @@ RSpec.describe "Datasets workflow", type: :request do
       depositor_name: "Owner User",
       depositor_email: "owner@example.edu",
       publication_state: :draft
+    )
+    approved_draft.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+    source.related_materials.create!(
+      title: approved_draft.title,
+      uri: "https://example.test/datasets/#{approved_draft.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
     )
     primary = approved_draft.creators.create!(name: "Draft Primary", email: "primary@example.edu", contact: true, row_position: 1)
     secondary = approved_draft.creators.create!(name: "Draft Secondary", email: "secondary@example.edu", contact: false, row_position: 2)
@@ -2862,6 +2949,37 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(dataset_path(approved_draft))
     expect(approved_draft.reload.corresponding_creator_name).to eq("Draft Secondary")
 
+    patch dataset_path(approved_draft), params: {
+      dataset: {
+        title: approved_draft.title,
+        description: approved_draft.description,
+        keywords: approved_draft.keywords,
+        subject: approved_draft.subject,
+        license: approved_draft.license,
+        publisher: approved_draft.publisher,
+        creators_attributes: [
+          {
+            id: primary.id,
+            name: primary.name,
+            email: primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: secondary.id,
+            name: secondary.name,
+            email: secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(approved_draft))
+    expect(approved_draft.reload.corresponding_creator_name).to be_nil
+    expect(approved_draft.reload.corresponding_creator_email).to be_nil
+
     get version_controls_dataset_path(source)
 
     expect(response).to have_http_status(:ok)
@@ -2872,6 +2990,23 @@ RSpec.describe "Datasets workflow", type: :request do
 
     request.reload
     expect(request.approved_dataset_id).to eq(approved_draft.id)
+
+    get version_controls_dataset_path(approved_draft)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Difference Summary")
+
+    document = Nokogiri::HTML(response.body)
+    creators_heading = document.css("h3").find { |heading| heading.text.squish == "Creators" }
+    funders_heading = document.css("h3").find { |heading| heading.text.squish == "Funders" }
+    materials_heading = document.css("h3").find { |heading| heading.text.squish == "Related Materials (non-version)" }
+
+    expect(creators_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(creators_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
+    expect(funders_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(funders_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
+    expect(materials_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(materials_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
   end
 
   it "shows difference summary on version controls when previous version exists" do
@@ -3165,6 +3300,39 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9100003"
     )
+    approved_draft = Dataset.create!(
+      title: "Version Controls Link Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved for link test",
+      requested_at: 2.days.ago,
+      status: :approved,
+      reviewed_at: 1.day.ago,
+      review_note: "Approved on show page test",
+      approved_dataset: approved_draft
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Rejected for link test",
+      requested_at: 1.day.ago,
+      status: :rejected,
+      reviewed_at: Time.current,
+      review_note: "Rejected on show page test"
+    )
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
     get dataset_path(source)
@@ -3172,6 +3340,12 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Curator Controls")
     expect(response.body).to include("Version Controls")
+    expect(response.body).to include("Approved request from Owner User")
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Submitted")
+    expect(response.body).to include("Review note: Approved on show page test")
+    expect(response.body).to include("Review note: Rejected on show page test")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
   end
 
   it "links newer-version banner to latest published version through an intermediate draft" do
