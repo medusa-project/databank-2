@@ -884,6 +884,7 @@ RSpec.describe "Datasets workflow", type: :request do
       identifier: "10.5555/IDB-2222222"
     )
     previous.creators.create!(name: "Researcher One", email: "researcher@example.edu", contact: true, position: 1)
+    previous.creators.create!(name: "Researcher Two", email: "researcher2@example.edu", contact: false, position: 2)
     previous.contributors.create!(name: "Research Support", email: "support@example.edu", role: "Data Curator", position: 1)
     previous.funders.create!(name: "U.S. Department of Energy (DOE)", identifier: "10.13039/100000015", award_number: "DE-12345", position: 1)
     previous.related_materials.create!(title: "Project Article", uri: "https://example.org/article", relation_type: "IsSupplementTo", position: 1)
@@ -897,7 +898,11 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(new_dataset.identifier).to be_nil
     expect(new_dataset.title).to eq(previous.title)
     expect(new_dataset.description).to eq(previous.description)
-    expect(new_dataset.creators.pluck(:name)).to eq([ "Researcher One" ])
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Researcher One", "Researcher Two" ])
+    expect(new_dataset.creators.find_by!(name: "Researcher One").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Researcher Two").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Researcher One")
+    expect(new_dataset.corresponding_creator_email).to eq("researcher@example.edu")
     expect(new_dataset.contributors.pluck(:name)).to eq([ "Research Support" ])
     expect(new_dataset.funders.pluck(:name)).to eq([ "U.S. Department of Energy (DOE)" ])
     expect(new_dataset.related_materials.find_by!(relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION).uri).to eq("https://doi.org/10.5555/IDB-2222222")
@@ -915,6 +920,83 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).to include(previous.key)
+  end
+
+  it "recalculates corresponding creator fields for a draft version after nested creator edits" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    previous = Dataset.create!(
+      title: "Versioned Contact Dataset",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-3333333"
+    )
+
+    previous_primary = previous.creators.create!(
+      name: "Primary Creator",
+      email: "primary@example.edu",
+      contact: true,
+      position: 1
+    )
+    previous_secondary = previous.creators.create!(
+      name: "Secondary Creator",
+      email: "secondary@example.edu",
+      contact: false,
+      position: 2
+    )
+
+    post version_dataset_path(previous)
+    version = Dataset.order(:created_at).last
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    expect(version.corresponding_creator_name).to eq("Primary Creator")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: previous_primary.name)
+    version_secondary = version.creators.find_by!(name: previous_secondary.name)
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(true)
+    expect(version_secondary.reload.is_contact).to be(true)
+    expect(version.corresponding_creator_name).to eq("Secondary Creator")
+    expect(version.corresponding_creator_email).to eq("secondary@example.edu")
   end
 
   it "blocks version creation for a depositor who does not own the dataset" do
@@ -1419,6 +1501,8 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9900311"
     )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
 
     request = source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -1437,14 +1521,59 @@ RSpec.describe "Datasets workflow", type: :request do
 
     new_dataset = Dataset.order(:created_at).last
     expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Source Primary", "Source Secondary" ])
+    expect(new_dataset.creators.find_by!(name: "Source Primary").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Source Secondary").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Primary")
+    expect(new_dataset.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = new_dataset.creators.find_by!(name: "Source Primary")
+    version_secondary = new_dataset.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(new_dataset), params: {
+      dataset: {
+        title: new_dataset.title,
+        description: new_dataset.description,
+        keywords: new_dataset.keywords,
+        subject: new_dataset.subject,
+        license: new_dataset.license,
+        publisher: new_dataset.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(new_dataset))
+    new_dataset.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_secondary.reload.contact).to be(true)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Secondary")
+    expect(new_dataset.corresponding_creator_email).to eq("secondary@example.edu")
+
+    get dataset_path(new_dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Corresponding Creator")
+    expect(response.body).to include("Source Secondary")
+    expect(response.body).to include("Source Primary; Source Secondary")
 
     request.reload
     expect(request.status).to eq("approved")
     expect(request.reviewed_by_uid).to eq("admin@example.edu")
     expect(request.approved_dataset_id).to eq(new_dataset.id)
-
-    follow_redirect!
-    expect(response.body).to include("Version request approved. Draft #{new_dataset.key} is ready for editing.")
 
     subjects = ActionMailer::Base.deliveries.map(&:subject)
     recipients = ActionMailer::Base.deliveries.flat_map(&:to)
@@ -1455,6 +1584,86 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(approved_mail).to be_present
     expect(approved_mail.body.encoded).to include("You can now edit your new version draft")
     expect(approved_mail.body.encoded).to include("/datasets/#{new_dataset.key}/edit")
+  end
+
+  it "clears corresponding creator fields on approved drafts when nested edits remove all contacts" do
+    source = Dataset.create!(
+      title: "Admin Approval Contact Clear Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900312"
+    )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need a corrected v2 with contact changes",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved for contact clear check" }
+
+    version = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(version))
+    expect(version.corresponding_creator_name).to eq("Source Primary")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: "Source Primary")
+    version_secondary = version.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(false)
+    expect(version_secondary.reload.is_contact).to be(false)
+    expect(version.corresponding_creator_name).to be_nil
+    expect(version.corresponding_creator_email).to be_nil
+
+    get dataset_path(version)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Corresponding Creator")
+    expect(response.body).to include("Source Primary; Source Secondary")
   end
 
   it "redirects approve action back to version controls when initiated there" do
@@ -2535,6 +2744,60 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Creator Old")
     expect(response.body).to include("new.csv")
     expect(response.body).to include("old.csv")
+  end
+
+  it "shows no creator add/remove diff when only contact flags change" do
+    previous = Dataset.create!(
+      title: "Creator Contact Diff Source",
+      description: "Original description.",
+      keywords: "alpha,beta",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100011"
+    )
+    previous.creators.create!(name: "Creator Same", email: "same@example.edu", contact: true, position: 1)
+
+    current = Dataset.create!(
+      title: "Creator Contact Diff Source",
+      description: "Original description.",
+      keywords: "alpha,beta",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    current.related_materials.create!(
+      title: previous.title,
+      uri: previous.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+    current.creators.create!(name: "Creator Same", email: "same@example.edu", contact: false, position: 1)
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(current)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Difference Summary")
+
+    document = Nokogiri::HTML(response.body)
+    creators_heading = document.css("h3").find { |heading| heading.text.squish == "Creators" }
+
+    expect(creators_heading).to be_present
+
+    added_line = creators_heading.xpath("following-sibling::p[1]").text.squish
+    removed_line = creators_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(added_line).to eq("Added: none")
+    expect(removed_line).to eq("Removed: none")
   end
 
   it "shows version file copy controls on version controls for draft versions" do
