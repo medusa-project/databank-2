@@ -357,6 +357,48 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.funders.map(&:name)).to eq([ "Funder Two", "Funder One" ])
   end
 
+  it "persists ordering from position-only nested metadata updates" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Position Only Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Position Only Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        contributors_attributes: [
+          { name: "Contributor One", role: "Analyst", position: 2 },
+          { name: "Contributor Two", role: "Analyst", position: 1 }
+        ],
+        related_materials_attributes: [
+          { title: "Material One", link: "https://example.org/material-1", position: 2 },
+          { title: "Material Two", link: "https://example.org/material-2", position: 1 }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.contributors.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.contributors.map(&:name)).to eq([ "Contributor Two", "Contributor One" ])
+    expect(dataset.related_materials.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.related_materials.map(&:title)).to eq([ "Material Two", "Material One" ])
+  end
+
   it "returns ORCID lookup results for dataset creators" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -498,6 +540,143 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(edit_dataset_path(dataset))
     expect(dataset.creators.find_by!(name: "Creator One").reload.contact).to be(false)
     expect(second_creator.reload.contact).to be(true)
+  end
+
+  it "keeps only one contact creator when updated through nested dataset attributes" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Nested Contact Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    first_creator = dataset.creators.create!(
+      name: "Creator One",
+      email: "one@example.edu",
+      is_contact: true,
+      row_position: 1
+    )
+    second_creator = dataset.creators.create!(
+      name: "Creator Two",
+      email: "two@example.edu",
+      is_contact: false,
+      row_position: 2
+    )
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Nested Contact Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        creators_attributes: [
+          {
+            id: first_creator.id,
+            name: "Creator One",
+            email: "one@example.edu",
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: second_creator.id,
+            name: "Creator Two",
+            email: "two@example.edu",
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+
+    dataset.reload
+    expect(dataset.creators.count).to eq(2)
+    expect(first_creator.reload.contact).to be(false)
+    expect(first_creator.reload.is_contact).to be(false)
+    expect(second_creator.reload.contact).to be(true)
+    expect(second_creator.reload.is_contact).to be(true)
+    expect(dataset.corresponding_creator_name).to eq("Creator Two")
+    expect(dataset.corresponding_creator_email).to eq("two@example.edu")
+  end
+
+  it "clears corresponding creator fields when nested updates remove all creator contacts" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Nested Contact Clear Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    first_creator = dataset.creators.create!(
+      name: "Creator One",
+      email: "one@example.edu",
+      is_contact: true,
+      row_position: 1
+    )
+    second_creator = dataset.creators.create!(
+      name: "Creator Two",
+      email: "two@example.edu",
+      is_contact: false,
+      row_position: 2
+    )
+    dataset.reload
+
+    expect(dataset.corresponding_creator_name).to eq("Creator One")
+    expect(dataset.corresponding_creator_email).to eq("one@example.edu")
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Nested Contact Clear Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        creators_attributes: [
+          {
+            id: first_creator.id,
+            name: "Creator One",
+            email: "one@example.edu",
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: second_creator.id,
+            name: "Creator Two",
+            email: "two@example.edu",
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+
+    dataset.reload
+    expect(first_creator.reload.contact).to be(false)
+    expect(first_creator.reload.is_contact).to be(false)
+    expect(second_creator.reload.contact).to be(false)
+    expect(second_creator.reload.is_contact).to be(false)
+    expect(dataset.corresponding_creator_name).to be_nil
+    expect(dataset.corresponding_creator_email).to be_nil
   end
 
   it "blocks publish until every creator has an email address" do

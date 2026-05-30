@@ -8,6 +8,7 @@ class Creator < ApplicationRecord
   validates :row_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
 
   after_save :ensure_exclusive_contact, if: :contact_selected?
+  after_save :sync_dataset_corresponding_contact, if: :contact_related_fields_changed?
 
   def contact_selected?
     is_contact? || contact?
@@ -50,11 +51,46 @@ class Creator < ApplicationRecord
       self.row_position = position
     end
 
-    self.contact = true if is_contact?
-    self.is_contact = true if contact?
+    contact_value = ActiveModel::Type::Boolean.new.cast(contact)
+    is_contact_value = ActiveModel::Type::Boolean.new.cast(is_contact)
+    contact_selected = if will_save_change_to_contact? && will_save_change_to_is_contact?
+      contact_value || is_contact_value
+    elsif will_save_change_to_is_contact?
+      is_contact_value
+    elsif will_save_change_to_contact?
+      contact_value
+    else
+      contact_value || is_contact_value
+    end
+
+    self.contact = contact_selected
+    self.is_contact = contact_selected
   end
 
   def ensure_exclusive_contact
     dataset.creators.where.not(id: id).where("contact = ? OR is_contact = ?", true, true).update_all(contact: false, is_contact: false, updated_at: Time.current)
+  end
+
+  def contact_related_fields_changed?
+    saved_change_to_contact? ||
+      saved_change_to_is_contact? ||
+      saved_change_to_name? ||
+      saved_change_to_given_name? ||
+      saved_change_to_family_name? ||
+      saved_change_to_institution_name? ||
+      saved_change_to_email?
+  end
+
+  def sync_dataset_corresponding_contact
+    contact_creator = dataset.creators
+      .where("contact = ? OR is_contact = ?", true, true)
+      .order(Arel.sql("COALESCE(row_position, position) ASC, id ASC"))
+      .first
+
+    dataset.update_columns(
+      corresponding_creator_name: contact_creator&.display_name,
+      corresponding_creator_email: contact_creator&.email,
+      updated_at: Time.current
+    )
   end
 end

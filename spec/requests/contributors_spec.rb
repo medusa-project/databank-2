@@ -50,6 +50,7 @@ RSpec.describe "Contributors", type: :request do
         family_name: "Researcher",
         email: "taylor@example.edu",
         role: "Data Curator",
+        row_order: 1,
         row_position: 1
       }
     }
@@ -60,6 +61,7 @@ RSpec.describe "Contributors", type: :request do
     contributor = dataset.contributors.first
     expect(contributor.name).to eq("Taylor Researcher")
     expect(contributor.role).to eq("Data Curator")
+    expect(contributor.row_order).to eq(1)
     expect(contributor.position).to eq(1)
   end
 
@@ -91,6 +93,7 @@ RSpec.describe "Contributors", type: :request do
       contributor: {
         name: "New Name",
         role: "Data Curator",
+        row_order: 7,
         row_position: 2
       }
     }
@@ -100,6 +103,7 @@ RSpec.describe "Contributors", type: :request do
     contributor.reload
     expect(contributor.name).to eq("New Name")
     expect(contributor.role).to eq("Data Curator")
+    expect(contributor.row_order).to eq(7)
     expect(contributor.position).to eq(2)
   end
 

@@ -255,7 +255,7 @@ This project now uses SimpleCov and generates coverage output in `coverage/`.
 
 Current baseline (full `bundle exec rspec` run):
 
-- line coverage: `84.02%` (`2224 / 2647`)
+- line coverage: `84.6%` (`2252 / 2662`)
 
 Why coverage can reasonably be below 80% in the short term:
 
