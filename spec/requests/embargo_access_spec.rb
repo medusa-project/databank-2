@@ -26,15 +26,8 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "hides metadata-embargoed datasets from guests before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Metadata Embargo Dataset",
-      description: "Should not be publicly listed yet",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-meta",
-      depositor_name: "Owner Meta",
-      depositor_email: "owner-meta@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 30
     )
@@ -46,15 +39,8 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "shows file-embargoed datasets in public search before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "File Embargo Dataset",
-      description: "Metadata should remain visible",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-file",
-      depositor_name: "Owner File",
-      depositor_email: "owner-file@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_FILE,
       release_date: Date.current + 30
     )
@@ -66,28 +52,14 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "blocks guest download for file embargo but allows owner access" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Embargoed Download Dataset",
-      description: "Download should be blocked for guests",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-download",
-      depositor_name: "Owner Download",
       depositor_email: "owner-download@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_FILE,
       release_date: Date.current + 30
     )
 
-    upload = Rack::Test::UploadedFile.new(
-      Rails.root.join("test/fixtures/files/analysis.csv"),
-      "text/csv"
-    )
-
-    datafile = dataset.datafiles.create!(
-      binary: upload,
-      description: "Embargoed file"
-    )
+    datafile = create(:datafile, dataset: dataset)
 
     get download_dataset_datafile_path(dataset, datafile)
     expect(response).to have_http_status(:forbidden)
@@ -100,28 +72,13 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "blocks guest download for metadata embargo before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Metadata Embargo Download Dataset",
-      description: "Download should be blocked for guests",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-meta-download",
-      depositor_name: "Owner Meta Download",
-      depositor_email: "owner-meta-download@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 30
     )
 
-    upload = Rack::Test::UploadedFile.new(
-      Rails.root.join("test/fixtures/files/analysis.csv"),
-      "text/csv"
-    )
-
-    datafile = dataset.datafiles.create!(
-      binary: upload,
-      description: "Metadata embargoed file"
-    )
+    datafile = create(:datafile, dataset: dataset)
 
     get download_dataset_datafile_path(dataset, datafile)
     expect(response).to have_http_status(:found)
@@ -129,28 +86,13 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "allows guest access once a metadata embargo is released" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Released Metadata Embargo Dataset",
-      description: "Should be public after release",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-meta-released",
-      depositor_name: "Owner Meta Released",
-      depositor_email: "owner-meta-released@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current - 1
     )
 
-    upload = Rack::Test::UploadedFile.new(
-      Rails.root.join("test/fixtures/files/analysis.csv"),
-      "text/csv"
-    )
-
-    datafile = dataset.datafiles.create!(
-      binary: upload,
-      description: "Released metadata embargo file"
-    )
+    datafile = create(:datafile, dataset: dataset)
 
     get datasets_path, params: { q: "Released Metadata Embargo Dataset" }
     expect(response).to have_http_status(:ok)
@@ -162,15 +104,8 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "requires login for guest access to metadata-embargoed dataset show before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Private Metadata Dataset",
-      description: "Metadata hidden before release",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-private-meta",
-      depositor_name: "Owner Private",
-      depositor_email: "owner-private@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 15
     )
@@ -182,15 +117,9 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "allows owner depositor to view their metadata-embargoed dataset before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Owner Metadata Dataset",
-      description: "Owner can view",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-visible-meta",
-      depositor_name: "Owner Visible",
       depositor_email: "owner-visible@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 15
     )
@@ -204,15 +133,8 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "blocks non-owner depositor from metadata-embargoed dataset before release" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Other User Metadata Dataset",
-      description: "Should not be visible to non-owner depositors",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-other-meta",
-      depositor_name: "Owner Other",
-      depositor_email: "owner-other@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 15
     )
@@ -226,15 +148,9 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "shows embargoed owned datasets in depositor search with depositor facets hidden" do
-    Dataset.create!(
+    create(:dataset, :published,
       title: "Owner Embargo Search Dataset",
-      description: "Owner should find this in search",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-search-meta",
-      depositor_name: "Search Owner",
       depositor_email: "search-owner@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 15
     )
@@ -250,15 +166,8 @@ RSpec.describe "Embargo access", type: :request do
   end
 
   it "shows metadata-embargoed datasets to admins and keeps admin depositor facet" do
-    dataset = Dataset.create!(
+    dataset = create(:dataset, :published,
       title: "Admin Embargo Dataset",
-      description: "Admin should find this in search",
-      keywords: "embargo",
-      subject: "Data Curation",
-      owner_uid: "owner-admin-meta",
-      depositor_name: "Admin Visible Owner",
-      depositor_email: "admin-visible-owner@example.edu",
-      publication_state: :published,
       embargo: Dataset::EMBARGO_METADATA,
       release_date: Date.current + 15
     )

@@ -5,7 +5,7 @@ RSpec.describe "Page titles", type: :request do
     get datasets_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body.scan("<ilw-page-title>").size).to eq(1)
+    expect(response.body.scan('<div class="idb-page-title">').size).to eq(1)
     expect(response.body).to include("<h1>Dataset Search</h1>")
   end
 
@@ -13,7 +13,7 @@ RSpec.describe "Page titles", type: :request do
     get root_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("<ilw-page-title>")
+    expect(response.body).not_to include('<div class="idb-page-title">')
     expect(response.body).to include("welcome-title")
   end
 
@@ -21,7 +21,7 @@ RSpec.describe "Page titles", type: :request do
     get policies_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body.scan("<ilw-page-title>").size).to eq(1)
+    expect(response.body.scan('<div class="idb-page-title">').size).to eq(1)
     expect(response.body).to include("<h1>Policies</h1>")
   end
 end

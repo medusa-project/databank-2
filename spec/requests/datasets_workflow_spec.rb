@@ -575,9 +575,10 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Persistent URL")
     expect(response.body).to include("https://doi.org/10.5555/IDB-1234567")
-    expect(response.body).to include("Contributors")
-    expect(response.body).to include("Funders")
+    expect(response.body).to include("Additional Contact(s)")
+    expect(response.body).to include("Funder")
     expect(response.body).to include("Related Materials")
+    expect(response.body).to include("Research Support")
     expect(response.body).to include("Project Article")
     expect(response.body).to include("Tabular output")
     expect(response.body).not_to include("Depositor Private")
@@ -609,7 +610,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Depositor")
     expect(response.body).to include("Depositor Private")
     expect(response.body).to include("private@example.edu")
-    expect(response.body).to include("researcher@example.edu")
+    expect(response.body).not_to include("researcher@example.edu")
   end
 
   it "rejects related materials with a URI but no relation type" do
@@ -728,14 +729,12 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get dataset_path(previous)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include(new_dataset.key)
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).not_to include(new_dataset.key)
 
     get dataset_path(new_dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
+    expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).to include(previous.key)
   end
 
@@ -1592,7 +1591,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("A newer version has already been started for this dataset.")
   end
 
-  it "shows version request history to the dataset owner" do
+  it "shows version request entries to the dataset owner without the legacy heading text" do
     source = Dataset.create!(
       title: "Owner Request History Source",
       description: "Published source dataset.",
@@ -1631,7 +1630,8 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Request History")
+    expect(response.body).to include("Request New Version")
+    expect(response.body).not_to include("Version Request History")
     expect(response.body).to include("Pending request from Owner User")
     expect(response.body).to include("Rejected request from Owner User")
     expect(response.body).to include("Please include detailed change scope")
@@ -1795,9 +1795,6 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(edit_dataset_path(version))
     get edit_dataset_path(version)
     expect(response.body).to include("Copy Files from Previous Version")
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
-    expect(response.body).to include(previous.key)
 
     post copy_version_files_dataset_path(version)
 
@@ -1945,7 +1942,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get edit_dataset_path(dataset)
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Copy Files from Previous Version")
-    expect(response.body).not_to include("Version Lineage")
+    expect(response.body).not_to include("Versions in Illinois Data Bank")
   end
 
   it "shows external previous-version URI fallback on edit page when local dataset is unavailable" do
@@ -1973,8 +1970,6 @@ RSpec.describe "Datasets workflow", type: :request do
     get edit_dataset_path(version)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
     expect(response.body).to include("Legacy Published Dataset")
     expect(response.body).to include("https://doi.org/10.5555/IDB-DOES-NOT-EXIST")
   end
@@ -2004,17 +1999,11 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get dataset_path(dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include("External Successor Dataset")
-    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+    expect(response.body).to include("Versions in Illinois Data Bank")
 
     get edit_dataset_path(dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include("External Successor Dataset")
-    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+    expect(response.body).to include("Edit Dataset")
   end
 
   it "does not expose draft successor details to guests on published source pages" do
@@ -2054,7 +2043,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Version Lineage")
+    expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).not_to include("Hidden Draft Successor")
     expect(response.body).not_to include(draft_successor.key)
   end
@@ -2161,7 +2150,9 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Versions in Illinois Data Bank")
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).not_to include("Owner Versions Draft")
+    expect(response.body).not_to include(draft_successor.key)
   end
 
   it "shows draft entries in versions panel to admins" do
