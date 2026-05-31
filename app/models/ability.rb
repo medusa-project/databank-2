@@ -4,7 +4,7 @@ class Ability
   def initialize(user)
     user ||= User.guest
 
-    if user.admin?
+    if user.curator?
       can :manage, :all
       return
     end

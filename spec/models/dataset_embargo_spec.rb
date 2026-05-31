@@ -94,5 +94,24 @@ RSpec.describe Dataset, type: :model do
       expect(scope_ids).not_to include(unreleased_metadata.id)
       expect(scope_ids).not_to include(draft_dataset.id)
     end
+
+    it "adds release date publish requirement when file embargo is set without release date" do
+      dataset = create(:dataset, :published, embargo: Dataset::EMBARGO_NONE, release_date: nil)
+      dataset.update_columns(embargo: Dataset::EMBARGO_FILE, release_date: nil)
+      dataset.reload
+
+      expect(dataset.missing_publish_fields).to include("release date when embargo is file or metadata")
+      expect(dataset.ready_to_publish?).to be(false)
+    end
+
+    it "allows publish readiness when file embargo has a release date" do
+      dataset = create(:dataset, :published,
+        embargo: Dataset::EMBARGO_FILE,
+        release_date: Date.current + 7
+      )
+
+      expect(dataset.missing_publish_fields).not_to include("release date when embargo is file or metadata")
+      expect(dataset.ready_to_publish?).to be(true)
+    end
   end
 end

@@ -147,6 +147,7 @@ class Dataset < ApplicationRecord
     missing << "creators"         if creators.empty?
     missing << "contact creator"  if creators.none?(&:contact_selected?)
     missing << "email address for all creators" if creators.any? { |creator| creator.email.blank? }
+    missing << "release date when embargo is file or metadata" if (file_embargoed? || metadata_embargoed?) && release_date.blank?
     missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_type.blank? }
     missing << "depositor contact" if depositor_email.blank?
     missing

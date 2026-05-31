@@ -103,6 +103,40 @@ RSpec.describe "Embargo access", type: :request do
     expect(response.headers["Content-Disposition"]).to include('attachment; filename="analysis.csv"')
   end
 
+  it "allows guest access on the exact metadata embargo release date" do
+    dataset = create(:dataset, :published,
+      title: "Exact Date Metadata Release Dataset",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current
+    )
+
+    datafile = create(:datafile, dataset: dataset)
+
+    get datasets_path, params: { q: "Exact Date Metadata Release Dataset" }
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(dataset_path(dataset))
+
+    get dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+
+    get download_dataset_datafile_path(dataset, datafile)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "allows guest file download on the exact file embargo release date" do
+    dataset = create(:dataset, :published,
+      title: "Exact Date File Release Dataset",
+      embargo: Dataset::EMBARGO_FILE,
+      release_date: Date.current
+    )
+
+    datafile = create(:datafile, dataset: dataset)
+
+    get download_dataset_datafile_path(dataset, datafile)
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Disposition"]).to include('attachment; filename="analysis.csv"')
+  end
+
   it "requires login for guest access to metadata-embargoed dataset show before release" do
     dataset = create(:dataset, :published,
       title: "Private Metadata Dataset",
@@ -176,6 +210,25 @@ RSpec.describe "Embargo access", type: :request do
 
     get datasets_path, params: { q: "Admin Embargo Dataset" }
 
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(dataset_path(dataset))
+    expect(response.body).to include("Depositor")
+  end
+
+  it "shows metadata-embargoed datasets to curators before release" do
+    dataset = create(:dataset, :published,
+      title: "Curator Embargo Dataset",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 15
+    )
+
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    get dataset_path(dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Curator Embargo Dataset")
+
+    get datasets_path, params: { q: "Curator Embargo Dataset" }
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(dataset_path(dataset))
     expect(response.body).to include("Depositor")

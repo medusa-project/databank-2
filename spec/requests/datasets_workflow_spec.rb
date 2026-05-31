@@ -867,6 +867,51 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.reload).to be_draft
   end
 
+  it "blocks publish when embargo requires a release date" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Embargo Publish Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    post dataset_creators_path(dataset), params: {
+      creator: {
+        name: "Creator One",
+        email: "one@example.edu",
+        contact: true,
+        position: 1
+      }
+    }
+
+    csv_fixture = Rails.root.join("test/fixtures/files/analysis.csv")
+    uploaded_file = Rack::Test::UploadedFile.new(csv_fixture, "text/csv")
+
+    post dataset_datafiles_path(dataset), params: {
+      datafile: {
+        binary: uploaded_file,
+        description: "Primary analysis file"
+      }
+    }
+
+    # Simulate legacy/imported invalid state so publish preflight handles it gracefully.
+    dataset.update_columns(embargo: Dataset::EMBARGO_FILE, release_date: nil)
+
+    post publish_dataset_path(dataset)
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("Cannot publish: release date when embargo is file or metadata required.")
+    expect(dataset.reload).to be_draft
+  end
+
   it "creates a new draft version from a published dataset and preserves lineage" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -1379,6 +1424,34 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(acknowledgement_mail.body.encoded).to include("contact the Research Data Service team")
   end
 
+  it "allows version request submission for a metadata-embargoed published dataset" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Embargoed Request Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 30,
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900310"
+    )
+
+    expect {
+      post submit_version_request_dataset_path(source), params: { comment: "Version while metadata embargoed." }
+    }.to change(VersionRequest, :count).by(1)
+
+    request = VersionRequest.order(:created_at).last
+    expect(response).to redirect_to(version_acknowledge_dataset_path(source, version_request_id: request.id))
+    expect(request.status).to eq("pending")
+  end
+
   it "does not create a duplicate pending version request" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -1521,6 +1594,8 @@ RSpec.describe "Datasets workflow", type: :request do
 
     new_dataset = Dataset.order(:created_at).last
     expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset.embargo).to eq(Dataset::EMBARGO_NONE)
+    expect(new_dataset.release_date).to be_nil
     expect(new_dataset.creators.pluck(:name)).to eq([ "Source Primary", "Source Secondary" ])
     expect(new_dataset.creators.find_by!(name: "Source Primary").contact).to be(true)
     expect(new_dataset.creators.find_by!(name: "Source Secondary").contact).to be(false)
@@ -1584,6 +1659,42 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(approved_mail).to be_present
     expect(approved_mail.body.encoded).to include("You can now edit your new version draft")
     expect(approved_mail.body.encoded).to include("/datasets/#{new_dataset.key}/edit")
+  end
+
+  it "resets embargo settings on drafts approved from metadata-embargoed sources" do
+    source = Dataset.create!(
+      title: "Embargoed Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 30,
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900317"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Create embargo-reset draft",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved with reset" }
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset.embargo).to eq(Dataset::EMBARGO_NONE)
+    expect(new_dataset.release_date).to be_nil
   end
 
   it "clears corresponding creator fields on approved drafts when nested edits remove all contacts" do
@@ -2051,7 +2162,46 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Reject Request")
   end
 
-  it "blocks non-admin approval of a version request" do
+  it "allows a curator to access version controls and approve a pending version request" do
+    source = Dataset.create!(
+      title: "Curator Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900316"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Curator can approve this",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    get version_controls_dataset_path(source)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Pending Version Requests")
+
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved by curator" }
+    }.to change(Dataset, :count).by(1)
+
+    request.reload
+    expect(request.status).to eq("approved")
+    expect(request.reviewed_by_uid).to eq("curator@example.edu")
+  end
+
+  it "blocks non-curator approval of a version request" do
     source = Dataset.create!(
       title: "Unauthorized Approval Source",
       description: "Published source dataset.",

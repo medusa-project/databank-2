@@ -1,7 +1,9 @@
 const { defineConfig, devices } = require("@playwright/test");
 
+const skipGlobalSetup = process.env.PW_SKIP_GLOBAL_SETUP === "1";
+
 module.exports = defineConfig({
-  globalSetup: "./playwright/global-setup.js",
+  globalSetup: skipGlobalSetup ? undefined : "./playwright/global-setup.js",
   testDir: "./playwright",
   timeout: 30_000,
   expect: {

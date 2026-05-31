@@ -74,6 +74,27 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(response.body).not_to include(dataset_two.key)
   end
 
+  it "allows curator users to view external delivery attempts" do
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:curator-view",
+      error_message: "Curator visible"
+    )
+
+    get admin_external_delivery_attempts_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("External Delivery Audit")
+    expect(response.body).to include(dataset_one.key)
+    expect(response.body).to include("Curator visible")
+  end
+
   it "blocks non-admin users" do
     sign_in_as(email: "owner-a@example.edu", name: "Owner A", role: "depositor")
 
