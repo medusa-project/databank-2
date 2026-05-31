@@ -70,3 +70,5 @@ group :development do
 end
 
 gem "rspec-rails", "~> 8.0", groups: [ :development, :test ]
+gem "factory_bot_rails", "~> 6.4", groups: [ :development, :test ]
+gem "simplecov", "~> 0.22", require: false, group: :test

@@ -41,7 +41,7 @@ RSpec.describe "Datasets search", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(dataset_one.title)
     expect(response.body).to include("Apply Filters")
-    expect(response.body).to include("<ilw-page-title>")
+    expect(response.body).to include('<div class="idb-page-title">')
     expect(response.body).to include("<h1>Dataset Search</h1>")
     expect(response.body).not_to include('slot="title"')
     expect(response.body).not_to include("Marine Biology Survey")

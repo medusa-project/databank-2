@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_26_123000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,6 +50,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_26_123000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "app_settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.text "value"
+    t.index ["key"], name: "index_app_settings_on_key", unique: true
   end
 
   create_table "contributors", force: :cascade do |t|
@@ -232,6 +240,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_26_123000) do
     t.datetime "updated_at", null: false
     t.index ["anchor"], name: "index_guide_subitems_on_anchor"
     t.index ["item_id"], name: "index_guide_subitems_on_item_id"
+  end
+
+  create_table "managed_curators", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_managed_curators_on_email", unique: true
   end
 
   create_table "migration_runs", force: :cascade do |t|

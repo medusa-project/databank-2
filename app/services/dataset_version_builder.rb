@@ -18,6 +18,8 @@ class DatasetVersionBuilder
         owner_uid: @previous_dataset.owner_uid,
         depositor_name: @previous_dataset.depositor_name,
         depositor_email: @previous_dataset.depositor_email,
+        embargo: Dataset::EMBARGO_NONE,
+        release_date: nil,
         publication_state: :draft
       )
 

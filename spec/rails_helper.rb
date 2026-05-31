@@ -66,6 +66,7 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
 
   config.include ActiveJob::TestHelper
+  config.include FactoryBot::Syntax::Methods
 
   config.before do
     ActiveJob::Base.queue_adapter = :test

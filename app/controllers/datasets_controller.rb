@@ -54,7 +54,7 @@ class DatasetsController < ApplicationController
   end
 
   def version_controls
-    authorize! :manage, Dataset
+    authorize! :review_versions, @dataset
     @version_group = DatasetVersionGroup.new(@dataset)
     @previous_version = @dataset.previous_version_dataset
     @version_comparison = build_version_comparison(current: @dataset, previous: @previous_version) if @previous_version.present?
@@ -113,7 +113,7 @@ class DatasetsController < ApplicationController
   end
 
   def approve_version_request
-    authorize! :manage, Dataset
+    authorize! :review_versions, @dataset
 
     source_path = review_action_redirect_path(default_path: dataset_path(@dataset))
     version_request = @dataset.version_requests.pending.find(params[:version_request_id])
@@ -154,7 +154,7 @@ class DatasetsController < ApplicationController
   end
 
   def reject_version_request
-    authorize! :manage, Dataset
+    authorize! :review_versions, @dataset
 
     source_path = review_action_redirect_path(default_path: dataset_path(@dataset))
     version_request = @dataset.version_requests.pending.find(params[:version_request_id])
@@ -344,7 +344,7 @@ class DatasetsController < ApplicationController
   def set_dataset
     @dataset = Dataset.find_by!(key: params[:id])
 
-    unless @dataset.published? || logged_in?
+    unless @dataset.publicly_readable_now? || logged_in?
       redirect_to login_path, alert: "Please sign in to continue."
     end
   end
@@ -404,13 +404,13 @@ class DatasetsController < ApplicationController
   end
 
   def copy_version_files_redirect_path
-    return edit_dataset_path(@dataset) unless params[:from] == "version_controls" && can?(:manage, Dataset)
+    return edit_dataset_path(@dataset) unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
 
     version_controls_dataset_path(@dataset)
   end
 
   def review_action_redirect_path(default_path:)
-    return default_path unless params[:from] == "version_controls" && can?(:manage, Dataset)
+    return default_path unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
 
     version_controls_dataset_path(@dataset)
   end
@@ -546,21 +546,21 @@ class DatasetsController < ApplicationController
   end
 
   def public_datasets
-    return Dataset.all if logged_in? && current_user.admin?
+    return Dataset.all if logged_in? && current_user.curator?
 
     if logged_in?
       owned   = Dataset.where(depositor_email: current_user.email)
-      public  = Dataset.published
+      public  = Dataset.publicly_readable_now
       Dataset.where(id: owned).or(Dataset.where(id: public))
     else
-      Dataset.published
+      Dataset.publicly_readable_now
     end
   end
 
   def current_role
     return "guest" unless logged_in?
 
-    current_user.admin? ? "admin" : "depositor"
+    current_user.curator? ? "admin" : "depositor"
   end
 
   def datasets_for_current_role

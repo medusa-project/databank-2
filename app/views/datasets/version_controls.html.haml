@@ -36,7 +36,7 @@
             Version linkage URI:
             = link_to(previous_material.uri, previous_material.uri)
 
-    - if @dataset.draft? && @previous_version.present?
+    - if @dataset.draft? && @previous_version.present? && can?(:update, @dataset)
       %section.dataset-show-panel{aria: { label: "Version file copy controls" }}
         %h2.dataset-show-section-title Version File Copy
         %p

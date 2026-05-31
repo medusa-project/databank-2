@@ -31,7 +31,7 @@
           = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "idb-button-primary"
           - if @dataset.version_eligible?
             = link_to "Request New Version", pre_version_dataset_path(@dataset), class: "idb-button-primary"
-            - if can?(:manage, Dataset)
+            - if can?(:review_versions, @dataset)
               = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
     - if citation_text.present? || doi_url.present?
@@ -153,7 +153,7 @@
                           - if material.relation_type.present?
                             %span.dataset-show-list-secondary= material.relation_type
 
-    - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:manage, @dataset) }
+    - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:review_versions, @dataset) }
     - if visible_version_entries.any?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Versions in Illinois Data Bank" }}
         %details.idb-section-disclosure.dataset-show-disclosure{open: (visible_version_entries.length > 1)}
@@ -220,7 +220,7 @@
               %p
                 No change log entries available.
 
-  - if logged_in? && can?(:manage, Dataset)
+  - if logged_in? && can?(:review_versions, @dataset)
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator controls" }}
       %details.idb-section-disclosure.dataset-show-disclosure{open: true}
         %summary
@@ -229,6 +229,7 @@
           %p
             = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
 
+  - if logged_in? && can?(:manage, Dataset)
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "External delivery" }}
       %details.idb-section-disclosure.dataset-show-disclosure{open: true}
         %summary

@@ -37,6 +37,11 @@ Rails.application.routes.draw do
 
   post "datasets/:id/version", to: "datasets#create_version", as: :version_dataset
 
+  get "admin", to: "welcome#admin", as: :admin
+  patch "admin/update_system_message", to: "welcome#update_system_message", as: :update_admin_system_message
+  post "admin/managed_curators", to: "welcome#create_managed_curator", as: :admin_managed_curators
+  delete "admin/managed_curators/:id", to: "welcome#destroy_managed_curator", as: :admin_managed_curator
+
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts

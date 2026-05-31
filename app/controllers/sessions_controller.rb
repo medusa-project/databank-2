@@ -22,7 +22,10 @@ class SessionsController < ApplicationController
 
   # Development-only role switching
   def role_switch
-    return unless Rails.env.development? || Rails.env.test?
+    unless Rails.env.development? || Rails.env.test?
+      redirect_back fallback_location: root_path, alert: "Role switching is only available in development and test."
+      return
+    end
 
     user = current_user
     if user && params[:role].present?

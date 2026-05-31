@@ -16,7 +16,7 @@
         %p.datasets-results-count{aria: { live: "polite" }}= "Displaying #{start_item} - #{end_item} of #{@total_count} in total"
 
       - if @total_pages > 1
-        %nav.datasets-pagination.datasets-pagination-top{aria: { label: "Pagination" }}
+        %nav.datasets-pagination.datasets-pagination-top{aria: { label: "Results pagination (top)" }}
           - if @page > 1
             = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
           - pagination_items.each do |item|
@@ -139,7 +139,7 @@
           %p.no-results No datasets found.
 
   - if @total_pages > 1
-    %nav.datasets-pagination{aria: { label: "Pagination" }}
+    %nav.datasets-pagination{aria: { label: "Results pagination (bottom)" }}
       - if @page > 1
         = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
       - pagination_items.each do |item|

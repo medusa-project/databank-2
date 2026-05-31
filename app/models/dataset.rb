@@ -1,6 +1,10 @@
 class Dataset < ApplicationRecord
   KEY_PREFIX = ENV.fetch("DATASET_KEY_PREFIX", "IDB").freeze
   KEY_DIGITS = 7
+  EMBARGO_NONE = "none".freeze
+  EMBARGO_FILE = "file".freeze
+  EMBARGO_METADATA = "metadata".freeze
+  EMBARGO_OPTIONS = [ EMBARGO_NONE, EMBARGO_FILE, EMBARGO_METADATA ].freeze
   CREATOR_TYPE_PERSON = 0
   CREATOR_TYPE_INSTITUTION = 1
 
@@ -22,13 +26,33 @@ class Dataset < ApplicationRecord
 
   enum :publication_state, { draft: 0, published: 1 }, default: :draft
 
+  scope :publicly_readable_now, lambda {
+    published.where(
+      <<~SQL.squish,
+        COALESCE(NULLIF(embargo, ''), :none) <> :metadata
+        OR (
+          COALESCE(NULLIF(embargo, ''), :none) = :metadata
+          AND release_date IS NOT NULL
+          AND release_date <= :today
+        )
+      SQL
+      none: EMBARGO_NONE,
+      metadata: EMBARGO_METADATA,
+      today: Date.current
+    )
+  }
+
   validates :key,             presence: true, uniqueness: true
   validates :title,           presence: true, unless: :draft?
   validates :owner_uid,       presence: true
   validates :depositor_name,  presence: true
   validates :depositor_email, presence: true
+  validates :embargo, inclusion: { in: EMBARGO_OPTIONS }, allow_blank: true
+
+  validate :release_date_required_for_embargo
 
   before_validation :set_key, on: :create
+  before_validation :normalize_embargo
   before_save :set_primary_contact
 
   def to_param
@@ -123,6 +147,7 @@ class Dataset < ApplicationRecord
     missing << "creators"         if creators.empty?
     missing << "contact creator"  if creators.none?(&:contact_selected?)
     missing << "email address for all creators" if creators.any? { |creator| creator.email.blank? }
+    missing << "release date when embargo is file or metadata" if (file_embargoed? || metadata_embargoed?) && release_date.blank?
     missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_type.blank? }
     missing << "depositor contact" if depositor_email.blank?
     missing
@@ -132,7 +157,48 @@ class Dataset < ApplicationRecord
     missing_publish_fields.empty?
   end
 
+  def embargo_mode
+    embargo.presence || EMBARGO_NONE
+  end
+
+  def file_embargoed?
+    embargo_mode == EMBARGO_FILE
+  end
+
+  def metadata_embargoed?
+    embargo_mode == EMBARGO_METADATA
+  end
+
+  def embargo_released?(on_date: Date.current)
+    release_date.present? && release_date <= on_date
+  end
+
+  def publicly_readable_now?(on_date: Date.current)
+    return false unless published?
+    return true unless metadata_embargoed?
+
+    embargo_released?(on_date: on_date)
+  end
+
+  def files_publicly_readable_now?(on_date: Date.current)
+    return false unless published?
+    return true unless file_embargoed? || metadata_embargoed?
+
+    embargo_released?(on_date: on_date)
+  end
+
   private
+
+  def normalize_embargo
+    self.embargo = embargo_mode
+  end
+
+  def release_date_required_for_embargo
+    return unless file_embargoed? || metadata_embargoed?
+    return if release_date.present?
+
+    errors.add(:release_date, "is required when embargo is file or metadata")
+  end
 
   def invalid_name(attributes)
     attributes["family_name"].blank? &&

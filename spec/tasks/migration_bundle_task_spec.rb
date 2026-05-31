@@ -47,7 +47,8 @@ RSpec.describe "migration:bundle tasks" do
       overwrite: false,
       dry_run: true,
       checksum_path: dir.join("legacy_datasets.ndjson.sha256").to_s,
-      manifest_path: dir.join("manifest.json").to_s
+      manifest_path: dir.join("manifest.json").to_s,
+      report_path: dir.join("import_report.json").to_s
     )
   ensure
     ENV.delete("DIR")

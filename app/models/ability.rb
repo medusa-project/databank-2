@@ -4,12 +4,12 @@ class Ability
   def initialize(user)
     user ||= User.guest
 
-    if user.admin?
+    if user.curator?
       can :manage, :all
       return
     end
 
-    can :read, Dataset, &:published?
+    can :read, Dataset, &:publicly_readable_now?
     can :create, Dataset if user.depositor?
 
     can %i[read update destroy publish], Dataset do |dataset|

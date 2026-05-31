@@ -79,7 +79,7 @@ module Migration
     rescue StandardError => e
       summary[:validation_error] = e.message if defined?(summary)
       summary[:failed] += 1 if defined?(summary)
-      summary[:processed_count] = payloads.size if defined?(payloads) && defined?(summary)
+      summary[:processed_count] = payloads&.size.to_i if defined?(summary)
       summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_count") } if defined?(summary)
       summary[:checksum] = safe_expected_checksum if defined?(summary)
       write_report_artifact!(summary) if defined?(summary)

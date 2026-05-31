@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  ROLES = %w[depositor admin].freeze
+  ROLES = %w[depositor curator admin].freeze
 
   validates :provider, presence: true
   validates :uid,      presence: true, uniqueness: { scope: :provider }
@@ -22,6 +22,13 @@ class User < ApplicationRecord
 
   def admin?
     role == "admin"
+  end
+
+  def curator?
+    return true if admin? || role == "curator"
+    return false if email.blank?
+
+    CuratorDirectory.includes_email?(email)
   end
 
   def depositor?

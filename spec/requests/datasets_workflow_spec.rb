@@ -357,6 +357,48 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.funders.map(&:name)).to eq([ "Funder Two", "Funder One" ])
   end
 
+  it "persists ordering from position-only nested metadata updates" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Position Only Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Position Only Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        contributors_attributes: [
+          { name: "Contributor One", role: "Analyst", position: 2 },
+          { name: "Contributor Two", role: "Analyst", position: 1 }
+        ],
+        related_materials_attributes: [
+          { title: "Material One", link: "https://example.org/material-1", position: 2 },
+          { title: "Material Two", link: "https://example.org/material-2", position: 1 }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    dataset.reload
+    expect(dataset.contributors.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.contributors.map(&:name)).to eq([ "Contributor Two", "Contributor One" ])
+    expect(dataset.related_materials.map(&:row_position)).to eq([ 1, 2 ])
+    expect(dataset.related_materials.map(&:title)).to eq([ "Material Two", "Material One" ])
+  end
+
   it "returns ORCID lookup results for dataset creators" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -500,6 +542,143 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(second_creator.reload.contact).to be(true)
   end
 
+  it "keeps only one contact creator when updated through nested dataset attributes" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Nested Contact Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    first_creator = dataset.creators.create!(
+      name: "Creator One",
+      email: "one@example.edu",
+      is_contact: true,
+      row_position: 1
+    )
+    second_creator = dataset.creators.create!(
+      name: "Creator Two",
+      email: "two@example.edu",
+      is_contact: false,
+      row_position: 2
+    )
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Nested Contact Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        creators_attributes: [
+          {
+            id: first_creator.id,
+            name: "Creator One",
+            email: "one@example.edu",
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: second_creator.id,
+            name: "Creator Two",
+            email: "two@example.edu",
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+
+    dataset.reload
+    expect(dataset.creators.count).to eq(2)
+    expect(first_creator.reload.contact).to be(false)
+    expect(first_creator.reload.is_contact).to be(false)
+    expect(second_creator.reload.contact).to be(true)
+    expect(second_creator.reload.is_contact).to be(true)
+    expect(dataset.corresponding_creator_name).to eq("Creator Two")
+    expect(dataset.corresponding_creator_email).to eq("two@example.edu")
+  end
+
+  it "clears corresponding creator fields when nested updates remove all creator contacts" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Nested Contact Clear Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    first_creator = dataset.creators.create!(
+      name: "Creator One",
+      email: "one@example.edu",
+      is_contact: true,
+      row_position: 1
+    )
+    second_creator = dataset.creators.create!(
+      name: "Creator Two",
+      email: "two@example.edu",
+      is_contact: false,
+      row_position: 2
+    )
+    dataset.reload
+
+    expect(dataset.corresponding_creator_name).to eq("Creator One")
+    expect(dataset.corresponding_creator_email).to eq("one@example.edu")
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        title: "Nested Contact Clear Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank",
+        creators_attributes: [
+          {
+            id: first_creator.id,
+            name: "Creator One",
+            email: "one@example.edu",
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: second_creator.id,
+            name: "Creator Two",
+            email: "two@example.edu",
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+
+    dataset.reload
+    expect(first_creator.reload.contact).to be(false)
+    expect(first_creator.reload.is_contact).to be(false)
+    expect(second_creator.reload.contact).to be(false)
+    expect(second_creator.reload.is_contact).to be(false)
+    expect(dataset.corresponding_creator_name).to be_nil
+    expect(dataset.corresponding_creator_email).to be_nil
+  end
+
   it "blocks publish until every creator has an email address" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -575,9 +754,10 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Persistent URL")
     expect(response.body).to include("https://doi.org/10.5555/IDB-1234567")
-    expect(response.body).to include("Contributors")
-    expect(response.body).to include("Funders")
+    expect(response.body).to include("Additional Contact(s)")
+    expect(response.body).to include("Funder")
     expect(response.body).to include("Related Materials")
+    expect(response.body).to include("Research Support")
     expect(response.body).to include("Project Article")
     expect(response.body).to include("Tabular output")
     expect(response.body).not_to include("Depositor Private")
@@ -609,7 +789,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Depositor")
     expect(response.body).to include("Depositor Private")
     expect(response.body).to include("private@example.edu")
-    expect(response.body).to include("researcher@example.edu")
+    expect(response.body).not_to include("researcher@example.edu")
   end
 
   it "rejects related materials with a URI but no relation type" do
@@ -687,6 +867,51 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.reload).to be_draft
   end
 
+  it "blocks publish when embargo requires a release date" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Embargo Publish Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    post dataset_creators_path(dataset), params: {
+      creator: {
+        name: "Creator One",
+        email: "one@example.edu",
+        contact: true,
+        position: 1
+      }
+    }
+
+    csv_fixture = Rails.root.join("test/fixtures/files/analysis.csv")
+    uploaded_file = Rack::Test::UploadedFile.new(csv_fixture, "text/csv")
+
+    post dataset_datafiles_path(dataset), params: {
+      datafile: {
+        binary: uploaded_file,
+        description: "Primary analysis file"
+      }
+    }
+
+    # Simulate legacy/imported invalid state so publish preflight handles it gracefully.
+    dataset.update_columns(embargo: Dataset::EMBARGO_FILE, release_date: nil)
+
+    post publish_dataset_path(dataset)
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("Cannot publish: release date when embargo is file or metadata required.")
+    expect(dataset.reload).to be_draft
+  end
+
   it "creates a new draft version from a published dataset and preserves lineage" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -704,6 +929,7 @@ RSpec.describe "Datasets workflow", type: :request do
       identifier: "10.5555/IDB-2222222"
     )
     previous.creators.create!(name: "Researcher One", email: "researcher@example.edu", contact: true, position: 1)
+    previous.creators.create!(name: "Researcher Two", email: "researcher2@example.edu", contact: false, position: 2)
     previous.contributors.create!(name: "Research Support", email: "support@example.edu", role: "Data Curator", position: 1)
     previous.funders.create!(name: "U.S. Department of Energy (DOE)", identifier: "10.13039/100000015", award_number: "DE-12345", position: 1)
     previous.related_materials.create!(title: "Project Article", uri: "https://example.org/article", relation_type: "IsSupplementTo", position: 1)
@@ -717,7 +943,11 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(new_dataset.identifier).to be_nil
     expect(new_dataset.title).to eq(previous.title)
     expect(new_dataset.description).to eq(previous.description)
-    expect(new_dataset.creators.pluck(:name)).to eq([ "Researcher One" ])
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Researcher One", "Researcher Two" ])
+    expect(new_dataset.creators.find_by!(name: "Researcher One").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Researcher Two").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Researcher One")
+    expect(new_dataset.corresponding_creator_email).to eq("researcher@example.edu")
     expect(new_dataset.contributors.pluck(:name)).to eq([ "Research Support" ])
     expect(new_dataset.funders.pluck(:name)).to eq([ "U.S. Department of Energy (DOE)" ])
     expect(new_dataset.related_materials.find_by!(relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION).uri).to eq("https://doi.org/10.5555/IDB-2222222")
@@ -728,15 +958,90 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get dataset_path(previous)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include(new_dataset.key)
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).not_to include(new_dataset.key)
 
     get dataset_path(new_dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
+    expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).to include(previous.key)
+  end
+
+  it "recalculates corresponding creator fields for a draft version after nested creator edits" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    previous = Dataset.create!(
+      title: "Versioned Contact Dataset",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-3333333"
+    )
+
+    previous_primary = previous.creators.create!(
+      name: "Primary Creator",
+      email: "primary@example.edu",
+      contact: true,
+      position: 1
+    )
+    previous_secondary = previous.creators.create!(
+      name: "Secondary Creator",
+      email: "secondary@example.edu",
+      contact: false,
+      position: 2
+    )
+
+    post version_dataset_path(previous)
+    version = Dataset.order(:created_at).last
+
+    expect(response).to redirect_to(edit_dataset_path(version))
+    expect(version.corresponding_creator_name).to eq("Primary Creator")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: previous_primary.name)
+    version_secondary = version.creators.find_by!(name: previous_secondary.name)
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(true)
+    expect(version_secondary.reload.is_contact).to be(true)
+    expect(version.corresponding_creator_name).to eq("Secondary Creator")
+    expect(version.corresponding_creator_email).to eq("secondary@example.edu")
   end
 
   it "blocks version creation for a depositor who does not own the dataset" do
@@ -1119,6 +1424,34 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(acknowledgement_mail.body.encoded).to include("contact the Research Data Service team")
   end
 
+  it "allows version request submission for a metadata-embargoed published dataset" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    source = Dataset.create!(
+      title: "Embargoed Request Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 30,
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900310"
+    )
+
+    expect {
+      post submit_version_request_dataset_path(source), params: { comment: "Version while metadata embargoed." }
+    }.to change(VersionRequest, :count).by(1)
+
+    request = VersionRequest.order(:created_at).last
+    expect(response).to redirect_to(version_acknowledge_dataset_path(source, version_request_id: request.id))
+    expect(request.status).to eq("pending")
+  end
+
   it "does not create a duplicate pending version request" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -1241,6 +1574,8 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9900311"
     )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
 
     request = source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -1259,14 +1594,61 @@ RSpec.describe "Datasets workflow", type: :request do
 
     new_dataset = Dataset.order(:created_at).last
     expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset.embargo).to eq(Dataset::EMBARGO_NONE)
+    expect(new_dataset.release_date).to be_nil
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Source Primary", "Source Secondary" ])
+    expect(new_dataset.creators.find_by!(name: "Source Primary").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Source Secondary").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Primary")
+    expect(new_dataset.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = new_dataset.creators.find_by!(name: "Source Primary")
+    version_secondary = new_dataset.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(new_dataset), params: {
+      dataset: {
+        title: new_dataset.title,
+        description: new_dataset.description,
+        keywords: new_dataset.keywords,
+        subject: new_dataset.subject,
+        license: new_dataset.license,
+        publisher: new_dataset.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(new_dataset))
+    new_dataset.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_secondary.reload.contact).to be(true)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Secondary")
+    expect(new_dataset.corresponding_creator_email).to eq("secondary@example.edu")
+
+    get dataset_path(new_dataset)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Corresponding Creator")
+    expect(response.body).to include("Source Secondary")
+    expect(response.body).to include("Source Primary; Source Secondary")
 
     request.reload
     expect(request.status).to eq("approved")
     expect(request.reviewed_by_uid).to eq("admin@example.edu")
     expect(request.approved_dataset_id).to eq(new_dataset.id)
-
-    follow_redirect!
-    expect(response.body).to include("Version request approved. Draft #{new_dataset.key} is ready for editing.")
 
     subjects = ActionMailer::Base.deliveries.map(&:subject)
     recipients = ActionMailer::Base.deliveries.flat_map(&:to)
@@ -1277,6 +1659,122 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(approved_mail).to be_present
     expect(approved_mail.body.encoded).to include("You can now edit your new version draft")
     expect(approved_mail.body.encoded).to include("/datasets/#{new_dataset.key}/edit")
+  end
+
+  it "resets embargo settings on drafts approved from metadata-embargoed sources" do
+    source = Dataset.create!(
+      title: "Embargoed Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 30,
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900317"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Create embargo-reset draft",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved with reset" }
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(new_dataset))
+    expect(new_dataset.embargo).to eq(Dataset::EMBARGO_NONE)
+    expect(new_dataset.release_date).to be_nil
+  end
+
+  it "clears corresponding creator fields on approved drafts when nested edits remove all contacts" do
+    source = Dataset.create!(
+      title: "Admin Approval Contact Clear Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900312"
+    )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need a corrected v2 with contact changes",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved for contact clear check" }
+
+    version = Dataset.order(:created_at).last
+    expect(response).to redirect_to(edit_dataset_path(version))
+    expect(version.corresponding_creator_name).to eq("Source Primary")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: "Source Primary")
+    version_secondary = version.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(false)
+    expect(version_secondary.reload.is_contact).to be(false)
+    expect(version.corresponding_creator_name).to be_nil
+    expect(version.corresponding_creator_email).to be_nil
+
+    get dataset_path(version)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Corresponding Creator")
+    expect(response.body).to include("Source Primary; Source Secondary")
   end
 
   it "redirects approve action back to version controls when initiated there" do
@@ -1293,6 +1791,8 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9900410"
     )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
 
     request = source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -1305,11 +1805,105 @@ RSpec.describe "Datasets workflow", type: :request do
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
-    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls" }
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls" }
+    }.to change(Dataset, :count).by(1)
+
+    new_dataset = Dataset.order(:created_at).last
+    expect(new_dataset).to be_draft
+    expect(new_dataset.creators.pluck(:name)).to eq([ "Source Primary", "Source Secondary" ])
+    expect(new_dataset.creators.find_by!(name: "Source Primary").contact).to be(true)
+    expect(new_dataset.creators.find_by!(name: "Source Secondary").contact).to be(false)
+    expect(new_dataset.corresponding_creator_name).to eq("Source Primary")
+    expect(new_dataset.corresponding_creator_email).to eq("primary@example.edu")
+
+    request.reload
+    expect(request.status).to eq("approved")
+    expect(request.review_note).to eq("Approved from controls")
+    expect(request.approved_dataset_id).to eq(new_dataset.id)
 
     expect(response).to redirect_to(version_controls_dataset_path(source))
     follow_redirect!
     expect(response.body).to include("Version request approved. Draft")
+    expect(response.body).to include("Draft created: #{new_dataset.key}")
+  end
+
+  it "clears corresponding creator fields when approved from version controls and nested edits remove all contacts" do
+    source = Dataset.create!(
+      title: "Approve Controls Contact Clear Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900411"
+    )
+    source.creators.create!(name: "Source Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Source Secondary", email: "secondary@example.edu", contact: false, position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Need approved redirect contact clear",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: request.id), params: { from: "version_controls", review_note: "Approved from controls for clear" }
+
+    request.reload
+    version = Dataset.find(request.approved_dataset_id)
+
+    expect(response).to redirect_to(version_controls_dataset_path(source))
+    expect(version.corresponding_creator_name).to eq("Source Primary")
+    expect(version.corresponding_creator_email).to eq("primary@example.edu")
+
+    version_primary = version.creators.find_by!(name: "Source Primary")
+    version_secondary = version.creators.find_by!(name: "Source Secondary")
+
+    patch dataset_path(version), params: {
+      dataset: {
+        title: version.title,
+        description: version.description,
+        keywords: version.keywords,
+        subject: version.subject,
+        license: version.license,
+        publisher: version.publisher,
+        creators_attributes: [
+          {
+            id: version_primary.id,
+            name: version_primary.name,
+            email: version_primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: version_secondary.id,
+            name: version_secondary.name,
+            email: version_secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(version))
+
+    version.reload
+    expect(version_primary.reload.contact).to be(false)
+    expect(version_primary.reload.is_contact).to be(false)
+    expect(version_secondary.reload.contact).to be(false)
+    expect(version_secondary.reload.is_contact).to be(false)
+    expect(version.corresponding_creator_name).to be_nil
+    expect(version.corresponding_creator_email).to be_nil
   end
 
   it "allows an admin to reject a pending version request" do
@@ -1382,6 +1976,63 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(version_controls_dataset_path(source))
     follow_redirect!
     expect(response.body).to include("Version request rejected.")
+
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Reviewed by admin@example.edu")
+    expect(response.body).to include("Review note: Rejected from controls")
+    expect(response.body).not_to include("Draft created:")
+  end
+
+  it "shows approved and rejected version requests in the correct version controls sections after action-driven reviews" do
+    source = Dataset.create!(
+      title: "Version Controls Action Flow Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900412"
+    )
+
+    first_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approve this one",
+      requested_at: 2.days.ago,
+      status: :pending
+    )
+    second_request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Reject this one",
+      requested_at: 1.day.ago,
+      status: :pending
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    post approve_version_request_dataset_path(source, version_request_id: first_request.id), params: { from: "version_controls", review_note: "Approved from action flow" }
+    approved_draft = Dataset.order(:created_at).last
+
+    post reject_version_request_dataset_path(source, version_request_id: second_request.id), params: { from: "version_controls", review_note: "Rejected from action flow" }
+
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Approved request from Owner User")
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Reviewed by admin@example.edu")
+    expect(response.body).to include("Review note: Approved from action flow")
+    expect(response.body).to include("Review note: Rejected from action flow")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).to include(edit_dataset_path(approved_draft))
+    expect(response.body).not_to include("Draft created: #{source.key}")
   end
 
   it "redirects approve not-found errors back to version controls when initiated there" do
@@ -1511,7 +2162,46 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Reject Request")
   end
 
-  it "blocks non-admin approval of a version request" do
+  it "allows a curator to access version controls and approve a pending version request" do
+    source = Dataset.create!(
+      title: "Curator Approval Source",
+      description: "Published source dataset.",
+      keywords: "v1",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9900316"
+    )
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Curator can approve this",
+      requested_at: Time.current,
+      status: :pending
+    )
+
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    get version_controls_dataset_path(source)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Pending Version Requests")
+
+    expect {
+      post approve_version_request_dataset_path(source, version_request_id: request.id), params: { review_note: "Approved by curator" }
+    }.to change(Dataset, :count).by(1)
+
+    request.reload
+    expect(request.status).to eq("approved")
+    expect(request.reviewed_by_uid).to eq("curator@example.edu")
+  end
+
+  it "blocks non-curator approval of a version request" do
     source = Dataset.create!(
       title: "Unauthorized Approval Source",
       description: "Published source dataset.",
@@ -1592,7 +2282,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("A newer version has already been started for this dataset.")
   end
 
-  it "shows version request history to the dataset owner" do
+  it "shows version request entries to the dataset owner without the legacy heading text" do
     source = Dataset.create!(
       title: "Owner Request History Source",
       description: "Published source dataset.",
@@ -1631,10 +2321,12 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Request History")
+    expect(response.body).to include("Request New Version")
+    expect(response.body).not_to include("Version Request History")
     expect(response.body).to include("Pending request from Owner User")
     expect(response.body).to include("Rejected request from Owner User")
     expect(response.body).to include("Please include detailed change scope")
+    expect(response.body.index("Rejected request from Owner User")).to be < response.body.index("Pending request from Owner User")
   end
 
   it "hides version request history from non-owners" do
@@ -1795,9 +2487,6 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to redirect_to(edit_dataset_path(version))
     get edit_dataset_path(version)
     expect(response.body).to include("Copy Files from Previous Version")
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
-    expect(response.body).to include(previous.key)
 
     post copy_version_files_dataset_path(version)
 
@@ -1945,7 +2634,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get edit_dataset_path(dataset)
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Copy Files from Previous Version")
-    expect(response.body).not_to include("Version Lineage")
+    expect(response.body).not_to include("Versions in Illinois Data Bank")
   end
 
   it "shows external previous-version URI fallback on edit page when local dataset is unavailable" do
@@ -1973,8 +2662,6 @@ RSpec.describe "Datasets workflow", type: :request do
     get edit_dataset_path(version)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Previous Version")
     expect(response.body).to include("Legacy Published Dataset")
     expect(response.body).to include("https://doi.org/10.5555/IDB-DOES-NOT-EXIST")
   end
@@ -2004,17 +2691,11 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get dataset_path(dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include("External Successor Dataset")
-    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+    expect(response.body).to include("Versions in Illinois Data Bank")
 
     get edit_dataset_path(dataset)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Version Lineage")
-    expect(response.body).to include("Next Version")
-    expect(response.body).to include("External Successor Dataset")
-    expect(response.body).to include("https://doi.org/10.5555/IDB-NEXT-ONLY")
+    expect(response.body).to include("Edit Dataset")
   end
 
   it "does not expose draft successor details to guests on published source pages" do
@@ -2054,7 +2735,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Version Lineage")
+    expect(response.body).to include("Versions in Illinois Data Bank")
     expect(response.body).not_to include("Hidden Draft Successor")
     expect(response.body).not_to include(draft_successor.key)
   end
@@ -2161,7 +2842,9 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Versions in Illinois Data Bank")
+    expect(response.body).to include("Versions in Illinois Data Bank")
+    expect(response.body).not_to include("Owner Versions Draft")
+    expect(response.body).not_to include(draft_successor.key)
   end
 
   it "shows draft entries in versions panel to admins" do
@@ -2253,6 +2936,18 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9100004"
     )
+    approved_draft = Dataset.create!(
+      title: "Reviewed Grouping Approved Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
 
     source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -2263,7 +2958,8 @@ RSpec.describe "Datasets workflow", type: :request do
       status: :approved,
       reviewed_at: 2.days.ago,
       reviewed_by_uid: "curator-1@example.edu",
-      review_note: "Older approved note"
+      review_note: "Older approved note",
+      approved_dataset: approved_draft
     )
     source.version_requests.create!(
       requester_uid: "owner@example.edu",
@@ -2307,9 +3003,160 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Rejected Requests")
     expect(response.body).to include("Reviewed by curator-2@example.edu")
     expect(response.body).to include("Reviewed by curator-4@example.edu")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).not_to include("Draft created: #{source.key}")
 
     expect(response.body.index("Newer approved note")).to be < response.body.index("Older approved note")
     expect(response.body.index("Newer rejected note")).to be < response.body.index("Older rejected note")
+  end
+
+  it "keeps approved request metadata and draft links visible after contact edits on the approved draft" do
+    source = Dataset.create!(
+      title: "Reviewed Request Robustness Source",
+      description: "Published dataset.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100005"
+    )
+    source.creators.create!(name: "Draft Primary", email: "primary@example.edu", contact: true, position: 1)
+    source.creators.create!(name: "Draft Secondary", email: "secondary@example.edu", contact: false, position: 2)
+
+    approved_draft = Dataset.create!(
+      title: "Reviewed Request Robustness Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    approved_draft.related_materials.create!(
+      title: source.title,
+      uri: source.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+    source.related_materials.create!(
+      title: approved_draft.title,
+      uri: "https://example.test/datasets/#{approved_draft.key}",
+      relation_type: RelatedMaterial::VERSION_NEW_RELATION,
+      position: 1
+    )
+    primary = approved_draft.creators.create!(name: "Draft Primary", email: "primary@example.edu", contact: true, row_position: 1)
+    secondary = approved_draft.creators.create!(name: "Draft Secondary", email: "secondary@example.edu", contact: false, row_position: 2)
+
+    request = source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved request with linked draft",
+      requested_at: Time.current,
+      status: :approved,
+      reviewed_at: Time.current,
+      reviewed_by_uid: "curator-5@example.edu",
+      review_note: "Reviewed with linked draft",
+      approved_dataset: approved_draft
+    )
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    patch dataset_path(approved_draft), params: {
+      dataset: {
+        title: approved_draft.title,
+        description: approved_draft.description,
+        keywords: approved_draft.keywords,
+        subject: approved_draft.subject,
+        license: approved_draft.license,
+        publisher: approved_draft.publisher,
+        creators_attributes: [
+          {
+            id: primary.id,
+            name: primary.name,
+            email: primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: secondary.id,
+            name: secondary.name,
+            email: secondary.email,
+            is_contact: true,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(approved_draft))
+    expect(approved_draft.reload.corresponding_creator_name).to eq("Draft Secondary")
+
+    patch dataset_path(approved_draft), params: {
+      dataset: {
+        title: approved_draft.title,
+        description: approved_draft.description,
+        keywords: approved_draft.keywords,
+        subject: approved_draft.subject,
+        license: approved_draft.license,
+        publisher: approved_draft.publisher,
+        creators_attributes: [
+          {
+            id: primary.id,
+            name: primary.name,
+            email: primary.email,
+            is_contact: false,
+            row_position: 1
+          },
+          {
+            id: secondary.id,
+            name: secondary.name,
+            email: secondary.email,
+            is_contact: false,
+            row_position: 2
+          }
+        ]
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(approved_draft))
+    expect(approved_draft.reload.corresponding_creator_name).to be_nil
+    expect(approved_draft.reload.corresponding_creator_email).to be_nil
+
+    get version_controls_dataset_path(source)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Reviewed by curator-5@example.edu")
+    expect(response.body).to include("Review note: Reviewed with linked draft")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
+    expect(response.body).to include(edit_dataset_path(approved_draft))
+
+    request.reload
+    expect(request.approved_dataset_id).to eq(approved_draft.id)
+
+    get version_controls_dataset_path(approved_draft)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Difference Summary")
+
+    document = Nokogiri::HTML(response.body)
+    creators_heading = document.css("h3").find { |heading| heading.text.squish == "Creators" }
+    funders_heading = document.css("h3").find { |heading| heading.text.squish == "Funders" }
+    materials_heading = document.css("h3").find { |heading| heading.text.squish == "Related Materials (non-version)" }
+
+    expect(creators_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(creators_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
+    expect(funders_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(funders_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
+    expect(materials_heading.xpath("following-sibling::p[1]").text.squish).to eq("Added: none")
+    expect(materials_heading.xpath("following-sibling::p[2]").text.squish).to eq("Removed: none")
   end
 
   it "shows difference summary on version controls when previous version exists" do
@@ -2365,6 +3212,82 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Creator Old")
     expect(response.body).to include("new.csv")
     expect(response.body).to include("old.csv")
+  end
+
+  it "shows no creator add/remove diff when only contact flags change" do
+    previous = Dataset.create!(
+      title: "Creator Contact Diff Source",
+      description: "Original description.",
+      keywords: "alpha,beta",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100011"
+    )
+    previous.creators.create!(name: "Creator Same", email: "same@example.edu", contact: true, position: 1)
+    previous.funders.create!(name: "Funder Same", identifier: "10.1234/same", award_number: "SAME-1", position: 1)
+    previous.related_materials.create!(title: "Material Same", uri: "https://example.org/same", relation_type: "IsSupplementTo", position: 1)
+
+    current = Dataset.create!(
+      title: "Creator Contact Diff Source",
+      description: "Original description.",
+      keywords: "alpha,beta",
+      subject: "Earth Systems",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    current.related_materials.create!(
+      title: previous.title,
+      uri: previous.persistent_url,
+      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
+      position: 1
+    )
+    current.creators.create!(name: "Creator Same", email: "same@example.edu", contact: false, position: 1)
+    current.funders.create!(name: "Funder Same", identifier: "10.1234/same", award_number: "SAME-1", position: 1)
+    current.related_materials.create!(title: "Material Same", uri: "https://example.org/same", relation_type: "IsSupplementTo", position: 2)
+
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    get version_controls_dataset_path(current)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Difference Summary")
+
+    document = Nokogiri::HTML(response.body)
+    creators_heading = document.css("h3").find { |heading| heading.text.squish == "Creators" }
+
+    expect(creators_heading).to be_present
+
+    added_line = creators_heading.xpath("following-sibling::p[1]").text.squish
+    removed_line = creators_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(added_line).to eq("Added: none")
+    expect(removed_line).to eq("Removed: none")
+
+    funders_heading = document.css("h3").find { |heading| heading.text.squish == "Funders" }
+    expect(funders_heading).to be_present
+
+    funders_added_line = funders_heading.xpath("following-sibling::p[1]").text.squish
+    funders_removed_line = funders_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(funders_added_line).to eq("Added: none")
+    expect(funders_removed_line).to eq("Removed: none")
+
+    materials_heading = document.css("h3").find { |heading| heading.text.squish == "Related Materials (non-version)" }
+    expect(materials_heading).to be_present
+
+    materials_added_line = materials_heading.xpath("following-sibling::p[1]").text.squish
+    materials_removed_line = materials_heading.xpath("following-sibling::p[2]").text.squish
+
+    expect(materials_added_line).to eq("Added: none")
+    expect(materials_removed_line).to eq("Removed: none")
   end
 
   it "shows version file copy controls on version controls for draft versions" do
@@ -2527,6 +3450,39 @@ RSpec.describe "Datasets workflow", type: :request do
       publication_state: :published,
       identifier: "10.5555/IDB-9100003"
     )
+    approved_draft = Dataset.create!(
+      title: "Version Controls Link Draft",
+      description: "Draft successor.",
+      keywords: "k",
+      subject: "s",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-version",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :draft
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Approved for link test",
+      requested_at: 2.days.ago,
+      status: :approved,
+      reviewed_at: 1.day.ago,
+      review_note: "Approved on show page test",
+      approved_dataset: approved_draft
+    )
+    source.version_requests.create!(
+      requester_uid: "owner@example.edu",
+      requester_email: "owner@example.edu",
+      requester_name: "Owner User",
+      comment: "Rejected for link test",
+      requested_at: 1.day.ago,
+      status: :rejected,
+      reviewed_at: Time.current,
+      review_note: "Rejected on show page test"
+    )
 
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
     get dataset_path(source)
@@ -2534,6 +3490,12 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Curator Controls")
     expect(response.body).to include("Version Controls")
+    expect(response.body).to include("Approved request from Owner User")
+    expect(response.body).to include("Rejected request from Owner User")
+    expect(response.body).to include("Submitted")
+    expect(response.body).to include("Review note: Approved on show page test")
+    expect(response.body).to include("Review note: Rejected on show page test")
+    expect(response.body).to include("Draft created: #{approved_draft.key}")
   end
 
   it "links newer-version banner to latest published version through an intermediate draft" do

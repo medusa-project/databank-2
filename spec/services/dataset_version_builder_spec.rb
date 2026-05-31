@@ -13,6 +13,8 @@ RSpec.describe DatasetVersionBuilder do
         owner_uid: "owner-uid",
         depositor_name: "Owner User",
         depositor_email: "owner@example.edu",
+        embargo: Dataset::EMBARGO_METADATA,
+        release_date: Date.current + 10,
         publication_state: :published,
         identifier: "10.5555/IDB-1112223"
       )
@@ -43,6 +45,8 @@ RSpec.describe DatasetVersionBuilder do
       expect(new_dataset.license).to eq(previous.license)
       expect(new_dataset.publisher).to eq(previous.publisher)
       expect(new_dataset.depositor_email).to eq(previous.depositor_email)
+      expect(new_dataset.embargo).to eq(Dataset::EMBARGO_NONE)
+      expect(new_dataset.release_date).to be_nil
 
       expect(new_dataset.creators.pluck(:name, :email, :contact)).to eq([ [ "Creator One", "creator@example.edu", true ] ])
       expect(new_dataset.contributors.pluck(:name, :email, :role)).to eq([ [ "Contributor One", "contrib@example.edu", "Data Curator" ] ])
