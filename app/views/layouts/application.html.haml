@@ -53,6 +53,9 @@
     %ilw-page
       = render "shared/header"
       %main#main-content
+        - if system_message.present?
+          %div.ilw-notice.ilw-notice--warning{role: "status", "aria-live": "polite"}
+            = sanitize(system_message)
         - flash.each do |key, value|
           - css = key.to_s == "alert" ? "error" : "success"
           %div{class: "ilw-notice ilw-notice--#{css}", role: "alert"}

@@ -71,6 +71,7 @@
 	padding: 5px 1.875rem;
 	font-family: var(--il-font-sans, "Source Sans Pro", Arial, sans-serif);
 	color: var(--ilw-text--color, #333);
+	font-size: 1em;
 }
 
 .welcome-spotlight {
@@ -82,14 +83,12 @@
  * Use the same side spacing that ilw-content uses so the text aligns with
  * the header and footer chrome.
  * ----------------------------------------------------------------------- */
-#welcome-body {
+.welcome-primary-row {
 	display: flex;
 	gap: 2rem;
-	/* 5px top/bottom matches legacy .welcome { margin: 5px } */
-	font-size: 1em;
 }
 
-.welcome-main {
+.welcome-primary-row .welcome-main {
 	flex: 2;
 	min-width: 0;
 }
@@ -119,6 +118,27 @@
 	border-left: 2px solid #d1d5db;
 	padding-left: 1rem;
 	font-size: 1em;
+}
+
+.welcome-staff-row {
+	margin-top: 1.25rem;
+	padding-top: 1rem;
+	border-top: 2px solid #e5e7eb;
+}
+
+.welcome-role-switch-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 24rem;
+}
+
+.welcome-role-switch-controls select {
+	width: 100%;
+}
+
+.welcome-role-switch-controls .idb-button-secondary {
+	margin-top: 0;
 }
 
 .welcome-spotlight h2 {
@@ -208,7 +228,7 @@
  * Responsive – stack columns on small screens
  * ----------------------------------------------------------------------- */
 @media (max-width: 768px) {
-	#welcome-body {
+	.welcome-primary-row {
 		flex-direction: column;
 		gap: 1rem;
 	}
@@ -221,5 +241,22 @@
 	#welcome-overlay > ul {
 		width: auto;
 		max-width: calc(100vw - 60px);
+	}
+}
+
+@media (min-width: 768px) {
+	.welcome-role-switch-controls {
+		flex-direction: row;
+		align-items: center;
+		max-width: none;
+	}
+
+	.welcome-role-switch-controls select {
+		width: auto;
+		min-width: 16rem;
+	}
+
+	.welcome-role-switch-controls .idb-button-secondary {
+		margin-left: 0.5rem;
 	}
 }

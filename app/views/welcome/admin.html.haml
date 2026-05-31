@@ -1,0 +1,58 @@
+- content_for :title, "Curator and Admin Page"
+
+- if current_user&.admin?
+  %section.idb-section-card
+    %h2.idb-section-title Administrative Controls
+    %p
+      = link_to "Manage Researcher Spotlights", featured_researchers_path, class: "idb-button-primary"
+    %p
+      = link_to "External Delivery Audit", admin_external_delivery_attempts_path, class: "idb-button-primary"
+
+  %section.idb-section-card
+    %h2.idb-section-title Manage Service Message
+    = form_with url: update_admin_system_message_path, method: :patch, scope: :admin_page, local: true do |f|
+      %div
+        = f.label :system_message, "Service message"
+        = f.text_area :system_message, value: @system_message_for_form, rows: 3
+      %p
+        = f.submit "Save Message", class: "idb-button-primary"
+
+  %section.idb-section-card
+    %h2.idb-section-title Manage Curators
+    %h3.idb-section-title Core Curators (Encrypted Config)
+    - if @core_curator_emails.any?
+      %ul
+        - @core_curator_emails.each do |email|
+          %li= email
+    - else
+      %p No core curators configured.
+
+    %h3.idb-section-title Admin-Managed Curators
+    = form_with url: admin_managed_curators_path, method: :post, scope: :managed_curator, local: true do |f|
+      %div
+        = f.label :email, "Curator email"
+        = f.email_field :email, required: true, autocomplete: "email"
+      %p
+        = f.submit "Add Curator", class: "idb-button-primary"
+
+    - if @managed_curators.any?
+      %table.idb-compact-table
+        %thead
+          %tr
+            %th Email
+            %th Actions
+        %tbody
+          - @managed_curators.each do |managed_curator|
+            %tr
+              %td= managed_curator.email
+              %td
+                = button_to "Remove", admin_managed_curator_path(managed_curator), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Remove #{managed_curator.email} from admin-managed curators?" } }
+    - else
+      %p No admin-managed curators configured.
+
+  %p
+    = link_to "Back", root_path, class: "idb-button-secondary"
+- else
+  %h2 You are not authorized to view this page.
+  %p
+    = link_to "Back", root_path, class: "idb-button-secondary"

@@ -42,6 +42,6 @@ class VersionRequestNotificationService
     configured = ENV["VERSION_REQUEST_REVIEW_EMAILS"].to_s.split(",").map(&:strip).reject(&:blank?)
     return configured if configured.any?
 
-    User.where(role: "admin").pluck(:email).compact.uniq
+    CuratorDirectory.review_recipients
   end
 end
