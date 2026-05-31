@@ -560,7 +560,7 @@ class DatasetsController < ApplicationController
   def current_role
     return "guest" unless logged_in?
 
-    current_user.admin? ? "admin" : "depositor"
+    current_user.curator? ? "admin" : "depositor"
   end
 
   def datasets_for_current_role
