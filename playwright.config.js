@@ -29,7 +29,7 @@ module.exports = defineConfig({
     command:
       "rm -f tmp/pids/server.pid && RAILS_ENV=test bin/rails db:prepare && RAILS_ENV=test bin/rails server -p 3100",
     port: 3100,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 120_000,
   },
 });
