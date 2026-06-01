@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       get :confirm_review
       get :get_current_token, defaults: { format: :json }
       get :get_new_token, defaults: { format: :json }
+      post :request_review
       post :submit_version_request
       get :version_acknowledge
       post :copy_version_files

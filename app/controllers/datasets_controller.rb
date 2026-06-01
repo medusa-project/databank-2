@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show record_text download_metrics]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics confirm_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -50,6 +50,12 @@ class DatasetsController < ApplicationController
 
   def confirm_review
     authorize! :update, @dataset
+  end
+
+  def request_review
+    authorize! :update, @dataset
+    @dataset.update_column(:identifier, @dataset.generate_doi) if @dataset.identifier.blank?
+    render :confirm_review
   end
 
   def pre_version

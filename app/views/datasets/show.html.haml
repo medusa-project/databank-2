@@ -59,6 +59,7 @@
             %strong This dataset is ready to publish.
 
         - unless @dataset.published?
+          = button_to "Request Pre-Publication Review", request_review_dataset_path(@dataset), method: :post, class: "idb-button-secondary"
           = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
   .dataset-show-grid
