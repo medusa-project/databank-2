@@ -50,6 +50,18 @@
     - else
       %p No admin-managed curators configured.
 
+  %section.idb-section-card
+    %h2.idb-section-title File Audit Report
+    %p Generate a CSV audit of all dataset files and storage status.
+    = form_with url: request_file_audit_curator_reports_path, method: :post, local: true do |f|
+      .idb-form-row
+        = f.label :notes, "Request notes (optional)"
+        = f.text_area :notes, rows: 3
+      .idb-workflow-strip
+        %nav.idb-workflow-actions-right{aria: { label: "File audit report actions" }}
+          = f.submit "Request File Audit Report", class: "idb-button-primary"
+          = link_to "See All Curator Reports", curator_reports_path, class: "idb-button-secondary"
+
   .idb-workflow-strip.idb-workflow-strip-bottom
     %nav.idb-workflow-actions-right{aria: { label: "Admin page actions" }}
       = link_to "Back", root_path, class: "idb-button-secondary"

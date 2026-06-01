@@ -1,0 +1,25 @@
+- content_for :title, "Curator Report"
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator report details" }}
+    %h1.dataset-show-section-title Curator Report ##{@curator_report.id}
+
+    %dl.dataset-show-metadata
+      %dt Report Type
+      %dd= @curator_report.report_type
+      %dt Status
+      %dd= @curator_report.status
+      %dt Requestor
+      %dd= "#{@curator_report.requestor_name} <#{@curator_report.requestor_email}>"
+      %dt Storage
+      %dd= [@curator_report.storage_root, @curator_report.storage_key].compact.join("/")
+      %dt Notes
+      %dd= @curator_report.notes.presence || "(none)"
+      %dt Created
+      %dd= @curator_report.created_at.utc.iso8601
+
+    .idb-workflow-strip.idb-workflow-strip-bottom
+      %nav.idb-workflow-actions-right{aria: { label: "Curator report detail actions" }}
+        = link_to "Back to Reports", curator_reports_path, class: "idb-button-secondary"
+        - if @curator_report.status == "available"
+          = link_to "Download", download_curator_report_path(@curator_report), class: "idb-button-primary"

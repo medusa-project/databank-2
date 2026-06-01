@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_01_223000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_01_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -98,6 +98,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_01_223000) do
     t.integer "type_of"
     t.datetime "updated_at", null: false
     t.index ["dataset_id"], name: "index_creators_on_dataset_id"
+  end
+
+  create_table "curator_reports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "notes"
+    t.string "report_type", null: false
+    t.string "requestor_email", null: false
+    t.string "requestor_name", null: false
+    t.string "storage_key"
+    t.string "storage_root"
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_curator_reports_on_created_at"
+    t.index ["report_type"], name: "index_curator_reports_on_report_type"
   end
 
   create_table "datafiles", force: :cascade do |t|

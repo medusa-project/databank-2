@@ -71,6 +71,16 @@ Rails.application.routes.draw do
   end
   get "/researcher_spotlights", to: "featured_researchers#index", as: :researcher_spotlights
 
+  resources :curator_reports, only: %i[index show destroy] do
+    member do
+      get :download
+    end
+
+    collection do
+      post :request_file_audit
+    end
+  end
+
   get "/metric", to: "metrics#index"
   resources :metrics, only: :index do
     collection do
