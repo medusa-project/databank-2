@@ -27,6 +27,9 @@
 
     .dataset-show-titlebar
       = render "datasets/workflow/show_actions", dataset: @dataset
+      .idb-workflow-strip
+        %nav.idb-workflow-actions-right{aria: { label: "Dataset text record actions" }}
+          = link_to "Dataset info text", record_text_dataset_path(@dataset), class: "idb-button-secondary"
 
     - if citation_text.present? || doi_url.present?
       .dataset-show-citation

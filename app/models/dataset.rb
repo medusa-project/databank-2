@@ -188,6 +188,62 @@ class Dataset < ApplicationRecord
     embargo_released?(on_date: on_date)
   end
 
+  def record_text
+    return "Method not valid for draft dataset." if identifier.blank?
+
+    content = "##########################################################################################\n"
+    content += "#  About this file:\n"
+    content += "#  The dataset described in this info file was downloaded in part or in whole\n"
+    content += "#  from the Illinois Data Bank.\n"
+    content += "#  This info file contains citation information, a permanent digital object identifier (DOI),\n"
+    content += "#  and a listing of all data files available for this dataset.\n"
+    content += "#  Keep this info file so in the future you'll know where you obtained\n"
+    content += "#  the data files you've just downloaded.\n"
+    content += "##########################################################################################\n\n"
+
+    content += "[ DOI: ] #{identifier}\n"
+    content += "[ Title: ] #{title}\n"
+    content += "[ #{'Creator'.pluralize(creators.count)}: ] #{creator_names_for_record_text}\n"
+    content += "[ Publisher: ] #{publisher}\n"
+    content += "[ Publication Year: ] #{publication_year_for_record_text}\n\n"
+    content += "[ Citation: ] #{plain_text_citation_for_record_text}\n\n"
+
+    content += "[ Description: ] #{description}\n\n" if description.present?
+    content += "[ Keywords: ] #{keywords}\n" if keywords.present?
+
+    content += "[ License: ] #{license_line_for_record_text}\n"
+    content += "[ Corresponding Creator: ] #{corresponding_creator_name}\n"
+
+    if funders.any?
+      funders.each do |funder|
+        content += "[ Funder: ] #{funder.name}"
+        grant_value = funder.grant.presence || funder.award_number
+        content += " - [ Grant: ] #{grant_value}" if grant_value.present?
+        content += "\n"
+      end
+      content += "\n"
+    end
+
+    if related_materials.any?
+      related_materials.each do |material|
+        next if material.version_relation?
+        next unless material.citation.present? || material.link.present? || material.uri.present?
+
+        label = material.material_type.presence || "Material"
+        parts = [ material.citation.presence, material.link.presence, material.uri.presence ].compact
+        content += "[ Related #{label}: ] #{parts.join(', ')}\n"
+      end
+    end
+
+    content += "\n[ #{'File'.pluralize(datafiles.count)} (#{datafiles.count}): ]\n"
+    datafiles.order(:id).each do |datafile|
+      formatted_size = ActionController::Base.helpers.number_to_human_size(datafile.binary_size.to_i)
+      content += ". #{datafile.binary_name}, #{formatted_size}\n"
+    end
+
+    content
+  end
+
   def today_downloads
     DayFileDownload.where(dataset_key: key, download_date: Date.current).distinct.count(:ip_address)
   end
@@ -223,6 +279,41 @@ class Dataset < ApplicationRecord
   end
 
   private
+
+  def creator_names_for_record_text
+    names = creators.map(&:name).reject(&:blank?)
+    return "[Creator List]" if names.empty?
+
+    names.join("; ")
+  end
+
+  def publication_year_for_record_text
+    (published_at || updated_at || created_at).year
+  end
+
+  def plain_text_citation_for_record_text
+    citation_parts = []
+    creator_names = creators.map(&:name).reject(&:blank?)
+    citation_parts << creator_names.join("; ") if creator_names.any?
+    citation_parts << "(#{publication_year_for_record_text})"
+    citation_parts << "#{title}." if title.present?
+    citation_parts << publisher if publisher.present?
+    citation_parts << "https://doi.org/#{identifier}" if identifier.present?
+    citation_parts.join(" ")
+  end
+
+  def license_line_for_record_text
+    case license.to_s
+    when "CC01", "CC0"
+      "CC0 - https://creativecommons.org/publicdomain/zero/1.0/"
+    when "CCBY4", "CC-BY-4.0"
+      "CC BY - https://creativecommons.org/licenses/by/4.0/"
+    when "license.txt"
+      "Custom - See license.txt file in dataset."
+    else
+      "Not found."
+    end
+  end
 
   def normalize_embargo
     self.embargo = embargo_mode

@@ -23,6 +23,8 @@ Rails.application.routes.draw do
     member do
       get :pre_version
       get :version_controls
+      get :download_metrics, defaults: { format: :json }
+      get :record_text
       get :get_current_token, defaults: { format: :json }
       get :get_new_token, defaults: { format: :json }
       post :submit_version_request
