@@ -16,6 +16,7 @@
     = f.label :author
     = f.text_field :author, required: true
 
-  .dataset-notes-actions
-    = f.submit "Save", class: "idb-button-primary"
-    = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
+  .idb-workflow-strip.idb-workflow-strip-bottom
+    %nav.idb-workflow-actions-right{aria: { label: "Note form actions" }}
+      = f.submit "Save", class: "idb-button-primary"
+      = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"

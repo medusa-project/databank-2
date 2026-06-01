@@ -21,6 +21,7 @@
             = @note.updated_at.utc.iso8601
         %div= simple_format(@note.body)
 
-        .dataset-notes-actions
-          = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
-          = link_to "Edit", edit_dataset_note_path(@dataset, @note), class: "idb-button-primary"
+        .idb-workflow-strip.idb-workflow-strip-bottom
+          %nav.idb-workflow-actions-right{aria: { label: "Curator note actions" }}
+            = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
+            = link_to "Edit", edit_dataset_note_path(@dataset, @note), class: "idb-button-primary"

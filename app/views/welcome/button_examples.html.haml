@@ -8,13 +8,20 @@
   %section{ "aria-labelledby" => "button-examples-standard" }
     %h2#button-examples-standard Standard Buttons
     %p
-      Success uses
-      %code --il-arches-darker-1
-      , info uses
-      %code --il-storm
-      , and warning uses
-      %code --il-altgeld
-      (all AA-safe with white text).
+      These now use the legacy effective palette from legacy Data Bank overrides:
+      primary
+      %code #265191
+      , success
+      %code #488222
+      , info
+      %code #B34700
+      , danger
+      %code #C02C2C
+      , warning
+      %code #F47F24
+      with
+      %code #252525
+      text for AA contrast.
     %p
       %button.idb-button-primary{ type: "button" } Primary Button
     %p
@@ -22,11 +29,11 @@
     %p
       %button.idb-button-danger{ type: "button" } Danger Button
     %p
-      %button.idb-button-success{ type: "button" } Success Button (--il-arches-darker-1)
+      %button.idb-button-success{ type: "button" } Success Button
     %p
-      %button.idb-button-info{ type: "button" } Info Button (--il-storm)
+      %button.idb-button-info{ type: "button" } Info Button
     %p
-      %button.idb-button-warning{ type: "button" } Warning Button (--il-altgeld)
+      %button.idb-button-warning{ type: "button" } Warning Button (dark text for contrast)
     %p
       %button.idb-button-default{ type: "button" } Default Button
     %p
@@ -45,6 +52,40 @@
       %button.idb-button-primary.idb-button-demo-four{ type: "button" } Four
     %p
       %button.idb-button-primary.idb-button-demo-five{ type: "button" } Five
+
+  %section{ "aria-labelledby" => "button-examples-legacy-effective" }
+    %h2#button-examples-legacy-effective Legacy Effective Button Styling
+    %p
+      These samples reproduce the effective legacy app button styling (including override colors from legacy stylesheet rules).
+      They intentionally use the legacy palette values from the old app's final button overrides.
+    %p
+      %button.legacy-btn.legacy-btn-primary{ type: "button" } Save & Continue
+    %p
+      %button.legacy-btn.legacy-btn-info{ type: "button" } Save & Exit
+    %p
+      %button.legacy-btn.legacy-btn-success{ type: "button" } Edit
+    %p
+      %button.legacy-btn.legacy-btn-danger{ type: "button" } Delete
+    %p
+      %button.legacy-btn.legacy-btn-warning{ type: "button" } Warning
+    %p
+      %button.legacy-btn.legacy-btn-share{ type: "button" } Generate private sharing link
+    %p
+      %button.legacy-btn.legacy-btn-default{ type: "button" } Default
+
+    %h3 Legacy Effective Anchor Variants
+    %p
+      %a.legacy-btn.legacy-btn-primary{ href: "#" } Primary Link
+    %p
+      %a.legacy-btn.legacy-btn-info{ href: "#" } Info Link
+    %p
+      %a.legacy-btn.legacy-btn-success{ href: "#" } Success Link
+    %p
+      %a.legacy-btn.legacy-btn-danger{ href: "#" } Danger Link
+    %p
+      %a.legacy-btn.legacy-btn-share{ href: "#" } Share Link
+    %p
+      %a.legacy-btn.legacy-btn-default{ href: "#" } Default Link
 
   %section{ "aria-labelledby" => "button-examples-anchor" }
     %h2#button-examples-anchor Anchor Button Variants

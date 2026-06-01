@@ -25,5 +25,6 @@
         %strong Your request note:
         = @version_request.comment
 
-  %p
-    = link_to "Back to dataset", dataset_path(@dataset), class: "idb-button-primary"
+  .idb-workflow-strip.idb-workflow-strip-bottom
+    %nav.idb-workflow-actions-right{aria: { label: "Version request acknowledgement actions" }}
+      = link_to "Back to dataset", dataset_path(@dataset), class: "idb-button-primary"

@@ -50,9 +50,11 @@
     - else
       %p No admin-managed curators configured.
 
-  %p
-    = link_to "Back", root_path, class: "idb-button-secondary"
+  .idb-workflow-strip.idb-workflow-strip-bottom
+    %nav.idb-workflow-actions-right{aria: { label: "Admin page actions" }}
+      = link_to "Back", root_path, class: "idb-button-secondary"
 - else
   %h2 You are not authorized to view this page.
-  %p
-    = link_to "Back", root_path, class: "idb-button-secondary"
+  .idb-workflow-strip.idb-workflow-strip-bottom
+    %nav.idb-workflow-actions-right{aria: { label: "Unauthorized actions" }}
+      = link_to "Back", root_path, class: "idb-button-secondary"

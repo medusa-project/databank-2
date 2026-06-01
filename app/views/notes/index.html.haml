@@ -7,7 +7,7 @@
         %p.dataset-show-eyebrow Curator notes for dataset
         %h1= @dataset.title
         %p= @dataset.key
-      .dataset-show-actions
+      %nav.idb-workflow-actions-right{aria: { label: "Curator notes actions" }}
         = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-secondary"
         = link_to "New Note", new_dataset_note_path(@dataset), class: "idb-button-primary"
 

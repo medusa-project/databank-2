@@ -95,7 +95,7 @@
             = succeed "." do
               %a{href: "mailto:databank@library.illinois.edu"} email us
 
-    %nav{aria: { label: "Pre-deposit actions" }}
-      = link_to "Continue", new_dataset_path, class: "idb-button-primary"
-      = " "
-      = link_to "Cancel", root_path, class: "idb-button-danger"
+    .idb-workflow-strip.idb-workflow-strip-bottom
+      %nav.idb-workflow-actions-right{aria: { label: "Pre-deposit actions" }}
+        = link_to "Continue", new_dataset_path, class: "idb-button-primary"
+        = link_to "Cancel", root_path, class: "idb-button-danger"
