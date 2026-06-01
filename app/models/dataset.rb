@@ -188,6 +188,26 @@ class Dataset < ApplicationRecord
     embargo_released?(on_date: on_date)
   end
 
+  def today_downloads
+    DayFileDownload.where(dataset_key: key, download_date: Date.current).distinct.count(:ip_address)
+  end
+
+  def total_downloads
+    DatasetDownloadTally.where(dataset_key: key).sum(:tally)
+  end
+
+  def dataset_download_tallies
+    DatasetDownloadTally.where(dataset_key: key)
+  end
+
+  def ip_downloaded_dataset_today(request_ip)
+    DayFileDownload.where(
+      ip_address: request_ip,
+      dataset_key: key,
+      download_date: Date.current
+    ).exists?
+  end
+
   def current_token
     scoped_tokens = Token.where(dataset_key: key)
     return nil if scoped_tokens.count.zero?

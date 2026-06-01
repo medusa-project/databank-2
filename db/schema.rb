@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_01_121000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_01_223000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -117,6 +117,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_01_121000) do
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
   end
 
+  create_table "dataset_download_tallies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key", null: false
+    t.string "doi"
+    t.date "download_date", null: false
+    t.integer "tally", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key", "download_date"], name: "index_dataset_download_tallies_unique_daily", unique: true
+    t.index ["dataset_key"], name: "index_dataset_download_tallies_on_dataset_key"
+  end
+
   create_table "datasets", force: :cascade do |t|
     t.string "agree"
     t.boolean "complete"
@@ -156,6 +167,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_01_121000) do
     t.index ["key"], name: "index_datasets_on_key", unique: true
   end
 
+  create_table "day_file_downloads", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key", null: false
+    t.string "doi"
+    t.date "download_date", null: false
+    t.string "file_web_id", null: false
+    t.string "filename"
+    t.string "ip_address", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key", "download_date"], name: "index_day_file_downloads_on_dataset_key_and_download_date"
+    t.index ["ip_address", "file_web_id", "download_date"], name: "index_day_file_downloads_ip_file_date", unique: true
+  end
+
   create_table "external_delivery_attempts", force: :cascade do |t|
     t.integer "attempt", default: 1, null: false
     t.datetime "created_at", null: false
@@ -188,6 +212,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_01_121000) do
     t.text "testimonial"
     t.datetime "updated_at", null: false
     t.index ["is_active"], name: "index_featured_researchers_on_is_active"
+  end
+
+  create_table "file_download_tallies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key"
+    t.string "doi"
+    t.date "download_date", null: false
+    t.string "file_web_id", null: false
+    t.string "filename"
+    t.integer "tally", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key"], name: "index_file_download_tallies_on_dataset_key"
+    t.index ["file_web_id", "download_date"], name: "index_file_download_tallies_unique_daily", unique: true
+    t.index ["file_web_id"], name: "index_file_download_tallies_on_file_web_id"
   end
 
   create_table "funders", force: :cascade do |t|
