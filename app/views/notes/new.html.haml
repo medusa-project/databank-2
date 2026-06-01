@@ -1,0 +1,12 @@
+- content_for :title, "New Curator Note"
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "New curator note" }}
+    %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+      %summary
+        %h1.dataset-show-section-title New Note
+      .idb-section-body
+        %p
+          For
+          = link_to @dataset.title, dataset_path(@dataset)
+        = render "form"

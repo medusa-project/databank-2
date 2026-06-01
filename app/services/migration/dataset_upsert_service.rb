@@ -125,6 +125,10 @@ module Migration
       sync_collection!(dataset.datafiles, normalized_datafiles) do |record, attrs|
         record.assign_attributes(attrs)
       end
+
+      sync_collection!(dataset.notes, normalized_notes) do |record, attrs|
+        record.assign_attributes(attrs)
+      end
     end
 
     def sync_collection!(association, rows)
@@ -153,6 +157,8 @@ module Migration
       when "Datafile"
         key = attrs[:web_id].presence || attrs[:binary_name]
         attrs[:web_id].present? ? association.find_by(web_id: key) : association.find_by(binary_name: key)
+      when "Note"
+        association.find_by(author: attrs[:author], body: attrs[:body])
       end
     end
 
@@ -238,6 +244,21 @@ module Migration
           description: datafile["description"],
           source_created_at: datafile["created_at"],
           source_updated_at: datafile["updated_at"]
+        }
+      end
+    end
+
+    def normalized_notes
+      Array(payload["notes"]).filter_map do |note|
+        body = note["body"]
+        author = note["author"]
+        next if body.blank? && author.blank?
+
+        {
+          body: body,
+          author: author,
+          source_created_at: note["created_at"],
+          source_updated_at: note["updated_at"]
         }
       end
     end

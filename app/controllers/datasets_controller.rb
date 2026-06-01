@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
-  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request]
+  before_action :set_dataset, only: %i[show edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -110,6 +110,17 @@ class DatasetsController < ApplicationController
     return if @version_request.present?
 
     redirect_to dataset_path(@dataset), alert: "No pending version request found."
+  end
+
+  def get_current_token
+    authorize! :update, @dataset
+    token = @dataset.current_token || @dataset.new_token
+    render json: { token: token.identifier }
+  end
+
+  def get_new_token
+    authorize! :update, @dataset
+    render json: { token: @dataset.new_token.identifier }
   end
 
   def approve_version_request
@@ -225,7 +236,11 @@ class DatasetsController < ApplicationController
         @dataset.update!(dataset_params)
         @dataset.prune_creators_for_mode!(org_mode: requested_org_mode)
       end
-      redirect_to dataset_path(@dataset), notice: "Dataset updated."
+      if params[:save_and_exit].present?
+        redirect_to datasets_path, notice: "Dataset updated and saved."
+      else
+        redirect_to dataset_path(@dataset), notice: "Dataset updated."
+      end
     rescue ActiveRecord::RecordInvalid
       render :edit, status: :unprocessable_entity
     end

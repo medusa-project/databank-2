@@ -1,0 +1,69 @@
+%dialog{id: "api-token-dialog", data: { api_token_target: "dialog", action: "cancel->api-token#onCancel close->api-token#onClose" }, aria: { labelledby: "token-header" }}
+  %article
+    %header
+      %h2{id: "token-header"} Command Line Tools
+
+    %p
+      %strong Here is your token:
+      %br
+      %code{data: { api_token_target: "tokenValue" }} Loading...
+
+    %p
+      %strong Dataset identifier:
+      = dataset.key
+      (Unique and persistent identifier for this dataset within Illinois Data Bank)
+
+    .instruction-box
+      %p Your token and dataset identifier are pre-populated into example commands in sections below.
+      %p Expand Python or cURL section to see the example command for that option.
+      %ul
+        %li
+          For our pipeline, cURL method only works on files
+          %strong up to 4 GB.
+        %li
+          The API, as used in the included Python script, can be used for files
+          %strong up to 50 GB.
+
+    %h3 Options: Python, cURL, or custom script
+
+    %details
+      %summary Use our sample Python file upload script.
+      %p
+        Download our sample python client
+        = link_to "databank_api_client_v2.py", "/databank_api_client_v2.py", target: "_blank", rel: "noopener"
+      %p Requires recent version of Python 2 or 3.
+      %p
+        Works for files
+        %strong up to 50 GB.
+      %p Required modules
+      %pre
+        %code pip install tuspy requests urllib3[secure]
+      %p Copy and paste this command example. Change myfile.csv to your own data file's name.
+      %pre
+        %code{data: { api_token_target: "pythonCommand" }}
+
+    %details
+      %summary Execute a cURL command.
+      %p Requires cURL.
+      %p
+        For our pipeline, cURL method only works on files
+        %strong up to 4 GB.
+      %p Copy and paste this command example. Replace my_datafile.csv with your file name, and keep binary=@ unchanged.
+      %pre
+        %code{data: { api_token_target: "curlCommand" }}
+
+    %details
+      %summary Create your own custom script using our API.
+      %p
+        %em Size constraints depend on implementation details.
+      %p
+        See the
+        = link_to "Command Line Tools / API Reference", "/guides#api"
+        or
+        = link_to "Contact Us", "/contact"
+
+    %p{data: { api_token_target: "error" }, hidden: true, role: "alert"}
+
+    %footer.idb-row-actions-inline
+      %button.idb-button-secondary{type: "button", data: { action: "api-token#renew" }} Get new token
+      %button.idb-button-danger{type: "button", data: { action: "api-token#close" }} Close

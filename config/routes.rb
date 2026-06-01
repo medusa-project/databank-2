@@ -1,4 +1,13 @@
 Rails.application.routes.draw do
+  post "files", to: "tus_files#create"
+  post "files/", to: "tus_files#create"
+  patch "files/:id", to: "tus_files#update"
+  match "files/:id", to: "tus_files#show", via: :head
+  options "files", to: "tus_files#options"
+  options "files/:id", to: "tus_files#options"
+
+  post "api/dataset/:dataset_key/datafile", to: "api_dataset#datafile", defaults: { format: :json }
+
   # Auth
   get "login",  to: "sessions#new",     as: :login
   delete "logout", to: "sessions#destroy", as: :logout
@@ -14,6 +23,8 @@ Rails.application.routes.draw do
     member do
       get :pre_version
       get :version_controls
+      get :get_current_token, defaults: { format: :json }
+      get :get_new_token, defaults: { format: :json }
       post :submit_version_request
       get :version_acknowledge
       post :copy_version_files
@@ -32,6 +43,7 @@ Rails.application.routes.draw do
     end
     resources :contributors,      except: %i[index new show]
     resources :funders,           except: %i[index new show]
+    resources :notes
     resources :related_materials, except: %i[index new show]
   end
 

@@ -34,7 +34,15 @@ RSpec.describe Migration::BundleImportService do
       "url" => "https://databank.illinois.edu/datasets/IDB-2222222.json",
       "owner_uid" => "legacy-owner",
       "depositor_name" => "Legacy User",
-      "depositor_email" => "legacy@example.edu"
+      "depositor_email" => "legacy@example.edu",
+      "notes" => [
+        {
+          "body" => "Curator migration note",
+          "author" => "curator@example.edu",
+          "created_at" => "2026-06-01T09:00:00Z",
+          "updated_at" => "2026-06-01T10:00:00Z"
+        }
+      ]
     }
 
     File.write(bundle_path, "#{payload.to_json}\n")
@@ -46,6 +54,45 @@ RSpec.describe Migration::BundleImportService do
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset.depositor_name).to eq("Legacy User")
     expect(dataset.depositor_email).to eq("legacy@example.edu")
+    expect(dataset.notes.count).to eq(1)
+    expect(dataset.notes.first.body).to eq("Curator migration note")
+    expect(dataset.notes.first.author).to eq("curator@example.edu")
+  end
+
+  it "replaces notes in overwrite mode" do
+    dataset = Dataset.create!(
+      key: "IDB-7777777",
+      identifier: "10.13012/B2IDB-7777777_V1",
+      title: "Original",
+      owner_uid: "legacy-owner",
+      depositor_name: "Legacy User",
+      depositor_email: "legacy@example.edu"
+    )
+    dataset.notes.create!(body: "Outdated note", author: "old-curator@example.edu")
+
+    payload = {
+      "title" => "Updated Bundle Dataset",
+      "identifier" => "10.13012/B2IDB-7777777_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-7777777.json",
+      "owner_uid" => "legacy-owner",
+      "depositor_name" => "Legacy User",
+      "depositor_email" => "legacy@example.edu",
+      "notes" => [
+        {
+          "body" => "Imported replacement note",
+          "author" => "new-curator@example.edu"
+        }
+      ]
+    }
+
+    File.write(bundle_path, "#{payload.to_json}\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s, overwrite: true).call
+
+    expect(summary[:updated]).to eq(1)
+    dataset.reload
+    expect(dataset.notes.pluck(:body)).to eq([ "Imported replacement note" ])
+    expect(dataset.notes.pluck(:author)).to eq([ "new-curator@example.edu" ])
   end
 
   it "fails when checksum does not match" do

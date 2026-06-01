@@ -1,0 +1,21 @@
+= form_with model: [@dataset, @note], local: true do |f|
+  - if @note.errors.any?
+    .idb-alert.idb-alert-danger
+      %p
+        %strong= pluralize(@note.errors.count, "error")
+        prevented this note from being saved.
+      %ul
+        - @note.errors.full_messages.each do |message|
+          %li= message
+
+  .idb-form-row
+    = f.label :body, "Note"
+    = f.text_area :body, rows: 6, required: true
+
+  .idb-form-row
+    = f.label :author
+    = f.text_field :author, required: true
+
+  .dataset-notes-actions
+    = f.submit "Save", class: "idb-button-primary"
+    = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"

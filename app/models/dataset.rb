@@ -12,6 +12,7 @@ class Dataset < ApplicationRecord
   has_many :creators,          -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_many :contributors,      -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_many :funders,           -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
+  has_many :notes,             -> { order(created_at: :desc, id: :desc) }, dependent: :destroy
   has_many :related_materials, -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_many :version_requests, dependent: :destroy
   has_many :approved_version_requests, class_name: "VersionRequest", foreign_key: :approved_dataset_id, inverse_of: :approved_dataset, dependent: :nullify
@@ -185,6 +186,20 @@ class Dataset < ApplicationRecord
     return true unless file_embargoed? || metadata_embargoed?
 
     embargo_released?(on_date: on_date)
+  end
+
+  def current_token
+    scoped_tokens = Token.where(dataset_key: key)
+    return nil if scoped_tokens.count.zero?
+    return scoped_tokens.first if scoped_tokens.count == 1
+
+    scoped_tokens.destroy_all
+    new_token
+  end
+
+  def new_token
+    Token.where(dataset_key: key).destroy_all
+    Token.create!(dataset_key: key, identifier: Token.generate_auth_token)
   end
 
   private
