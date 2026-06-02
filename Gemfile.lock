@@ -244,10 +244,6 @@ GEM
     nokogiri (1.19.3)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    nokogiri (1.19.3-arm64-darwin)
-      racc (~> 1.4)
-    nokogiri (1.19.3-x86_64-darwin)
-      racc (~> 1.4)
     omniauth (2.1.4)
       hashie (>= 3.4.6)
       logger
@@ -266,6 +262,7 @@ GEM
       rackup (>= 1.0.1)
       rake (>= 12.3.3)
     pg (1.6.3)
+    pg (1.6.3-aarch64-linux)
     pg (1.6.3-arm64-darwin)
     pg (1.6.3-x86_64-darwin)
     pp (0.6.3)
@@ -417,11 +414,13 @@ GEM
       railties (>= 7.0.0)
       tailwindcss-ruby (~> 4.0)
     tailwindcss-ruby (4.3.0)
+    tailwindcss-ruby (4.3.0-aarch64-linux-gnu)
     tailwindcss-ruby (4.3.0-arm64-darwin)
     tailwindcss-ruby (4.3.0-x86_64-darwin)
     temple (0.10.4)
     thor (1.5.0)
     thruster (0.1.21)
+    thruster (0.1.21-aarch64-linux)
     thruster (0.1.21-arm64-darwin)
     thruster (0.1.21-x86_64-darwin)
     tilt (2.7.0)
@@ -448,6 +447,7 @@ GEM
     zeitwerk (2.8.1)
 
 PLATFORMS
+  aarch64-linux
   arm64-darwin
   ruby
   x86_64-darwin
@@ -472,6 +472,7 @@ DEPENDENCIES
   jbuilder
   kamal
   medusa_storage!
+  nokogiri
   omniauth (~> 2.1)
   omniauth-rails_csrf_protection (~> 2.0)
   passenger

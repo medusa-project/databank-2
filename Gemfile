@@ -15,6 +15,8 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Tailwind CSS via CLI
 gem "tailwindcss-rails"
+# Force Nokogiri to build from source to avoid glibc mismatch on older deploy hosts.
+gem "nokogiri", force_ruby_platform: true
 # HAML templates
 gem "haml-rails", "~> 2.1"
 # Authorization
