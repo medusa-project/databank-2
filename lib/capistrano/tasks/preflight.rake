@@ -20,4 +20,15 @@ namespace :deploy do
   end
 end
 
+namespace :bundler do
+  desc "Remove cached bundle to force rebuild when using BUNDLE_FORCE_RUBY_PLATFORM"
+  task :clean_cache do
+    on roles(:app) do
+      bundle_dir = shared_path.join("bundle")
+      execute :rm, "-rf", bundle_dir if test("[ -d #{bundle_dir} ]")
+    end
+  end
+end
+
 before "deploy:check:linked_files", "deploy:preflight"
+before "bundler:install", "bundler:clean_cache"
