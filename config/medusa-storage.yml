@@ -1,3 +1,47 @@
+demo:
+  :storage:
+    - :name: draft
+      :type: s3
+      :aws_access_key_id: <%= ENV.fetch("STORAGE_S3_ACCESS_KEY_ID") %>
+      :aws_secret_access_key: <%= ENV.fetch("STORAGE_S3_SECRET_ACCESS_KEY") %>
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+    - :name: medusa
+      :type: s3
+      :aws_access_key_id: <%= ENV.fetch("STORAGE_S3_ACCESS_KEY_ID") %>
+      :aws_secret_access_key: <%= ENV.fetch("STORAGE_S3_SECRET_ACCESS_KEY") %>
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_MEDUSA_BUCKET") %>
+      :prefix: <%= ENV.fetch("STORAGE_MEDUSA_PREFIX", "") %>
+    - :name: globus_download
+      :type: s3
+      :aws_access_key_id: <%= ENV.fetch("STORAGE_S3_ACCESS_KEY_ID") %>
+      :aws_secret_access_key: <%= ENV.fetch("STORAGE_S3_SECRET_ACCESS_KEY") %>
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_GLOBUS_BUCKET") %>
+      :prefix: <%= ENV.fetch("STORAGE_GLOBUS_DOWNLOAD_PREFIX", "") %>
+    - :name: globus_ingest
+      :type: s3
+      :aws_access_key_id: <%= ENV.fetch("STORAGE_S3_ACCESS_KEY_ID") %>
+      :aws_secret_access_key: <%= ENV.fetch("STORAGE_S3_SECRET_ACCESS_KEY") %>
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+    - :name: message
+      :type: s3
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: "messages/"
+    - :name: reports
+      :type: s3
+      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: "reports/"
+    - :name: tmpfs
+      :type: filesystem
+      :path: <%= ENV.fetch("STORAGE_TMPFS_PATH", "/tmp") %>
+
 production:
   :storage:
     - :name: draft
