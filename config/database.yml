@@ -90,17 +90,22 @@ production:
   primary: &primary_production
     <<: *default
     database: databank_2_production
-    username: databank_2
-    password: <%= ENV["DATABANK_2_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: databank_2_production_cache
-    migrations_paths: db/cache_migrate
+    username: "<%= Rails.env.production? ? Rails.application.credentials.dig(:primary_db, :username) : 'username' %>"
+    password: "<%= Rails.env.production? ? Rails.application.credentials.dig(:primary_db, :password) : 'password' %>"
+    host: "<%= Rails.env.production? ? Rails.application.credentials.dig(:primary_db, :host) : 'host' %>"
   queue:
     <<: *primary_production
     database: databank_2_production_queue
     migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: databank_2_production_cable
-    migrations_paths: db/cable_migrate
+
+demo:
+  primary: &primary_demo
+    <<: *default
+    database: databank_2_demo
+    username: "<%= Rails.env.demo? ? Rails.application.credentials.dig(:primary_db, :username) : 'username' %>"
+    password: "<%= Rails.env.demo? ? Rails.application.credentials.dig(:primary_db, :password) : 'password' %>"
+    host: "<%= Rails.env.demo? ? Rails.application.credentials.dig(:primary_db, :host) : 'host' %>"
+  queue:
+    <<: *primary_demo
+    database: databank_2_demo_queue
+    migrations_paths: db/queue_migrate

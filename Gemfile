@@ -31,6 +31,8 @@ gem "jbuilder"
 gem "csv", "~> 3.3"
 # HTTP client with digest auth support
 gem "curb", "~> 1.0"
+# Use Passenger standalone on deployed Rocky hosts
+gem "passenger", require: false
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
@@ -69,6 +71,13 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+
+  # Use Capistrano for VM-based deployment parity with legacy databank.
+  gem "capistrano-bundler", require: false
+  gem "capistrano-passenger", require: false
+  gem "capistrano-rails", require: false
+  gem "capistrano-rbenv", require: false
+  gem "airbrussh", require: false
 end
 
 gem "rspec-rails", "~> 8.0", groups: [ :development, :test ]
