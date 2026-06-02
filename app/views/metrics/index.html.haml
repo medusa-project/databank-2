@@ -1,0 +1,42 @@
+- content_for :title, "Metrics"
+- modified_times = @modified_times || {}
+- refresh_status = @refresh_status || {}
+- metrics_rows = @metrics_rows || []
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Metrics exports" }}
+    %h1.dataset-show-section-title Metrics
+
+    %p
+      = link_to "Metrics Dashboard", "/metrics_dashboard.html", class: "idb-button-primary"
+
+    %ul.dataset-show-list
+      - metrics_rows.each do |row|
+        %li
+          %span.dataset-show-list-primary
+            - if modified_times[row[:key]].to_s == "not found"
+              = "#{row[:title]} not currently available"
+            - else
+              = link_to row[:title], row[:href]
+
+          %span.dataset-show-list-secondary
+            Modified:
+            = modified_times[row[:key]].presence || "not found"
+
+          %span.dataset-show-list-tertiary= row[:description]
+
+          - if refresh_status[row[:key]]
+            %p.idb-workflow-note Refresh in progress. Refresh this page manually to check status.
+
+          - if current_user&.admin?
+            .idb-workflow-strip
+              %nav.idb-workflow-actions-right{aria: { label: "#{row[:title]} actions" }}
+                - if refresh_status[row[:key]]
+                  %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
+                - else
+                  = link_to "Regenerate #{row[:title]}", row[:refresh_path], class: "idb-button-success"
+
+    %section{aria: { label: "Datafiles listing" }}
+      %h2.dataset-show-section-subtitle Datafiles listing
+      %p
+        = link_to "Datafiles listing JSON", "/metrics/datafiles_simple_list.json", class: "idb-button-secondary"

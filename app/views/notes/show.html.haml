@@ -1,0 +1,27 @@
+- content_for :title, "Curator Note"
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator note" }}
+    %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+      %summary
+        %h1.dataset-show-section-title Curator Note
+      .idb-section-body
+        %p
+          Dataset:
+          = link_to @dataset.title, dataset_path(@dataset)
+        %p
+          %strong Author:
+          = @note.author
+        %p
+          %strong Created:
+          = @note.created_at.utc.iso8601
+        - if @note.updated_at != @note.created_at
+          %p
+            %strong Updated:
+            = @note.updated_at.utc.iso8601
+        %div= simple_format(@note.body)
+
+        .idb-workflow-strip.idb-workflow-strip-bottom
+          %nav.idb-workflow-actions-right{aria: { label: "Curator note actions" }}
+            = link_to "Back to Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
+            = link_to "Edit", edit_dataset_note_path(@dataset, @note), class: "idb-button-primary"

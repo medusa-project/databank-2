@@ -3,6 +3,9 @@
 - dataset.creators.build(type_of: default_creator_type, row_position: 1) if dataset.creators.empty?
 - orcid_lookup_enabled = dataset.persisted?
 - orcid_lookup_url = orcid_lookup_enabled ? orcid_lookup_dataset_creators_path(dataset) : ""
+- form_id = local_assigns[:form_id]
+- form_html = { class: "idb-legacy-compact-form", data: { controller: "deposit-form", orcid_lookup_url: orcid_lookup_url } }
+- form_html[:id] = form_id if form_id.present?
 
 - if dataset.errors.any?
   %div.ilw-notice.ilw-notice--error
@@ -11,7 +14,7 @@
       - dataset.errors.full_messages.each do |message|
         %li= message
 
-= form_with model: dataset, local: true, html: { class: "idb-legacy-compact-form", data: { controller: "deposit-form", orcid_lookup_url: orcid_lookup_url } } do |f|
+= form_with model: dataset, local: true, html: form_html do |f|
   = f.hidden_field :have_permission
   = f.hidden_field :removed_private
   = f.hidden_field :agree

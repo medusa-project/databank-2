@@ -15,16 +15,22 @@ RSpec.describe Ingest::RabbitmqEventPublisher, type: :service do
     )
   end
 
-  around do |example|
-    original = ENV.to_h
-    begin
-      ENV["ENABLE_INGEST_EVENTS"] = "true"
-      ENV["RABBITMQ_URL"] = "amqp://guest:guest@localhost:5672"
-      ENV["INGEST_EVENTS_EXCHANGE"] = "databank.ingest"
-      ENV["INGEST_EVENTS_ROUTING_KEY"] = "dataset.published"
-      example.run
-    ensure
-      ENV.replace(original)
+  before do
+    ingest_config = {
+      events_enabled: "true",
+      rabbitmq_url: "amqp://guest:guest@localhost:5672",
+      events_exchange: "databank.ingest",
+      events_routing_key: "dataset.published"
+    }
+
+    allow(IdbConfig).to receive(:fetch) do |*keys, default: nil|
+      value = keys.reduce({ ingest: ingest_config }) do |memo, key|
+        break nil unless memo.respond_to?(:[])
+
+        memo[key.to_sym] || memo[key.to_s]
+      end
+
+      value.nil? ? default : value
     end
   end
 
@@ -59,7 +65,7 @@ RSpec.describe Ingest::RabbitmqEventPublisher, type: :service do
   end
 
   it "returns false when required config is missing" do
-    ENV.delete("RABBITMQ_URL")
+    allow(IdbConfig).to receive(:fetch).with(:ingest, :rabbitmq_url, default: "").and_return("")
 
     expect(described_class.new.publish_dataset_published(dataset)).to eq(false)
   end

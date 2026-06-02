@@ -37,6 +37,8 @@ class DatafilesController < ApplicationController
       return
     end
 
+    @datafile.record_download(request.remote_ip)
+
     if @datafile.binary.attached?
       send_data(
         @datafile.binary.download,

@@ -1,0 +1,28 @@
+- content_for :title, "Curator Reports"
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator reports" }}
+    %h1.dataset-show-section-title Curator Reports
+
+    .idb-workflow-strip
+      %nav.idb-workflow-actions-right{aria: { label: "Curator report index actions" }}
+        = link_to "Back to Admin", admin_path, class: "idb-button-secondary"
+
+    - if @curator_reports.any?
+      %ul.dataset-show-list
+        - @curator_reports.each do |report|
+          %li
+            %span.dataset-show-list-primary= "#{report.report_type.titleize} (##{report.id})"
+            %span.dataset-show-list-secondary= "Requested by #{report.requestor_name} <#{report.requestor_email}>"
+            %span.dataset-show-list-tertiary= "Status: #{report.status.titleize} | Created #{report.created_at.utc.iso8601}"
+            - if report.notes.present?
+              %p= report.notes
+
+            .idb-workflow-strip
+              %nav.idb-workflow-actions-right{aria: { label: "Curator report #{report.id} actions" }}
+                = link_to "View", curator_report_path(report), class: "idb-button-secondary"
+                - if report.status == "available"
+                  = link_to "Download", download_curator_report_path(report), class: "idb-button-primary"
+                = button_to "Delete", curator_report_path(report), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Delete this report?" } }
+    - else
+      %p No curator reports requested yet.

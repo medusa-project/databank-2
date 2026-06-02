@@ -1,4 +1,13 @@
 Rails.application.routes.draw do
+  post "files", to: "tus_files#create"
+  post "files/", to: "tus_files#create"
+  patch "files/:id", to: "tus_files#update"
+  match "files/:id", to: "tus_files#show", via: :head
+  options "files", to: "tus_files#options"
+  options "files/:id", to: "tus_files#options"
+
+  post "api/dataset/:dataset_key/datafile", to: "api_dataset#datafile", defaults: { format: :json }
+
   # Auth
   get "login",  to: "sessions#new",     as: :login
   delete "logout", to: "sessions#destroy", as: :logout
@@ -14,8 +23,15 @@ Rails.application.routes.draw do
     member do
       get :pre_version
       get :version_controls
+      get :download_metrics, defaults: { format: :json }
+      get :record_text
+      get :confirm_review
+      get :get_current_token, defaults: { format: :json }
+      get :get_new_token, defaults: { format: :json }
+      post :request_review
       post :submit_version_request
       get :version_acknowledge
+      get :download_link, defaults: { format: :json }
       post :copy_version_files
       post "approve_version_request/:version_request_id", action: :approve_version_request, as: :approve_version_request
       post "reject_version_request/:version_request_id", action: :reject_version_request, as: :reject_version_request
@@ -32,6 +48,7 @@ Rails.application.routes.draw do
     end
     resources :contributors,      except: %i[index new show]
     resources :funders,           except: %i[index new show]
+    resources :notes
     resources :related_materials, except: %i[index new show]
   end
 
@@ -58,6 +75,37 @@ Rails.application.routes.draw do
     end
   end
   get "/researcher_spotlights", to: "featured_researchers#index", as: :researcher_spotlights
+
+  resources :curator_reports, only: %i[index show destroy] do
+    member do
+      get :download
+    end
+
+    collection do
+      post :request_file_audit
+    end
+  end
+
+  get "/metric", to: "metrics#index"
+  resources :metrics, only: :index do
+    collection do
+      get :archived_content_csv
+      get :datafiles_csv
+      get :datafiles_simple_list
+      get :dataset_downloads, defaults: { format: :json }
+      get :file_downloads, defaults: { format: :json }
+      get :funders_csv
+      get :refresh_dataset_downloads
+      get :refresh_datafile_downloads
+      get :refresh_datafiles_csv
+      get :refresh_container_csv
+      get :related_materials_csv
+      get :refresh_datasets_tsv
+      get :refresh_funders_csv
+      get :refresh_related_materials_csv
+      get :refresh_container_contents_csv
+    end
+  end
 
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples

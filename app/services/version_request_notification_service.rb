@@ -39,7 +39,7 @@ class VersionRequestNotificationService
   private
 
   def curator_recipients
-    configured = ENV["VERSION_REQUEST_REVIEW_EMAILS"].to_s.split(",").map(&:strip).reject(&:blank?)
+    configured = IdbConfig.fetch(:version_request, :review_emails, default: "").to_s.split(",").map(&:strip).reject(&:blank?)
     return configured if configured.any?
 
     CuratorDirectory.review_recipients

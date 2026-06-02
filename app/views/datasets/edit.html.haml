@@ -11,7 +11,11 @@
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-layout
     .idb-sections-content
-      = render "form", dataset: @dataset, submit_label: "Update Dataset"
+      = render "datasets/workflow/edit_actions", dataset: @dataset, form_id: "dataset-edit-form", placement: "top"
+
+      = render "form", dataset: @dataset, submit_label: "Update Dataset", form_id: "dataset-edit-form"
+
+      = render "datasets/workflow/edit_actions", dataset: @dataset, form_id: "dataset-edit-form", placement: "bottom"
 
       - if previous_version_visible.present? || next_version_visible.present? || previous_version_material.present? || next_version_material.present?
         %section#dataset-version-lineage.idb-section-card
@@ -39,6 +43,14 @@
           %summary
             %h2.idb-section-title Files
           .idb-section-body
+            - if @dataset.draft? && can?(:update, @dataset)
+              %section#dataset-cli-upload
+                %h3 Command Line Tools
+                %p Generate a token to upload files to this draft dataset with command line tools.
+                .idb-row-actions-inline{data: { controller: "api-token", api_token_current_url_value: get_current_token_dataset_path(@dataset), api_token_renew_url_value: get_new_token_dataset_path(@dataset), api_token_dataset_key_value: @dataset.key }}
+                  %button.idb-button-secondary{type: "button", data: { action: "api-token#open" }} Get token for command line tools
+                  = render "api_modal", dataset: @dataset
+
             - if @dataset.draft? && @dataset.previous_version_dataset.present? && can?(:update, @dataset)
               %p
                 = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset), method: :post, class: "idb-button-primary"

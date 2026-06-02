@@ -45,3 +45,13 @@
 !/migration_bundles/datasets/.keep
 !/migration_bundles/guides/.keep
 !/migration_bundles/featured_researchers/.keep
+
+# Generated metrics export artifacts
+/public/archive_file_contents.csv
+/public/datafile_downloads.json
+/public/datafiles.csv
+/public/dataset_downloads.json
+/public/dataset_downloads_totals.csv
+/public/datasets.tsv
+/public/funders.csv
+/public/related_materials.csv

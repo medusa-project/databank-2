@@ -1,0 +1,32 @@
+- content_for :title, "Curator Notes"
+
+%ilw-content.dataset-show-page
+  .dataset-show-summary
+    .dataset-show-titlebar
+      %div
+        %p.dataset-show-eyebrow Curator notes for dataset
+        %h1= @dataset.title
+        %p= @dataset.key
+      %nav.idb-workflow-actions-right{aria: { label: "Curator notes actions" }}
+        = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-secondary"
+        = link_to "New Note", new_dataset_note_path(@dataset), class: "idb-button-primary"
+
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator notes" }}
+    %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+      %summary
+        %h2.dataset-show-section-title Notes
+      .idb-section-body
+        - if @notes.any?
+          %ul.dataset-show-list
+            - @notes.each do |note|
+              %li
+                %span.dataset-show-list-primary= truncate(note.body, length: 220)
+                %span.dataset-show-list-secondary= "#{note.author} | created #{note.created_at.utc.iso8601}"
+                - if note.updated_at != note.created_at
+                  %span.dataset-show-list-tertiary= "Updated #{note.updated_at.utc.iso8601}"
+                .dataset-notes-actions
+                  = link_to "Show", dataset_note_path(@dataset, note), class: "idb-button-secondary"
+                  = link_to "Edit", edit_dataset_note_path(@dataset, note), class: "idb-button-secondary"
+                  = button_to "Delete", dataset_note_path(@dataset, note), method: :delete, class: "idb-button-secondary", form: { data: { turbo_confirm: "Delete this note?" } }
+        - else
+          %p No curator notes yet.

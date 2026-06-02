@@ -1,0 +1,12 @@
+- content_for :title, "Pre-Publication Review Request Received"
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Pre-publication review confirmation" }}
+    %h1.dataset-show-section-title Pre-Publication Review Request Received
+    .indent.line-above
+      %p.idb-larger
+        Thank You! Within 1-2 days, a curator will contact you to discuss any suggestions or concerns before your dataset is published.
+
+    .idb-workflow-strip.idb-workflow-strip-bottom
+      %nav.idb-workflow-actions-right{aria: { label: "Confirmation actions" }}
+        = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-secondary"

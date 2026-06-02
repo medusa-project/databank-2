@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_01_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -100,6 +100,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.index ["dataset_id"], name: "index_creators_on_dataset_id"
   end
 
+  create_table "curator_reports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "notes"
+    t.string "report_type", null: false
+    t.string "requestor_email", null: false
+    t.string "requestor_name", null: false
+    t.string "storage_key"
+    t.string "storage_root"
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_curator_reports_on_created_at"
+    t.index ["report_type"], name: "index_curator_reports_on_report_type"
+  end
+
   create_table "datafiles", force: :cascade do |t|
     t.string "binary_name"
     t.bigint "binary_size"
@@ -115,6 +128,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.index ["dataset_id"], name: "index_datafiles_on_dataset_id"
     t.index ["storage_root", "storage_key"], name: "index_datafiles_on_storage_location"
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
+  end
+
+  create_table "dataset_download_tallies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key", null: false
+    t.string "doi"
+    t.date "download_date", null: false
+    t.integer "tally", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key", "download_date"], name: "index_dataset_download_tallies_unique_daily", unique: true
+    t.index ["dataset_key"], name: "index_dataset_download_tallies_on_dataset_key"
   end
 
   create_table "datasets", force: :cascade do |t|
@@ -156,6 +180,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.index ["key"], name: "index_datasets_on_key", unique: true
   end
 
+  create_table "day_file_downloads", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key", null: false
+    t.string "doi"
+    t.date "download_date", null: false
+    t.string "file_web_id", null: false
+    t.string "filename"
+    t.string "ip_address", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key", "download_date"], name: "index_day_file_downloads_on_dataset_key_and_download_date"
+    t.index ["ip_address", "file_web_id", "download_date"], name: "index_day_file_downloads_ip_file_date", unique: true
+  end
+
   create_table "external_delivery_attempts", force: :cascade do |t|
     t.integer "attempt", default: 1, null: false
     t.datetime "created_at", null: false
@@ -188,6 +225,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.text "testimonial"
     t.datetime "updated_at", null: false
     t.index ["is_active"], name: "index_featured_researchers_on_is_active"
+  end
+
+  create_table "file_download_tallies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key"
+    t.string "doi"
+    t.date "download_date", null: false
+    t.string "file_web_id", null: false
+    t.string "filename"
+    t.integer "tally", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key"], name: "index_file_download_tallies_on_dataset_key"
+    t.index ["file_web_id", "download_date"], name: "index_file_download_tallies_unique_daily", unique: true
+    t.index ["file_web_id"], name: "index_file_download_tallies_on_file_web_id"
   end
 
   create_table "funders", force: :cascade do |t|
@@ -277,6 +328,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.index ["status"], name: "index_migration_runs_on_status"
   end
 
+  create_table "notes", force: :cascade do |t|
+    t.string "author"
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_id"], name: "index_notes_on_dataset_id"
+  end
+
   create_table "related_materials", force: :cascade do |t|
     t.string "availability"
     t.text "citation"
@@ -296,6 +356,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
     t.string "uri"
     t.string "uri_type"
     t.index ["dataset_id"], name: "index_related_materials_on_dataset_id"
+  end
+
+  create_table "tokens", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dataset_key"
+    t.datetime "expires"
+    t.string "identifier"
+    t.datetime "updated_at", null: false
+    t.index ["dataset_key"], name: "index_tokens_on_dataset_key"
+    t.index ["identifier"], name: "index_tokens_on_identifier"
   end
 
   create_table "users", force: :cascade do |t|
@@ -339,6 +409,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_180100) do
   add_foreign_key "funders", "datasets"
   add_foreign_key "guide_items", "guide_sections", column: "section_id"
   add_foreign_key "guide_subitems", "guide_items", column: "item_id"
+  add_foreign_key "notes", "datasets"
   add_foreign_key "related_materials", "datasets"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"

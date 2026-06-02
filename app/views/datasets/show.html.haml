@@ -26,13 +26,10 @@
           = link_to "View the latest version.", dataset_path(@version_group.latest_published_version)
 
     .dataset-show-titlebar
-      - if logged_in? && can?(:update, @dataset)
-        .dataset-show-actions
-          = link_to "Edit Dataset", edit_dataset_path(@dataset), class: "idb-button-primary"
-          - if @dataset.version_eligible?
-            = link_to "Request New Version", pre_version_dataset_path(@dataset), class: "idb-button-primary"
-            - if can?(:review_versions, @dataset)
-              = button_to "Create New Version", version_dataset_path(@dataset), method: :post, class: "idb-button-primary"
+      = render "datasets/workflow/show_actions", dataset: @dataset
+      .idb-workflow-strip
+        %nav.idb-workflow-actions-right{aria: { label: "Dataset text record actions" }}
+          = link_to "Dataset info text", record_text_dataset_path(@dataset), class: "idb-button-secondary"
 
     - if citation_text.present? || doi_url.present?
       .dataset-show-citation
@@ -62,6 +59,7 @@
             %strong This dataset is ready to publish.
 
         - unless @dataset.published?
+          = button_to "Request Pre-Publication Review", request_review_dataset_path(@dataset), method: :post, class: "idb-button-secondary"
           = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
   .dataset-show-grid
@@ -184,6 +182,39 @@
           %summary
             %h2.dataset-show-section-title Files
           .idb-section-body
+            - if @dataset.files_publicly_readable_now? && @dataset.datafiles.count > 1
+              .dataset-show-custom-download
+                %h3 Download Selected Files
+                %p= "Create a custom zip file with selected files from this dataset."
+
+                %form#custom-download-form{data: {controller: "custom-downloader"}, style: "margin: 1rem 0"}
+                  .dataset-custom-files-checkboxes
+                    - @dataset.datafiles.each do |datafile|
+                      .dataset-custom-file-item
+                        %label
+                          %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, data: {action: "custom-downloader#updateTotal"}, class: "dataset-file-checkbox"}
+                          = datafile.binary_name.presence || datafile.web_id
+                          - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+                          - if file_size.present?
+                            %span.dataset-file-size= "(" + number_to_human_size(file_size) + ")"
+
+                  .dataset-download-info
+                    %p
+                      %strong Total size:
+                      %span#custom-download-total-size 0 bytes
+
+                  .dataset-download-actions
+                    %button.idb-button-primary{type: "button", data: {action: "custom-downloader#requestDownload"}, id: "request-download-button", disabled: true}
+                      Get Custom Zip and Download Link for Selected
+
+              #download-link-modal.modal{role: "dialog", aria: {labelledby: "download-link-modal-title", hidden: "true"}}
+                .modal-content
+                  %h2#download-link-modal-title Download Link Ready
+                  .download-link-info
+                    %p Your download link is ready:
+                    %p#download-link-result
+                    %p#download-file-size
+                  %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}} Close
             %ul.dataset-show-file-list
               - @dataset.datafiles.each do |datafile|
                 - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
@@ -228,6 +259,8 @@
         .idb-section-body
           %p
             = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
+          %p
+            = link_to "Curator Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
 
   - if logged_in? && can?(:manage, Dataset)
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "External delivery" }}

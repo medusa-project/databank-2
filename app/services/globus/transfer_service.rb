@@ -64,31 +64,31 @@ module Globus
     end
 
     def transfer_enabled?
-      ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false").casecmp("true").zero?
+      IdbConfig.fetch(:globus, :transfer_enabled, default: "false").casecmp("true").zero?
     end
 
     def transfer_endpoint
-      ENV["GLOBUS_TRANSFER_ENDPOINT"].to_s.strip
+      IdbConfig.fetch(:globus, :transfer_endpoint, default: "").to_s.strip
     end
 
     def transfer_token
-      ENV["GLOBUS_TRANSFER_TOKEN"].to_s.strip
+      IdbConfig.fetch(:globus, :transfer_token, default: "").to_s.strip
     end
 
     def source_collection
-      ENV["GLOBUS_SOURCE_COLLECTION"].to_s.strip
+      IdbConfig.fetch(:globus, :source_collection, default: "").to_s.strip
     end
 
     def destination_collection
-      ENV["GLOBUS_DESTINATION_COLLECTION"].to_s.strip
+      IdbConfig.fetch(:globus, :destination_collection, default: "").to_s.strip
     end
 
     def source_base_path
-      ENV.fetch("GLOBUS_SOURCE_BASE_PATH", "/")
+      IdbConfig.fetch(:globus, :source_base_path, default: "/")
     end
 
     def destination_base_path
-      ENV.fetch("GLOBUS_DESTINATION_BASE_PATH", "/")
+      IdbConfig.fetch(:globus, :destination_base_path, default: "/")
     end
   end
 end

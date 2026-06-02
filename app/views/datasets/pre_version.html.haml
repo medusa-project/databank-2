@@ -12,8 +12,7 @@
       = f.label :comment, "In 1-2 sentences, summarize why you are requesting a new version:"
       %br/
       = f.text_area :comment, rows: 4
-    %p
-      = f.submit "Request New Version", class: "idb-button-primary"
-
-  %p
-    = link_to "Cancel", dataset_path(@dataset)
+    .idb-workflow-strip.idb-workflow-strip-bottom
+      %nav.idb-workflow-actions-right{aria: { label: "Version request actions" }}
+        = f.submit "Request New Version", class: "idb-button-primary"
+        = link_to "Cancel", dataset_path(@dataset), class: "idb-button-danger"

@@ -19,19 +19,25 @@ RSpec.describe Globus::TransferService, type: :service do
     dataset.datafiles.create!(web_id: "abcde", binary_name: "analysis.csv")
   end
 
-  around do |example|
-    original = ENV.to_h
-    begin
-      ENV["ENABLE_GLOBUS_TRANSFER"] = "true"
-      ENV["GLOBUS_TRANSFER_ENDPOINT"] = "https://globus.example.org/api/transfers"
-      ENV["GLOBUS_TRANSFER_TOKEN"] = "secret-token"
-      ENV["GLOBUS_SOURCE_COLLECTION"] = "source-collection-id"
-      ENV["GLOBUS_DESTINATION_COLLECTION"] = "dest-collection-id"
-      ENV["GLOBUS_SOURCE_BASE_PATH"] = "/source-root"
-      ENV["GLOBUS_DESTINATION_BASE_PATH"] = "/dest-root"
-      example.run
-    ensure
-      ENV.replace(original)
+  before do
+    globus_config = {
+      transfer_enabled: "true",
+      transfer_endpoint: "https://globus.example.org/api/transfers",
+      transfer_token: "secret-token",
+      source_collection: "source-collection-id",
+      destination_collection: "dest-collection-id",
+      source_base_path: "/source-root",
+      destination_base_path: "/dest-root"
+    }
+
+    allow(IdbConfig).to receive(:fetch) do |*keys, default: nil|
+      value = keys.reduce({ globus: globus_config }) do |memo, key|
+        break nil unless memo.respond_to?(:[])
+
+        memo[key.to_sym] || memo[key.to_s]
+      end
+
+      value.nil? ? default : value
     end
   end
 
@@ -73,7 +79,7 @@ RSpec.describe Globus::TransferService, type: :service do
   end
 
   it "is disabled when required config is missing" do
-    ENV.delete("GLOBUS_TRANSFER_TOKEN")
+    allow(IdbConfig).to receive(:fetch).with(:globus, :transfer_token, default: "").and_return("")
 
     service = described_class.new
     expect(service.enabled?).to eq(false)

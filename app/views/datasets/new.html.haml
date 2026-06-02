@@ -71,6 +71,7 @@
 
             .idb-grid-col-12
               .deposit-agreement-selection-warning{aria: { live: "assertive" }, data: { agreement_target: "warning" }}
-              = f.submit "Submit", class: "idb-button-primary", id: "agree-button", disabled: true, data: { agreement_target: "submitButton" }
-              = " "
-              = link_to "Cancel", root_path, class: "idb-button-danger"
+              .idb-workflow-strip.idb-workflow-strip-bottom
+                %nav.idb-workflow-actions-right{aria: { label: "Deposit agreement actions" }}
+                  = f.submit "Submit", class: "idb-button-primary", id: "agree-button", disabled: true, data: { agreement_target: "submitButton" }
+                  = link_to "Cancel", root_path, class: "idb-button-danger"

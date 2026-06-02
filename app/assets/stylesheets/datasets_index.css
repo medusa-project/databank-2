@@ -313,10 +313,65 @@
   flex-wrap: wrap;
 }
 
+.idb-workflow-strip {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.idb-workflow-note {
+  margin: 0;
+  max-width: 42rem;
+  color: var(--idb-muted);
+  line-height: 1.45;
+}
+
+.idb-workflow-actions-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: min(100%, 18rem);
+  margin-left: auto;
+}
+
+.idb-workflow-actions-right .idb-button-primary,
+.idb-workflow-actions-right .idb-button-secondary,
+.idb-workflow-actions-right .idb-button-danger,
+.idb-workflow-actions-right .idb-button-success {
+  width: 100%;
+  justify-content: center;
+}
+
+.idb-workflow-strip-top {
+  margin-bottom: 0.85rem;
+}
+
+.idb-workflow-strip-bottom {
+  margin-top: 0.85rem;
+}
+
 .dataset-show-abstract,
 .dataset-show-status,
 .dataset-show-citation {
   margin-top: 1rem;
+}
+
+@media (max-width: 800px) {
+  .idb-workflow-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .idb-workflow-note {
+    max-width: none;
+  }
+
+  .idb-workflow-actions-right {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .dataset-show-citation {

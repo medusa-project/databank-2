@@ -54,6 +54,12 @@ RSpec.describe Migration::SampleImportService do
           "storage_root" => "medusa",
           "storage_key" => "DOI-10-13012-b2idb-9099901_v1/dataset_files/file.csv"
         }
+      ],
+      "notes" => [
+        {
+          "body" => "Imported sample note",
+          "author" => "sample-curator@example.edu"
+        }
       ]
     }
 
@@ -71,6 +77,8 @@ RSpec.describe Migration::SampleImportService do
     expect(dataset.funders.count).to eq(1)
     expect(dataset.related_materials.count).to eq(1)
     expect(dataset.datafiles.count).to eq(1)
+    expect(dataset.notes.count).to eq(1)
+    expect(dataset.notes.first.body).to eq("Imported sample note")
     datafile = dataset.datafiles.first
     expect(datafile.storage_root).to eq("medusa")
     expect(datafile.storage_key).to eq("DOI-10-13012-b2idb-9099901_v1/dataset_files/file.csv")

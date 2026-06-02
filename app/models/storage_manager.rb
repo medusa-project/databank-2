@@ -23,6 +23,6 @@ class StorageManager
     self.tmpfs_root = root_set.at("tmpfs")
     self.globus_download_root = root_set.at("globus_download")
     self.globus_ingest_root = root_set.at("globus_ingest")
-    self.tmpdir = ENV.fetch("STORAGE_TMPDIR", Dir.tmpdir)
+    self.tmpdir = IdbConfig.fetch(:storage, :tmpdir, default: Dir.tmpdir)
   end
 end

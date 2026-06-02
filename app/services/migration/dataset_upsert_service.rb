@@ -90,10 +90,19 @@ module Migration
 
         [ owner_uid, depositor_name, depositor_email ]
       else
-        owner_uid = ENV.fetch("MIGRATION_SAMPLE_OWNER_UID", DEFAULT_SAMPLE_OWNER_UID)
+        owner_uid = ENV.fetch(
+          "MIGRATION_SAMPLE_OWNER_UID",
+          IdbConfig.fetch(:migration, :sample_owner_uid, default: DEFAULT_SAMPLE_OWNER_UID)
+        )
         depositor_name = payload["corresponding_creator_name"].presence ||
-                         ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_NAME", DEFAULT_SAMPLE_DEPOSITOR_NAME)
-        depositor_email = ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_EMAIL", DEFAULT_SAMPLE_DEPOSITOR_EMAIL)
+                         ENV.fetch(
+                           "MIGRATION_SAMPLE_DEPOSITOR_NAME",
+                           IdbConfig.fetch(:migration, :sample_depositor_name, default: DEFAULT_SAMPLE_DEPOSITOR_NAME)
+                         )
+        depositor_email = ENV.fetch(
+          "MIGRATION_SAMPLE_DEPOSITOR_EMAIL",
+          IdbConfig.fetch(:migration, :sample_depositor_email, default: DEFAULT_SAMPLE_DEPOSITOR_EMAIL)
+        )
         [ owner_uid, depositor_name, depositor_email ]
       end
     end
@@ -125,6 +134,10 @@ module Migration
       sync_collection!(dataset.datafiles, normalized_datafiles) do |record, attrs|
         record.assign_attributes(attrs)
       end
+
+      sync_collection!(dataset.notes, normalized_notes) do |record, attrs|
+        record.assign_attributes(attrs)
+      end
     end
 
     def sync_collection!(association, rows)
@@ -153,6 +166,8 @@ module Migration
       when "Datafile"
         key = attrs[:web_id].presence || attrs[:binary_name]
         attrs[:web_id].present? ? association.find_by(web_id: key) : association.find_by(binary_name: key)
+      when "Note"
+        association.find_by(author: attrs[:author], body: attrs[:body])
       end
     end
 
@@ -238,6 +253,21 @@ module Migration
           description: datafile["description"],
           source_created_at: datafile["created_at"],
           source_updated_at: datafile["updated_at"]
+        }
+      end
+    end
+
+    def normalized_notes
+      Array(payload["notes"]).filter_map do |note|
+        body = note["body"]
+        author = note["author"]
+        next if body.blank? && author.blank?
+
+        {
+          body: body,
+          author: author,
+          source_created_at: note["created_at"],
+          source_updated_at: note["updated_at"]
         }
       end
     end

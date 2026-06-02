@@ -1,8 +1,7 @@
 class CuratorDirectory
   class << self
     def core_emails
-      raw = Rails.application.credentials.dig(:core_curators, :emails)
-      raw = ENV["CORE_CURATOR_EMAILS"] if raw.blank?
+      raw = IdbConfig.fetch(:curator, :core_emails)
 
       normalize_email_list(raw)
     end
