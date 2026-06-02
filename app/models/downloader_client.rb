@@ -63,9 +63,9 @@ class DownloaderClient
     # @return [Hash] The response hash from the downloader
     # @note: This method sends a request to the downloader to download the files
     def request_download_hash(medusa_request_json:)
-      user = Rails.application.credentials.dig(:downloader, :user)
-      password = Rails.application.credentials.dig(:downloader, :password)
-      endpoint = Rails.application.credentials.dig(:downloader, :endpoint)
+      user = IdbConfig.fetch(:downloader, :user)
+      password = IdbConfig.fetch(:downloader, :password)
+      endpoint = IdbConfig.fetch(:downloader, :endpoint)
 
       unless endpoint && user && password
         Rails.logger.warn "downloader credentials not configured"

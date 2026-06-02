@@ -1,5 +1,5 @@
 class Dataset < ApplicationRecord
-  KEY_PREFIX = ENV.fetch("DATASET_KEY_PREFIX", "IDB").freeze
+  KEY_PREFIX = IdbConfig.fetch(:dataset, :key_prefix, default: "IDB").freeze
   KEY_DIGITS = 7
   EMBARGO_NONE = "none".freeze
   EMBARGO_FILE = "file".freeze

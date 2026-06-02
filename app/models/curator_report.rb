@@ -81,7 +81,7 @@ class CuratorReport < ApplicationRecord
     end
 
     def root_url
-      ENV.fetch("ROOT_URL_TEXT", "http://localhost:3000")
+      IdbConfig.fetch(:app, :root_url_text, default: "http://localhost:3000")
     end
 
     def dataset_url(dataset)

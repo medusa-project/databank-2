@@ -54,19 +54,19 @@ module Ingest
     end
 
     def ingest_events_enabled?
-      ENV.fetch("ENABLE_INGEST_EVENTS", "false").casecmp("true").zero?
+      IdbConfig.fetch(:ingest, :events_enabled, default: "false").casecmp("true").zero?
     end
 
     def rabbitmq_url
-      ENV["RABBITMQ_URL"].to_s.strip
+      IdbConfig.fetch(:ingest, :rabbitmq_url, default: "").to_s.strip
     end
 
     def exchange_name
-      ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest")
+      IdbConfig.fetch(:ingest, :events_exchange, default: "databank.ingest")
     end
 
     def routing_key
-      ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published")
+      IdbConfig.fetch(:ingest, :events_routing_key, default: "dataset.published")
     end
   end
 end

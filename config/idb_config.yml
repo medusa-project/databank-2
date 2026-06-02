@@ -1,0 +1,114 @@
+default: &default
+  app:
+    root_url_text: <%= ENV.fetch("ROOT_URL_TEXT", "http://localhost:3000") %>
+    url: <%= ENV.fetch("APP_URL", "http://127.0.0.1:3000") %>
+  dataset:
+    key_prefix: <%= ENV.fetch("DATASET_KEY_PREFIX", "IDB") %>
+  mail:
+    from: <%= ENV.fetch("IDB_MAIL_FROM", "no-reply@databank.illinois.edu") %>
+  curator:
+    core_emails: <%= ENV.fetch("CORE_CURATOR_EMAILS", "") %>
+  version_request:
+    review_emails: <%= ENV.fetch("VERSION_REQUEST_REVIEW_EMAILS", "") %>
+  doi:
+    api_base_url: <%= ENV.fetch("DATACITE_API_BASE_URL", "") %>
+    username: <%= ENV.fetch("DATACITE_USERNAME", "") %>
+    password: <%= ENV.fetch("DATACITE_PASSWORD", "") %>
+    strict: <%= ENV.fetch("DATACITE_STRICT", "false") %>
+  globus:
+    transfer_enabled: <%= ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
+    transfer_endpoint: <%= ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
+    transfer_token: <%= ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>
+    source_collection: <%= ENV.fetch("GLOBUS_SOURCE_COLLECTION", "") %>
+    destination_collection: <%= ENV.fetch("GLOBUS_DESTINATION_COLLECTION", "") %>
+    source_base_path: <%= ENV.fetch("GLOBUS_SOURCE_BASE_PATH", "/") %>
+    destination_base_path: <%= ENV.fetch("GLOBUS_DESTINATION_BASE_PATH", "/") %>
+  ingest:
+    events_enabled: <%= ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
+    rabbitmq_url: <%= ENV.fetch("RABBITMQ_URL", "") %>
+    events_exchange: <%= ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
+    events_routing_key: <%= ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+  downloader:
+    endpoint: <%= ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
+    user: <%= ENV.fetch("DOWNLOADER_USER", "") %>
+    password: <%= ENV.fetch("DOWNLOADER_PASSWORD", "") %>
+  storage:
+    tmpdir: <%= ENV.fetch("STORAGE_TMPDIR", Dir.tmpdir) %>
+  migration:
+    sample_owner_uid: <%= ENV.fetch("MIGRATION_SAMPLE_OWNER_UID", "legacy-import") %>
+    sample_depositor_name: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_NAME", "Legacy Import") %>
+    sample_depositor_email: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_EMAIL", "legacy-import@example.edu") %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+demo:
+  <<: *default
+  app:
+    root_url_text: <%= Rails.application.credentials.dig(:root_url_text) || ENV.fetch("ROOT_URL_TEXT", "https://demo.databank.illinois.edu") %>
+    url: <%= Rails.application.credentials.dig(:app_url) || ENV.fetch("APP_URL", "https://demo.databank.illinois.edu") %>
+  mail:
+    from: <%= Rails.application.credentials.dig(:system_user_email) || ENV.fetch("IDB_MAIL_FROM", "no-reply@databank.illinois.edu") %>
+  curator:
+    core_emails: <%= Rails.application.credentials.dig(:core_curators, :emails) || ENV.fetch("CORE_CURATOR_EMAILS", "") %>
+  version_request:
+    review_emails: <%= Rails.application.credentials.dig(:version_request, :review_emails) || ENV.fetch("VERSION_REQUEST_REVIEW_EMAILS", "") %>
+  doi:
+    api_base_url: <%= Rails.application.credentials.dig(:datacite, :api_base_url) || Rails.application.credentials.dig(:datacite, :endpoint) || ENV.fetch("DATACITE_API_BASE_URL", "") %>
+    username: <%= Rails.application.credentials.dig(:datacite, :username) || ENV.fetch("DATACITE_USERNAME", "") %>
+    password: <%= Rails.application.credentials.dig(:datacite, :password) || ENV.fetch("DATACITE_PASSWORD", "") %>
+    strict: <%= Rails.application.credentials.dig(:datacite, :strict) || ENV.fetch("DATACITE_STRICT", "false") %>
+  globus:
+    transfer_enabled: <%= Rails.application.credentials.dig(:globus, :transfer_enabled) || ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
+    transfer_endpoint: <%= Rails.application.credentials.dig(:globus, :transfer_endpoint) || ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
+    transfer_token: <%= Rails.application.credentials.dig(:globus, :transfer_token) || ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>
+    source_collection: <%= Rails.application.credentials.dig(:globus, :source_collection) || ENV.fetch("GLOBUS_SOURCE_COLLECTION", "") %>
+    destination_collection: <%= Rails.application.credentials.dig(:globus, :destination_collection) || ENV.fetch("GLOBUS_DESTINATION_COLLECTION", "") %>
+    source_base_path: <%= Rails.application.credentials.dig(:globus, :source_base_path) || ENV.fetch("GLOBUS_SOURCE_BASE_PATH", "/") %>
+    destination_base_path: <%= Rails.application.credentials.dig(:globus, :destination_base_path) || ENV.fetch("GLOBUS_DESTINATION_BASE_PATH", "/") %>
+  ingest:
+    events_enabled: <%= Rails.application.credentials.dig(:ingest, :events_enabled) || ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
+    rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
+    events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
+    events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+  downloader:
+    endpoint: <%= Rails.application.credentials.dig(:downloader, :endpoint) || ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
+    user: <%= Rails.application.credentials.dig(:downloader, :user) || ENV.fetch("DOWNLOADER_USER", "") %>
+    password: <%= Rails.application.credentials.dig(:downloader, :password) || ENV.fetch("DOWNLOADER_PASSWORD", "") %>
+
+production:
+  <<: *default
+  app:
+    root_url_text: <%= Rails.application.credentials.dig(:root_url_text) || ENV.fetch("ROOT_URL_TEXT", "https://databank.illinois.edu") %>
+    url: <%= Rails.application.credentials.dig(:app_url) || ENV.fetch("APP_URL", "https://databank.illinois.edu") %>
+  mail:
+    from: <%= Rails.application.credentials.dig(:system_user_email) || ENV.fetch("IDB_MAIL_FROM", "no-reply@databank.illinois.edu") %>
+  curator:
+    core_emails: <%= Rails.application.credentials.dig(:core_curators, :emails) || ENV.fetch("CORE_CURATOR_EMAILS", "") %>
+  version_request:
+    review_emails: <%= Rails.application.credentials.dig(:version_request, :review_emails) || ENV.fetch("VERSION_REQUEST_REVIEW_EMAILS", "") %>
+  doi:
+    api_base_url: <%= Rails.application.credentials.dig(:datacite, :api_base_url) || Rails.application.credentials.dig(:datacite, :endpoint) || ENV.fetch("DATACITE_API_BASE_URL", "") %>
+    username: <%= Rails.application.credentials.dig(:datacite, :username) || ENV.fetch("DATACITE_USERNAME", "") %>
+    password: <%= Rails.application.credentials.dig(:datacite, :password) || ENV.fetch("DATACITE_PASSWORD", "") %>
+    strict: <%= Rails.application.credentials.dig(:datacite, :strict) || ENV.fetch("DATACITE_STRICT", "false") %>
+  globus:
+    transfer_enabled: <%= Rails.application.credentials.dig(:globus, :transfer_enabled) || ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
+    transfer_endpoint: <%= Rails.application.credentials.dig(:globus, :transfer_endpoint) || ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
+    transfer_token: <%= Rails.application.credentials.dig(:globus, :transfer_token) || ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>
+    source_collection: <%= Rails.application.credentials.dig(:globus, :source_collection) || ENV.fetch("GLOBUS_SOURCE_COLLECTION", "") %>
+    destination_collection: <%= Rails.application.credentials.dig(:globus, :destination_collection) || ENV.fetch("GLOBUS_DESTINATION_COLLECTION", "") %>
+    source_base_path: <%= Rails.application.credentials.dig(:globus, :source_base_path) || ENV.fetch("GLOBUS_SOURCE_BASE_PATH", "/") %>
+    destination_base_path: <%= Rails.application.credentials.dig(:globus, :destination_base_path) || ENV.fetch("GLOBUS_DESTINATION_BASE_PATH", "/") %>
+  ingest:
+    events_enabled: <%= Rails.application.credentials.dig(:ingest, :events_enabled) || ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
+    rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
+    events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
+    events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+  downloader:
+    endpoint: <%= Rails.application.credentials.dig(:downloader, :endpoint) || ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
+    user: <%= Rails.application.credentials.dig(:downloader, :user) || ENV.fetch("DOWNLOADER_USER", "") %>
+    password: <%= Rails.application.credentials.dig(:downloader, :password) || ENV.fetch("DOWNLOADER_PASSWORD", "") %>

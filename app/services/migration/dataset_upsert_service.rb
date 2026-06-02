@@ -90,10 +90,19 @@ module Migration
 
         [ owner_uid, depositor_name, depositor_email ]
       else
-        owner_uid = ENV.fetch("MIGRATION_SAMPLE_OWNER_UID", DEFAULT_SAMPLE_OWNER_UID)
+        owner_uid = ENV.fetch(
+          "MIGRATION_SAMPLE_OWNER_UID",
+          IdbConfig.fetch(:migration, :sample_owner_uid, default: DEFAULT_SAMPLE_OWNER_UID)
+        )
         depositor_name = payload["corresponding_creator_name"].presence ||
-                         ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_NAME", DEFAULT_SAMPLE_DEPOSITOR_NAME)
-        depositor_email = ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_EMAIL", DEFAULT_SAMPLE_DEPOSITOR_EMAIL)
+                         ENV.fetch(
+                           "MIGRATION_SAMPLE_DEPOSITOR_NAME",
+                           IdbConfig.fetch(:migration, :sample_depositor_name, default: DEFAULT_SAMPLE_DEPOSITOR_NAME)
+                         )
+        depositor_email = ENV.fetch(
+          "MIGRATION_SAMPLE_DEPOSITOR_EMAIL",
+          IdbConfig.fetch(:migration, :sample_depositor_email, default: DEFAULT_SAMPLE_DEPOSITOR_EMAIL)
+        )
         [ owner_uid, depositor_name, depositor_email ]
       end
     end
