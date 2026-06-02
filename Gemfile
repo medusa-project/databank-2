@@ -29,6 +29,8 @@ gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
 gem "csv", "~> 3.3"
+# HTTP client with digest auth support
+gem "curb", "~> 1.0"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"

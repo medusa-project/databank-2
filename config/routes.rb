@@ -31,6 +31,7 @@ Rails.application.routes.draw do
       post :request_review
       post :submit_version_request
       get :version_acknowledge
+      get :download_link, defaults: { format: :json }
       post :copy_version_files
       post "approve_version_request/:version_request_id", action: :approve_version_request, as: :approve_version_request
       post "reject_version_request/:version_request_id", action: :reject_version_request, as: :reject_version_request

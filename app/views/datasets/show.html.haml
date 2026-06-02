@@ -181,7 +181,39 @@
         %details.idb-section-disclosure.dataset-show-disclosure{open: true}
           %summary
             %h2.dataset-show-section-title Files
-          .idb-section-body
+          .idb-section-body             - if @dataset.files_publicly_readable_now? && @dataset.datafiles.count > 1
+               .dataset-show-custom-download
+                 %h3 Download Selected Files
+                 %p= "Create a custom zip file with selected files from this dataset."
+
+                 %form#custom-download-form{data: {controller: "custom-downloader"}, style: "margin: 1rem 0"}
+                   .dataset-custom-files-checkboxes
+                     - @dataset.datafiles.each do |datafile|
+                       .dataset-custom-file-item
+                         %label
+                           %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, data: {action: "custom-downloader#updateTotal"}, class: "dataset-file-checkbox"}
+                           = datafile.binary_name.presence || datafile.web_id
+                           - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+                           - if file_size.present?
+                             %span.dataset-file-size= "(" + number_to_human_size(file_size) + ")"
+
+                   .dataset-download-info
+                     %p
+                       %strong Total size:
+                       %span#custom-download-total-size 0 bytes
+
+                   .dataset-download-actions
+                     %button.idb-button-primary{type: "button", data: {action: "custom-downloader#requestDownload"}, id: "request-download-button", disabled: true}
+                       Get Custom Zip and Download Link for Selected
+
+             #download-link-modal.modal{role: "dialog", aria: {labelledby: "download-link-modal-title", hidden: "true"}}
+               .modal-content
+                 %h2#download-link-modal-title Download Link Ready
+                 .download-link-info
+                   %p Your download link is ready:
+                   %p#download-link-result
+                   %p#download-file-size
+                 %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}} Close
             %ul.dataset-show-file-list
               - @dataset.datafiles.each do |datafile|
                 - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size

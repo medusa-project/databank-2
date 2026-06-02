@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
-  skip_before_action :authenticate_user!, only: %i[index show record_text download_metrics]
+  skip_before_action :authenticate_user!, only: %i[index show record_text download_metrics download_link]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -57,7 +57,56 @@ class DatasetsController < ApplicationController
     @dataset.update_column(:identifier, @dataset.generate_doi) if @dataset.identifier.blank?
     render :confirm_review
   end
+   def download_link
+     authorize! :read, @dataset
+     return_hash = {}
 
+     if params.key?("web_ids")
+       web_ids_str = params["web_ids"]
+       web_ids = web_ids_str.split("~")
+
+       if !web_ids.respond_to?(:count) || web_ids.count < 1
+         return_hash["status"] = "error"
+         return_hash["error"] = "no web_ids after split"
+         render json: return_hash, content_type: request.format
+         return
+       end
+
+       web_ids.each(&:strip!)
+       parametrized_doi = @dataset.identifier.parameterize
+       download_hash = DownloaderClient.datafiles_download_hash(
+         dataset: @dataset,
+         web_ids: web_ids,
+         zip_name: "DOI-#{parametrized_doi}"
+       )
+       download_hash = download_hash.stringify_keys
+
+       if download_hash
+         if download_hash["status"] == "ok"
+           web_ids.each do |web_id|
+             datafile = Datafile.find_by(web_id: web_id)
+             if datafile
+               datafile.record_download(request.remote_ip)
+             end
+           end
+           return_hash["status"] = "ok"
+           return_hash["url"] = download_hash["download_url"]
+           return_hash["total_size"] = download_hash["total_size"]
+         else
+           return_hash["status"] = "error"
+           return_hash["error"] = download_hash["error"]
+         end
+       else
+         return_hash["status"] = "error"
+         return_hash["error"] = "nil zip link returned"
+       end
+       render json: return_hash, content_type: request.format
+     else
+       return_hash["status"] = "error"
+       return_hash["error"] = "no web_ids in request"
+       render json: return_hash, content_type: request.format
+     end
+   end
   def pre_version
     authorize! :update, @dataset
 
