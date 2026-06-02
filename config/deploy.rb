@@ -9,6 +9,9 @@ set :rbenv_type, :user
 set :rbenv_ruby, "3.3.6"
 set :format, :airbrussh
 set :bundle_path, -> { shared_path.join("bundle") }
+set :bundle_env_variables, {
+  "BUNDLE_FORCE_RUBY_PLATFORM" => "true"
+}
 
 set :linked_dirs, fetch(:linked_dirs, []).push(
   "log",
