@@ -20,4 +20,19 @@ namespace :deploy do
   end
 end
 
+namespace :bundler do
+  desc "Remove cached bundle and clear stale force_ruby_platform Bundler config"
+  task :clean_cache do
+    on roles(:app) do
+      bundle_dir = shared_path.join("bundle")
+      execute :rm, "-rf", bundle_dir if test("[ -d #{bundle_dir} ]")
+
+      within release_path do
+        execute :bundle, :config, :unset, "--local", :force_ruby_platform
+      end
+    end
+  end
+end
+
 before "deploy:check:linked_files", "deploy:preflight"
+before "bundler:install", "bundler:clean_cache"

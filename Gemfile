@@ -4,8 +4,14 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.3"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
-# Use postgresql as the database for Active Record
-gem "pg", "~> 1.1"
+# Use postgresql as the database for Active Record.
+# On older Linux deploy hosts, force source builds to avoid glibc mismatch
+# from precompiled platform gems.
+if RUBY_PLATFORM.include?("linux")
+  gem "pg", "~> 1.1", force_ruby_platform: true
+else
+  gem "pg", "~> 1.1"
+end
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
