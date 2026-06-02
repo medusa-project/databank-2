@@ -244,6 +244,10 @@ GEM
     nokogiri (1.19.3)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
+    nokogiri (1.19.3-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.3-x86_64-darwin)
+      racc (~> 1.4)
     omniauth (2.1.4)
       hashie (>= 3.4.6)
       logger
@@ -262,6 +266,8 @@ GEM
       rackup (>= 1.0.1)
       rake (>= 12.3.3)
     pg (1.6.3)
+    pg (1.6.3-arm64-darwin)
+    pg (1.6.3-x86_64-darwin)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
