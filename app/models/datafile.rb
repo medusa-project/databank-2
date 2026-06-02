@@ -1,7 +1,7 @@
 class Datafile < ApplicationRecord
   include Datafile::Storable
 
-  WEB_ID_LENGTH = 5
+  WEB_ID_LENGTH = 5 unless const_defined?(:WEB_ID_LENGTH)
 
   belongs_to :dataset
   has_one_attached :binary
