@@ -9,11 +9,11 @@ gem "propshaft"
 # from precompiled platform gems.
 if RUBY_PLATFORM.include?("linux")
   gem "pg", "~> 1.1", force_ruby_platform: true
-  gem "nokogiri", force_ruby_platform: true
 else
   gem "pg", "~> 1.1"
-  gem "nokogiri"
 end
+# Allow local macOS to use precompiled Nokogiri while deploy forces source builds via Capistrano.
+gem "nokogiri"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
