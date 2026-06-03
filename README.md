@@ -346,6 +346,13 @@ npm run test:e2e:a11y
 
 Why: catches accessibility issues earlier and supports WCAG-focused work.
 
+Run strategy for Playwright checks:
+
+- for thorough local validation, run only `npm run test:e2e`
+- for quick accessibility-focused feedback, run only `npm run test:e2e:a11y`
+- running both is mostly redundant unless you want a separate, explicit
+	accessibility pass/reporting step
+
 ### 3) Final sanity checks
 
 1. Confirm branch and staged changes
