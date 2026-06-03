@@ -80,3 +80,6 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+      - name: Validate runtime config contract (test)
+        run: RAILS_ENV=test bundle exec rake config:contract
+

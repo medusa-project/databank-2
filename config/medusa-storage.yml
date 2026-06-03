@@ -2,33 +2,33 @@ demo:
   :storage:
     - :name: draft
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :draft_prefix) || ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
     - :name: medusa
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_MEDUSA_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_MEDUSA_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :medusa_bucket) || ENV.fetch("STORAGE_MEDUSA_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :medusa_prefix) || ENV.fetch("STORAGE_MEDUSA_PREFIX", "") %>
     - :name: globus_download
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_GLOBUS_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_GLOBUS_DOWNLOAD_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :globus_bucket) || ENV.fetch("STORAGE_GLOBUS_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :globus_download_prefix) || ENV.fetch("STORAGE_GLOBUS_DOWNLOAD_PREFIX", "") %>
     - :name: globus_ingest
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :draft_prefix) || ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
     - :name: message
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
       :prefix: "messages/"
     - :name: reports
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
       :prefix: "reports/"
     - :name: tmpfs
       :type: filesystem
@@ -38,33 +38,33 @@ production:
   :storage:
     - :name: draft
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :draft_prefix) || ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
     - :name: medusa
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_MEDUSA_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_MEDUSA_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :medusa_bucket) || ENV.fetch("STORAGE_MEDUSA_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :medusa_prefix) || ENV.fetch("STORAGE_MEDUSA_PREFIX", "") %>
     - :name: globus_download
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_GLOBUS_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_GLOBUS_DOWNLOAD_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :globus_bucket) || ENV.fetch("STORAGE_GLOBUS_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :globus_download_prefix) || ENV.fetch("STORAGE_GLOBUS_DOWNLOAD_PREFIX", "") %>
     - :name: globus_ingest
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
-      :prefix: <%= ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :prefix: <%= Rails.application.credentials.dig(:storage, :draft_prefix) || ENV.fetch("STORAGE_DRAFT_PREFIX", "") %>
     - :name: message
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
       :prefix: "messages/"
     - :name: reports
       :type: s3
-      :region: <%= ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
-      :bucket: <%= ENV.fetch("STORAGE_DRAFT_BUCKET") %>
+      :region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("STORAGE_S3_REGION", "us-east-2") %>
+      :bucket: <%= Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("STORAGE_DRAFT_BUCKET") %>
       :prefix: "reports/"
     - :name: tmpfs
       :type: filesystem

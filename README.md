@@ -402,10 +402,25 @@ bundle exec cap demo deploy:check
 bundle exec cap demo deploy:preflight
 ```
 
+3. Runtime config contract checks (local):
+
+```sh
+RAILS_ENV=demo bundle exec rake config:contract_report
+RAILS_ENV=demo bundle exec rake config:contract
+```
+
+For production deploy prep, run the same checks with `RAILS_ENV=production`.
+
 The preflight task validates required executable hooks:
 
 - `~/svc_hooks/shutdown`
 - `~/svc_hooks/boot`
+
+During deploy, Capistrano runs `deploy:config_contract` automatically before
+`assets:precompile`.
+
+See [docs/deploy-config-contract.md](docs/deploy-config-contract.md) for the
+full deploy configuration contract and source-of-truth guidance.
 
 ### 4) Deploy demo
 
