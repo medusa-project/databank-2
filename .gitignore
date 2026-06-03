@@ -37,6 +37,10 @@
 /playwright-report/
 /coverage/
 
+# Deploy-only local bundler artifacts
+/Gemfile.deploy.lock
+/vendor/bundle-deploy/
+
 # Ignore local working files
 /working/*
 !/working/.keep
