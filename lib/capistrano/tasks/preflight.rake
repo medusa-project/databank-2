@@ -32,14 +32,14 @@ namespace :deploy do
 end
 
 namespace :bundler do
-  desc "Remove cached bundle and enforce force_ruby_platform for native gem source builds"
+  desc "Remove cached bundle and clear stale force_ruby_platform Bundler config"
   task :clean_cache do
     on roles(:app) do
       bundle_dir = shared_path.join("bundle")
       execute :rm, "-rf", bundle_dir if test("[ -d #{bundle_dir} ]")
 
       within release_path do
-        execute :bundle, :config, :set, "--local", :force_ruby_platform, "true"
+        execute :bundle, :config, :unset, "--local", :force_ruby_platform
       end
     end
   end
