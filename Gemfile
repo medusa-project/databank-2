@@ -9,8 +9,10 @@ gem "propshaft"
 # from precompiled platform gems.
 if RUBY_PLATFORM.include?("linux")
   gem "pg", "~> 1.1", force_ruby_platform: true
+  gem "nokogiri", force_ruby_platform: true
 else
   gem "pg", "~> 1.1"
+  gem "nokogiri"
 end
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
