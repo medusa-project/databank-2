@@ -13,18 +13,16 @@ DataCite registration, set these environment variables:
 If `DATACITE_STRICT=true`, publish raises on DataCite failures instead of
 falling back to generated DOI values.
 
-## Shibboleth Header Callback
+## Shibboleth Authentication
 
-The route `/auth/shibboleth/callback` supports reverse-proxy header mode for
-Shibboleth deployments. If OmniAuth auth hash is not present for this provider,
-the callback reads identity headers:
+Production/demo use `omniauth-shibboleth` with header request mode from
+`config/shibboleth.yml`. Development/test use OmniAuth `developer`.
 
-- `HTTP_EPPN` or `REMOTE_USER` or `HTTP_UID` (required)
-- `HTTP_MAIL` (optional; falls back to uid)
-- `HTTP_DISPLAYNAME` or `HTTP_CN` (optional)
+The login flow matches legacy databank behavior:
 
-This allows stage/production integration behind SSO middleware while keeping
-developer provider auth for local development.
+- `/login` redirects to `/Shibboleth.sso/Login?...` outside development/test.
+- `/auth/:provider/callback` accepts `shibboleth` and `developer` providers.
+- `developer` callback is blocked outside development/test.
 
 ## Ingest Event Publishing (RabbitMQ / Medusa Scaffold)
 

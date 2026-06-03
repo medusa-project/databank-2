@@ -26,7 +26,8 @@ class ApplicationController < ActionController::Base
   def authenticate_user!
     return if logged_in?
 
-    redirect_to login_path, alert: "Please sign in to continue."
+    session[:login_return_uri] = request.env["REQUEST_URI"]
+    redirect_to(login_path, alert: "Please sign in to continue.")
   end
 
   def load_system_message

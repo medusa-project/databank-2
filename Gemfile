@@ -28,6 +28,7 @@ gem "cancancan", "~> 3.6"
 # OmniAuth authentication
 gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
+gem "omniauth-shibboleth"
 # AWS S3 for production file storage
 gem "aws-sdk-s3", "~> 1.0", require: false
 # Required by Active Storage variant generation

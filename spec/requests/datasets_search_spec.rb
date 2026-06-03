@@ -2,13 +2,9 @@ require "rails_helper"
 
 RSpec.describe "Datasets search", type: :request do
   def login_as(email:, name:, role: nil)
-    post "/auth/shibboleth/callback", params: { provider: "shibboleth" }, headers: {
-      "REMOTE_USER" => email,
-      "HTTP_MAIL" => email,
-      "HTTP_DISPLAYNAME" => name
-    }
+    post "/auth/developer/callback", params: { email: email, name: name, role: role || "depositor" }
 
-    user = User.find_by!(provider: "shibboleth", uid: email)
+    user = User.find_by!(provider: "developer", uid: email)
     user.update!(role: role) if role.present?
     user
   end

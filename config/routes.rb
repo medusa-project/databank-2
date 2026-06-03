@@ -9,10 +9,12 @@ Rails.application.routes.draw do
   post "api/dataset/:dataset_key/datafile", to: "api_dataset#datafile", defaults: { format: :json }
 
   # Auth
-  get "login",  to: "sessions#new",     as: :login
-  delete "logout", to: "sessions#destroy", as: :logout
-  post  "role_switch", to: "sessions#role_switch"
+  match "/auth/failure", to: "sessions#unauthorized", as: :unauthorized, via: %i[get post]
   match "/auth/:provider/callback", to: "sessions#create", via: %i[get post]
+  match "/login", to: "sessions#new", as: :login, via: %i[get post]
+  match "/logout", to: "sessions#destroy", as: :logout, via: %i[get post delete]
+  match "/auth/:provider", to: "sessions#new", via: %i[get post]
+  post  "role_switch", to: "sessions#role_switch"
 
   # Core dataset resources
   resources :datasets do
