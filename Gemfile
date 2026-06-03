@@ -30,6 +30,8 @@ gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
 # AWS S3 for production file storage
 gem "aws-sdk-s3", "~> 1.0", require: false
+# Required by Active Storage variant generation
+gem "image_processing", "~> 1.2"
 gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", ref: "2523839f6f75b9fc5500c226dd9c4212d7f54691"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
