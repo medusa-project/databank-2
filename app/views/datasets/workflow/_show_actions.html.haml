@@ -3,7 +3,7 @@
 %section.idb-workflow-strip{aria: { label: "Dataset workflow actions" }}
   .idb-workflow-actions-right
     = link_to edit_dataset_path(dataset), class: "idb-button-success" do
-      Edit
+      Edit Dataset
 
     - if dataset.version_eligible?
       = link_to "Request New Version", pre_version_dataset_path(dataset), class: "idb-button-primary"

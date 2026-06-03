@@ -1,7 +1,7 @@
 - return unless can?(:update, dataset)
 
 - top_strip = placement.to_s == "top"
-%section{class: top_strip ? "idb-workflow-strip idb-workflow-strip-top" : "idb-workflow-strip idb-workflow-strip-bottom", aria: { label: "Edit dataset workflow actions" }}
+%section{class: top_strip ? "idb-workflow-strip idb-workflow-strip-top" : "idb-workflow-strip idb-workflow-strip-bottom", aria: { label: top_strip ? "Edit dataset workflow actions (top)" : "Edit dataset workflow actions (bottom)" }}
   - if top_strip
     .idb-workflow-note
       - if dataset.draft?
