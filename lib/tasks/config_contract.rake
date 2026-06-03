@@ -154,7 +154,7 @@ namespace :config do
         default_used: credentials_key.end_with?("prefix")
       )
       status = value.present? || ENV.key?(env_key) || credentials_key.end_with?("prefix") ? "set" : "missing"
-      rows << ["storage.#{credentials_key}", source, status]
+      rows << [ "storage.#{credentials_key}", source, status ]
     end
 
     active_storage_bucket_source = if Rails.application.credentials.dig(:storage, :active_storage_bucket).present?
@@ -166,7 +166,7 @@ namespace :config do
     else
       "missing"
     end
-    rows << ["active_storage.bucket", active_storage_bucket_source, active_storage_bucket_source == "missing" ? "missing" : "set"]
+    rows << [ "active_storage.bucket", active_storage_bucket_source, active_storage_bucket_source == "missing" ? "missing" : "set" ]
 
     rows.each do |row|
       puts "- #{row[0]} | source=#{row[1]} | status=#{row[2]}"
