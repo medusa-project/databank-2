@@ -11,6 +11,7 @@ class MetricsController < ApplicationController
   ]
 
   before_action :require_admin!, only: %i[
+    admin_metrics
     refresh_dataset_downloads
     refresh_datafile_downloads
     refresh_datasets_tsv
@@ -22,6 +23,10 @@ class MetricsController < ApplicationController
   ]
 
   def index
+    serve_metrics_file(Rails.root.join("public/metrics_dashboard.html"), type: "text/html")
+  end
+
+  def admin_metrics
     @modified_times = Metric.modified_times
     @refresh_status = Metric.refresh_status
     @metrics_rows = [
@@ -75,7 +80,7 @@ class MetricsController < ApplicationController
         description: "CSV of funder and grant information."
       }
     ]
-    @title = "Metrics"
+    @title = "Admin metrics"
   end
 
   def dataset_downloads
