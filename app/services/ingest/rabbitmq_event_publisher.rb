@@ -16,7 +16,7 @@ module Ingest
       ingest_events_enabled? && rabbitmq_url.present? && defined?(Bunny)
     end
 
-    def publish_dataset_published(dataset)
+    def publish_dataset_published(dataset, correlation_key: nil)
       return false unless enabled?
 
       session = Bunny.new(rabbitmq_url)
@@ -24,7 +24,7 @@ module Ingest
 
       channel = session.create_channel
       exchange = channel.topic(exchange_name, durable: true)
-      exchange.publish(JSON.generate(event_payload(dataset)),
+      exchange.publish(JSON.generate(event_payload(dataset, correlation_key: correlation_key)),
                        routing_key: routing_key,
                        content_type: "application/json",
                        persistent: true)
@@ -38,10 +38,16 @@ module Ingest
 
     private
 
-    def event_payload(dataset)
+    def event_payload(dataset, correlation_key: nil)
       {
         event: "dataset.published",
         emitted_at: Time.current.utc.iso8601,
+        correlation_key: correlation_key,
+        pass_through: {
+          dataset_id: dataset.id,
+          dataset_key: dataset.key,
+          correlation_key: correlation_key
+        },
         dataset: {
           id: dataset.id,
           key: dataset.key,

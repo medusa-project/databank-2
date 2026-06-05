@@ -95,6 +95,52 @@ RSpec.describe "External delivery replay", type: :request do
     expect(globus_jobs).to be_empty
   end
 
+  it "blocks dataset-level replay for response-acknowledged ingest failures unless forced" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    ingest_key = "dataset.published:#{dataset.id}:acknowledged"
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      response_status: :succeeded,
+      attempt: 1,
+      idempotency_key: ingest_key
+    )
+
+    post replay_failed_deliveries_dataset_path(dataset), params: { integration: "ingest" }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("acknowledged ingest attempt(s) were blocked")
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs).to be_empty
+  end
+
+  it "allows forced dataset-level replay for response-acknowledged ingest failures" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    ingest_key = "dataset.published:#{dataset.id}:acknowledged-force"
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      response_status: :succeeded,
+      attempt: 1,
+      idempotency_key: ingest_key
+    )
+
+    post replay_failed_deliveries_dataset_path(dataset), params: { integration: "ingest", force_replay: true }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs.map { |job| job[:args] }).to include([ dataset.id, ingest_key ])
+  end
+
   it "shows external delivery status panel on dataset page for admins" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
@@ -114,7 +160,9 @@ RSpec.describe "External delivery replay", type: :request do
     expect(response.body).to include("External Delivery")
     expect(response.body).to include("ingest: failed")
     expect(response.body).to include("Replay All Failed Deliveries")
+    expect(response.body).to include("Force Replay All Failed Deliveries")
     expect(response.body).to include("Replay ingest Failures")
+    expect(response.body).to include("Force Replay ingest Failures")
   end
 
   it "blocks non-admin replay attempts" do

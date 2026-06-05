@@ -12,6 +12,9 @@
       = label_tag :status, "Status"
       = select_tag :status, options_for_select([["All", ""]] + @statuses.map { |value| [value, value] }, @status)
     %p
+      = label_tag :response_status, "Response Status"
+      = select_tag :response_status, options_for_select([["All", ""]] + @response_statuses.map { |value| [value, value] }, @response_status)
+    %p
       = label_tag :event_name, "Event Name"
       = text_field_tag :event_name, @event_name
     %p
@@ -39,6 +42,8 @@
           %th= link_to "Integration", admin_external_delivery_attempts_path(query_params_for(sort: "integration", direction: next_direction_for("integration"), page: 1))
           %th= link_to "Event", admin_external_delivery_attempts_path(query_params_for(sort: "event_name", direction: next_direction_for("event_name"), page: 1))
           %th= link_to "Status", admin_external_delivery_attempts_path(query_params_for(sort: "status", direction: next_direction_for("status"), page: 1))
+          %th= link_to "Response", admin_external_delivery_attempts_path(query_params_for(sort: "response_status", direction: next_direction_for("response_status"), page: 1))
+          %th= link_to "Response Time", admin_external_delivery_attempts_path(query_params_for(sort: "response_received_at", direction: next_direction_for("response_received_at"), page: 1))
           %th= link_to "Attempt", admin_external_delivery_attempts_path(query_params_for(sort: "attempt", direction: next_direction_for("attempt"), page: 1))
           %th Error
           %th Actions
@@ -53,11 +58,15 @@
             %td= attempt.integration
             %td= attempt.event_name
             %td= attempt.status
+            %td= attempt.response_status.presence || "-"
+            %td= attempt.response_received_at&.utc&.iso8601 || "-"
             %td= attempt.attempt
             %td= attempt.error_message.presence || "-"
             %td
               - if attempt.status == "failed"
                 = button_to "Replay", replay_admin_external_delivery_attempt_path(attempt), method: :post, params: query_params_for, class: "idb-button-primary"
+                - if attempt.integration == "ingest" && attempt.response_status == "succeeded"
+                  = button_to "Force Replay", replay_admin_external_delivery_attempt_path(attempt), method: :post, params: query_params_for(force_replay: true), class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay even though ingest response is marked succeeded?" } }
               - else
                 = "-"
 
@@ -65,11 +74,15 @@
       = hidden_field_tag :dataset_key, @dataset_key
       = hidden_field_tag :integration, @integration
       = hidden_field_tag :status, @status
+      = hidden_field_tag :response_status, @response_status
       = hidden_field_tag :event_name, @event_name
       = hidden_field_tag :per_page, @per_page
       = hidden_field_tag :sort, sort_column
       = hidden_field_tag :direction, sort_direction
       = hidden_field_tag :page, @page
+      %p
+        = check_box_tag :force_replay, "true", false
+        = label_tag :force_replay, "Force replay acknowledged ingest attempts"
       %p
         = submit_tag "Replay Selected Failed Attempts", class: "idb-button-primary"
 
@@ -82,3 +95,22 @@
           = link_to "Next", admin_external_delivery_attempts_path(query_params_for(page: @page + 1)), class: "idb-button-secondary"
   - else
     %p No delivery attempts match the selected filters.
+
+  %h2 Orphaned Ingest Responses
+  - if @orphaned_ingest_responses.any?
+    %table
+      %thead
+        %tr
+          %th Time
+          %th Status
+          %th Correlation Key
+          %th Error
+      %tbody
+        - @orphaned_ingest_responses.each do |event|
+          %tr
+            %td= event.received_at.utc.iso8601
+            %td= event.status
+            %td= event.correlation_key.presence || "-"
+            %td= event.error_message.presence || "-"
+  - else
+    %p No unmatched or invalid ingest responses have been recorded.

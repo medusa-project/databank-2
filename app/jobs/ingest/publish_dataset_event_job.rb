@@ -13,20 +13,21 @@ module Ingest
           dataset: dataset,
           status: :skipped,
           idempotency_key: key,
+          correlation_key: key,
           details: { reason: "already_succeeded" }
         )
         return
       end
 
       publisher = RabbitmqEventPublisher.new
-      attempt_record = build_attempt(dataset: dataset, status: :started, idempotency_key: key)
+      attempt_record = build_attempt(dataset: dataset, status: :started, idempotency_key: key, correlation_key: key)
 
       unless publisher.enabled?
         attempt_record.update!(status: :skipped, details: { reason: "integration_disabled" })
         return
       end
 
-      success = publisher.publish_dataset_published(dataset)
+      success = publisher.publish_dataset_published(dataset, correlation_key: key)
       if success
         attempt_record.update!(status: :succeeded)
         return
@@ -53,7 +54,7 @@ module Ingest
 
     private
 
-    def build_attempt(dataset:, status:, idempotency_key:, details: {})
+    def build_attempt(dataset:, status:, idempotency_key:, correlation_key:, details: {})
       ExternalDeliveryAttempt.create!(
         dataset: dataset,
         integration: :ingest,
@@ -62,6 +63,7 @@ module Ingest
         attempt: [ executions.to_i, 1 ].max,
         job_id: job_id,
         idempotency_key: idempotency_key,
+        correlation_key: correlation_key,
         details: details
       )
     end

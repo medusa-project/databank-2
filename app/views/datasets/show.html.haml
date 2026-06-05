@@ -290,7 +290,10 @@
               = total_failed
             %p
               = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
+              = button_to "Force Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all", force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures for all integrations?" } }
             - @failed_delivery_counts.each do |integration, count|
               %p
                 = "#{integration} failures: #{count}"
                 = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"
+                - if integration.to_s == "ingest"
+                  = button_to "Force Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration, force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures?" } }

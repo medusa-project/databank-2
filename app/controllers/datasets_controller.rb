@@ -404,7 +404,13 @@ class DatasetsController < ApplicationController
     replay_targets = failures.uniq { |attempt| [ attempt.integration, attempt.idempotency_key ] }
 
     replayed = 0
+    blocked = 0
     replay_targets.each do |attempt|
+      if attempt.integration == "ingest" && attempt.response_succeeded? && !force_replay_requested?
+        blocked += 1
+        next
+      end
+
       case attempt.integration
       when "ingest"
         Ingest::PublishDatasetEventJob.perform_later(@dataset.id, attempt.idempotency_key)
@@ -418,9 +424,15 @@ class DatasetsController < ApplicationController
     target_label = selected_integration || "all"
 
     if replayed.positive?
-      redirect_to dataset_path(@dataset), notice: "Requeued #{replayed} failed external delivery attempt(s) for #{target_label}."
+      message = "Requeued #{replayed} failed external delivery attempt(s) for #{target_label}."
+      message += " Blocked #{blocked} acknowledged ingest attempt(s)." if blocked.positive?
+      redirect_to dataset_path(@dataset), notice: message
     else
-      redirect_to dataset_path(@dataset), alert: "No failed external deliveries to replay for #{target_label}."
+      if blocked.positive?
+        redirect_to dataset_path(@dataset), alert: "No failed external deliveries were replayed for #{target_label}; #{blocked} acknowledged ingest attempt(s) were blocked."
+      else
+        redirect_to dataset_path(@dataset), alert: "No failed external deliveries to replay for #{target_label}."
+      end
     end
   end
 
@@ -468,6 +480,10 @@ class DatasetsController < ApplicationController
 
   def creator_signatures(creators)
     creators.map { |creator| [ creator.name.to_s, creator.email.to_s ] }.sort.map { |name, email| email.present? ? "#{name} <#{email}>" : name }
+  end
+
+  def force_replay_requested?
+    ActiveModel::Type::Boolean.new.cast(params[:force_replay])
   end
 
   def funder_signatures(funders)

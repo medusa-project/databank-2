@@ -28,6 +28,9 @@ default: &default
     rabbitmq_url: <%= ENV.fetch("RABBITMQ_URL", "") %>
     events_exchange: <%= ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
     events_routing_key: <%= ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+    responses_enabled: <%= ENV.fetch("ENABLE_INGEST_RESPONSES", "false") %>
+    responses_queue: <%= ENV.fetch("INGEST_RESPONSES_QUEUE", "medusa_to_databank") %>
+    response_batch_size: <%= ENV.fetch("INGEST_RESPONSE_BATCH_SIZE", "50") %>
   downloader:
     endpoint: <%= ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= ENV.fetch("DOWNLOADER_USER", "") %>
