@@ -501,6 +501,276 @@ namespace :migration do
     end
   end
 
+  namespace :download_metrics do
+    desc "Import legacy download metrics bundle into tally records"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_download_metrics.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "download_metrics_bundle_import",
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run
+        }
+      ) do
+        raise ArgumentError, "bundle not found: #{bundle_path}" unless bundle_path.file?
+        raise ArgumentError, "checksum file not found: #{checksum_path}" if checksum_path.present? && !File.file?(checksum_path)
+        raise ArgumentError, "manifest file not found: #{manifest_path}" if manifest_path.present? && !File.file?(manifest_path)
+
+        manifest_data = manifest_path.present? ? JSON.parse(File.read(manifest_path)) : nil
+        expected_checksum = manifest_data&.dig("sha256").to_s.strip.presence
+        if expected_checksum.blank? && checksum_path.present?
+          expected_checksum = File.read(checksum_path).strip.split.first.to_s.strip.presence
+        end
+
+        if expected_checksum.present?
+          actual_checksum = Digest::SHA256.file(bundle_path).hexdigest
+          raise ArgumentError, "bundle checksum mismatch" unless actual_checksum == expected_checksum
+        end
+
+        parse_date = lambda do |value|
+          next nil if value.blank?
+
+          Date.parse(value.to_s)
+        rescue ArgumentError
+          nil
+        end
+
+        parse_time = lambda do |value|
+          next nil if value.blank?
+
+          Time.zone.parse(value.to_s)
+        rescue StandardError
+          nil
+        end
+
+        normalize_tally = lambda do |value|
+          Integer(value)
+        rescue ArgumentError, TypeError
+          nil
+        end
+
+        summary = {
+          bundle_path: bundle_path.to_s,
+          created: 0,
+          updated: 0,
+          skipped_existing: 0,
+          would_create: 0,
+          would_update: 0,
+          failed: 0,
+          validation_error: nil,
+          records: []
+        }
+
+        line_count = 0
+        type_counts = Hash.new(0)
+
+        File.foreach(bundle_path).with_index(1) do |line, line_number|
+          next if line.strip.empty?
+
+          payload = JSON.parse(line)
+          type = payload["type"].to_s
+          attributes = payload["attributes"] || {}
+
+          case type
+          when "DatasetDownloadTally"
+            download_date = parse_date.call(attributes["download_date"])
+            tally = normalize_tally.call(attributes["tally"])
+
+            if attributes["dataset_key"].to_s.blank? || download_date.nil? || tally.nil? || tally.negative?
+              summary[:failed] += 1
+              summary[:records] << { line: line_number, status: :failed, type: type, message: "invalid dataset download tally attributes" }
+              next
+            end
+
+            finder = {
+              dataset_key: attributes["dataset_key"].to_s,
+              download_date: download_date
+            }
+            values = {
+              doi: attributes["doi"],
+              tally: tally,
+              created_at: parse_time.call(attributes["created_at"]),
+              updated_at: parse_time.call(attributes["updated_at"])
+            }.compact
+            model_class = DatasetDownloadTally
+          when "FileDownloadTally"
+            download_date = parse_date.call(attributes["download_date"])
+            tally = normalize_tally.call(attributes["tally"])
+
+            if attributes["file_web_id"].to_s.blank? || download_date.nil? || tally.nil? || tally.negative?
+              summary[:failed] += 1
+              summary[:records] << { line: line_number, status: :failed, type: type, message: "invalid file download tally attributes" }
+              next
+            end
+
+            finder = {
+              file_web_id: attributes["file_web_id"].to_s,
+              download_date: download_date
+            }
+            values = {
+              filename: attributes["filename"],
+              dataset_key: attributes["dataset_key"],
+              doi: attributes["doi"],
+              tally: tally,
+              created_at: parse_time.call(attributes["created_at"]),
+              updated_at: parse_time.call(attributes["updated_at"])
+            }.compact
+            model_class = FileDownloadTally
+          when "DayFileDownload"
+            download_date = parse_date.call(attributes["download_date"])
+
+            if attributes["ip_address"].to_s.blank? || attributes["file_web_id"].to_s.blank? || attributes["dataset_key"].to_s.blank? || download_date.nil?
+              summary[:failed] += 1
+              summary[:records] << { line: line_number, status: :failed, type: type, message: "invalid day file download attributes" }
+              next
+            end
+
+            finder = {
+              ip_address: attributes["ip_address"].to_s,
+              file_web_id: attributes["file_web_id"].to_s,
+              download_date: download_date
+            }
+            values = {
+              filename: attributes["filename"],
+              dataset_key: attributes["dataset_key"],
+              doi: attributes["doi"],
+              created_at: parse_time.call(attributes["created_at"]),
+              updated_at: parse_time.call(attributes["updated_at"])
+            }.compact
+            model_class = DayFileDownload
+          else
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, message: "unsupported type" }
+            next
+          end
+
+          line_count += 1
+          type_counts[type] += 1
+
+          existing = model_class.find_by(finder)
+          comparable_values = values.transform_keys(&:to_s)
+
+          if dry_run
+            status = if existing.nil?
+              :would_create
+            elsif comparable_values.all? { |key, value| existing.public_send(key) == value }
+              :skipped_existing
+            else
+              :would_update
+            end
+
+            summary[status] += 1
+            summary[:records] << { line: line_number, status: status, type: type }.merge(finder)
+            next
+          end
+
+          if existing.nil?
+            record = model_class.new(finder.merge(values))
+            if record.save
+              summary[:created] += 1
+              summary[:records] << { line: line_number, status: :created, type: type }.merge(finder)
+            else
+              summary[:failed] += 1
+              summary[:records] << { line: line_number, status: :failed, type: type, message: record.errors.full_messages.to_sentence }.merge(finder)
+            end
+          elsif comparable_values.all? { |key, value| existing.public_send(key) == value }
+            summary[:skipped_existing] += 1
+            summary[:records] << { line: line_number, status: :skipped_existing, type: type }.merge(finder)
+          elsif existing.update(values)
+            summary[:updated] += 1
+            summary[:records] << { line: line_number, status: :updated, type: type }.merge(finder)
+          else
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, message: existing.errors.full_messages.to_sentence }.merge(finder)
+          end
+        rescue JSON::ParserError => e
+          summary[:failed] += 1
+          summary[:records] << { line: line_number, status: :failed, message: "invalid JSON: #{e.message}" }
+        end
+
+        if manifest_data&.dig("record_count").present?
+          expected_count = manifest_data["record_count"].to_i
+          raise ArgumentError, "bundle record count mismatch" if expected_count != line_count
+        end
+
+        if manifest_data&.dig("counts").is_a?(Hash)
+          %w[DatasetDownloadTally FileDownloadTally DayFileDownload].each do |record_type|
+            expected = manifest_data["counts"][record_type]
+            next if expected.nil?
+
+            raise ArgumentError, "manifest count mismatch for #{record_type}" if type_counts[record_type].to_i != expected.to_i
+          end
+        end
+
+        summary[:processed_count] = line_count
+        summary[:expected_record_count] = manifest_data&.dig("record_count")
+        summary[:checksum] = expected_checksum
+        summary[:counts] = {
+          "DatasetDownloadTally" => type_counts["DatasetDownloadTally"].to_i,
+          "FileDownloadTally" => type_counts["FileDownloadTally"].to_i,
+          "DayFileDownload" => type_counts["DayFileDownload"].to_i
+        }
+
+        Migration::RunReportWriter.new(
+          report_path: resolved_report_path,
+          report: {
+            generated_at: Time.current.utc.iso8601,
+            import_type: "download_metrics_bundle",
+            bundle_path: bundle_path.to_s,
+            checksum_path: checksum_path,
+            manifest_path: manifest_path,
+            summary: summary
+          }
+        ).call
+
+        summary
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Updated: #{summary[:updated]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      if dry_run
+        puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
+      end
+      if summary[:counts].is_a?(Hash)
+        puts "DatasetDownloadTally records processed: #{summary[:counts].fetch('DatasetDownloadTally', 0)}"
+        puts "FileDownloadTally records processed: #{summary[:counts].fetch('FileDownloadTally', 0)}"
+        puts "DayFileDownload records processed: #{summary[:counts].fetch('DayFileDownload', 0)}"
+      end
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+  end
+
   namespace :permissions do
     desc "Import legacy curator/deposit-exception permissions bundle into typed records"
     task import_from_dir: :environment do

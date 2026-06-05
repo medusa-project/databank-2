@@ -33,6 +33,7 @@ module Migration
       apply_timestamps!(dataset, payload["created_at"], payload["updated_at"])
 
       sync_nested_records!(dataset)
+      sync_token!(dataset)
 
       status = existing ? :updated : :created
       Result.new(status: status, dataset_key: dataset.key, identifier: dataset.identifier, message: nil)
@@ -270,6 +271,34 @@ module Migration
           source_updated_at: note["updated_at"]
         }
       end
+    end
+
+    def normalized_token
+      token_payload = payload["token"]
+      return nil unless token_payload.is_a?(Hash)
+
+      identifier = token_payload["identifier"].to_s.strip
+      return nil if identifier.blank?
+
+      {
+        identifier: identifier,
+        expires: parse_time(token_payload["expires"]),
+        source_created_at: token_payload["created_at"],
+        source_updated_at: token_payload["updated_at"]
+      }
+    end
+
+    def sync_token!(dataset)
+      token_attrs = normalized_token
+      return if token_attrs.nil?
+
+      source_created_at = token_attrs.delete(:source_created_at)
+      source_updated_at = token_attrs.delete(:source_updated_at)
+
+      token = dataset.token || dataset.build_token(dataset_key: dataset.key)
+      token.assign_attributes(token_attrs)
+      token.save!
+      apply_timestamps!(token, source_created_at, source_updated_at)
     end
 
     def normalized_material_uri(material)

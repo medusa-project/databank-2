@@ -1,7 +1,17 @@
 require "rails_helper"
 
 RSpec.describe "TUS files endpoint", type: :request do
-  let(:token) { Token.create!(dataset_key: "IDB-12345", identifier: Token.generate_auth_token) }
+  let(:dataset) do
+    Dataset.create!(
+      key: "IDB-12345",
+      title: "TUS upload dataset",
+      description: "Dataset for TUS upload tests",
+      owner_uid: "owner-tus-1",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu"
+    )
+  end
+  let(:token) { dataset.create_token!(identifier: Token.generate_auth_token) }
 
   it "creates a tus upload and returns location" do
     post "/files",

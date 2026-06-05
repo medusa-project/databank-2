@@ -28,10 +28,9 @@ class ApiDatasetController < ApplicationController
     token_identifier = ActionController::HttpAuthentication::Token.token_and_options(request)&.first
     render_unauthorized and return if token_identifier.blank?
 
-    scoped_tokens = Token.where(dataset_key: @dataset.key, identifier: token_identifier)
-    return if scoped_tokens.count == 1
+    dataset_token = @dataset.current_token
+    return if dataset_token&.identifier == token_identifier
 
-    scoped_tokens.destroy_all if scoped_tokens.count > 1
     render_unauthorized
   end
 

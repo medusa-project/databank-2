@@ -409,12 +409,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
 
   create_table "tokens", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "dataset_key"
+    t.string "dataset_key", null: false
     t.datetime "expires"
-    t.string "identifier"
+    t.string "identifier", null: false
     t.datetime "updated_at", null: false
-    t.index ["dataset_key"], name: "index_tokens_on_dataset_key"
-    t.index ["identifier"], name: "index_tokens_on_identifier"
+    t.index ["dataset_key"], name: "index_tokens_on_dataset_key", unique: true
+    t.index ["identifier"], name: "index_tokens_on_identifier", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -462,6 +462,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
   add_foreign_key "ingest_response_events", "external_delivery_attempts"
   add_foreign_key "notes", "datasets"
   add_foreign_key "related_materials", "datasets"
+  add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"
 end
