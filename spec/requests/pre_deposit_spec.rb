@@ -30,6 +30,16 @@ RSpec.describe "Pre-deposit considerations", type: :request do
     expect(response.body).to include(new_dataset_path)
   end
 
+  it "shows pre-deposit considerations for a no-deposit user with an admin-managed exception" do
+    ManagedDepositException.create!(email: "exception.user@example.edu")
+    sign_in_as(email: "exception.user@example.edu", name: "Exception User", role: "no_deposit")
+
+    get pre_deposit_datasets_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Pre-Deposit Considerations")
+  end
+
   it "shows the deposit agreement step after pre-deposit" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 

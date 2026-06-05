@@ -9,10 +9,12 @@ Rails.application.routes.draw do
   post "api/dataset/:dataset_key/datafile", to: "api_dataset#datafile", defaults: { format: :json }
 
   # Auth
-  get "login",  to: "sessions#new",     as: :login
-  delete "logout", to: "sessions#destroy", as: :logout
-  post  "role_switch", to: "sessions#role_switch"
+  match "/auth/failure", to: "sessions#unauthorized", as: :unauthorized, via: %i[get post]
   match "/auth/:provider/callback", to: "sessions#create", via: %i[get post]
+  match "/login", to: "sessions#new", as: :login, via: %i[get post]
+  match "/logout", to: "sessions#destroy", as: :logout, via: %i[get post delete]
+  match "/auth/:provider", to: "sessions#new", via: %i[get post]
+  post  "role_switch", to: "sessions#role_switch"
 
   # Core dataset resources
   resources :datasets do
@@ -41,6 +43,7 @@ Rails.application.routes.draw do
     resources :datafiles, param: :web_id, except: %i[index new show] do
       member { get :download }
     end
+    resources :dataset_access_grants, only: %i[create destroy]
     resources :creators,          except: %i[index new show] do
       collection do
         get :orcid_lookup
@@ -55,9 +58,12 @@ Rails.application.routes.draw do
   post "datasets/:id/version", to: "datasets#create_version", as: :version_dataset
 
   get "admin", to: "welcome#admin", as: :admin
+  post "admin/clear_cache", to: "welcome#clear_cache", as: :clear_admin_cache
   patch "admin/update_system_message", to: "welcome#update_system_message", as: :update_admin_system_message
   post "admin/managed_curators", to: "welcome#create_managed_curator", as: :admin_managed_curators
   delete "admin/managed_curators/:id", to: "welcome#destroy_managed_curator", as: :admin_managed_curator
+  post "admin/managed_deposit_exceptions", to: "welcome#create_managed_deposit_exception", as: :admin_managed_deposit_exceptions
+  delete "admin/managed_deposit_exceptions/:id", to: "welcome#destroy_managed_deposit_exception", as: :admin_managed_deposit_exception
 
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
@@ -87,6 +93,7 @@ Rails.application.routes.draw do
   end
 
   get "/metric", to: "metrics#index"
+  get "/admin_metrics", to: "metrics#admin_metrics"
   resources :metrics, only: :index do
     collection do
       get :archived_content_csv

@@ -13,18 +13,16 @@ DataCite registration, set these environment variables:
 If `DATACITE_STRICT=true`, publish raises on DataCite failures instead of
 falling back to generated DOI values.
 
-## Shibboleth Header Callback
+## Shibboleth Authentication
 
-The route `/auth/shibboleth/callback` supports reverse-proxy header mode for
-Shibboleth deployments. If OmniAuth auth hash is not present for this provider,
-the callback reads identity headers:
+Production/demo use `omniauth-shibboleth` with header request mode from
+`config/shibboleth.yml`. Development/test use OmniAuth `developer`.
 
-- `HTTP_EPPN` or `REMOTE_USER` or `HTTP_UID` (required)
-- `HTTP_MAIL` (optional; falls back to uid)
-- `HTTP_DISPLAYNAME` or `HTTP_CN` (optional)
+The login flow matches legacy databank behavior:
 
-This allows stage/production integration behind SSO middleware while keeping
-developer provider auth for local development.
+- `/login` redirects to `/Shibboleth.sso/Login?...` outside development/test.
+- `/auth/:provider/callback` accepts `shibboleth` and `developer` providers.
+- `developer` callback is blocked outside development/test.
 
 ## Ingest Event Publishing (RabbitMQ / Medusa Scaffold)
 
@@ -348,6 +346,13 @@ npm run test:e2e:a11y
 
 Why: catches accessibility issues earlier and supports WCAG-focused work.
 
+Run strategy for Playwright checks:
+
+- for thorough local validation, run only `npm run test:e2e`
+- for quick accessibility-focused feedback, run only `npm run test:e2e:a11y`
+- running both is mostly redundant unless you want a separate, explicit
+	accessibility pass/reporting step
+
 ### 3) Final sanity checks
 
 1. Confirm branch and staged changes
@@ -402,10 +407,25 @@ bundle exec cap demo deploy:check
 bundle exec cap demo deploy:preflight
 ```
 
+3. Runtime config contract checks (local):
+
+```sh
+RAILS_ENV=demo bundle exec rake config:contract_report
+RAILS_ENV=demo bundle exec rake config:contract
+```
+
+For production deploy prep, run the same checks with `RAILS_ENV=production`.
+
 The preflight task validates required executable hooks:
 
 - `~/svc_hooks/shutdown`
 - `~/svc_hooks/boot`
+
+During deploy, Capistrano runs `deploy:config_contract` automatically before
+`assets:precompile`.
+
+See [docs/deploy-config-contract.md](docs/deploy-config-contract.md) for the
+full deploy configuration contract and source-of-truth guidance.
 
 ### 4) Deploy demo
 

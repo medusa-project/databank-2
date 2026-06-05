@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export BUNDLE_GEMFILE="$ROOT_DIR/Gemfile.deploy"
+export BUNDLE_PATH="${BUNDLE_PATH:-$ROOT_DIR/vendor/bundle-deploy}"
+
+exec bundle exec cap "$@"

@@ -58,7 +58,7 @@ class DatasetsController < ApplicationController
     render :confirm_review
   end
    def download_link
-     authorize! :read, @dataset
+     authorize! :view_files, @dataset
      return_hash = {}
 
      if params.key?("web_ids")
@@ -635,8 +635,9 @@ class DatasetsController < ApplicationController
 
     if logged_in?
       owned   = Dataset.where(depositor_email: current_user.email)
+      granted = Dataset.where(id: DatasetAccessGrant.for_email(current_user.email).select(:dataset_id))
       public  = Dataset.publicly_readable_now
-      Dataset.where(id: owned).or(Dataset.where(id: public))
+      Dataset.where(id: owned).or(Dataset.where(id: public)).or(Dataset.where(id: granted)).distinct
     else
       Dataset.publicly_readable_now
     end

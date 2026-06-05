@@ -53,5 +53,26 @@ module.exports = async function globalSetup() {
 
       rt.update!(body: sanitized)
     end
+
+    # Ensure PK sequences are aligned after bundle imports that may set explicit ids.
+    # This prevents duplicate key errors during Playwright create flows.
+    connection = ActiveRecord::Base.connection
+    %w[
+      datasets
+      datafiles
+      creators
+      contributors
+      funders
+      notes
+      related_materials
+      featured_researchers
+      guide_sections
+      guide_items
+      guide_subitems
+    ].each do |table|
+      next unless connection.data_source_exists?(table)
+
+      connection.reset_pk_sequence!(table)
+    end
   `);
 };

@@ -1,20 +1,24 @@
-- content_for :title, "Sign in"
-
-%ilw-content
-  - if Rails.env.development? || Rails.env.test?
-    = form_with url: "/auth/developer/callback", method: :post do |f|
-      .space-y-4
-        %div
-          = f.label :email, "Email", class: "block text-sm font-medium"
-          = f.email_field :email, name: "email", required: true, class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-        %div
-          = f.label :name, "Name", class: "block text-sm font-medium"
-          = f.text_field :name, name: "name", required: true, class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-        %div
-          = f.label :role, "Role (dev only)", class: "block text-sm font-medium"
-          = f.select :role, %w[depositor curator admin], {}, name: "role", class: "mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-        %div
-          = f.submit "Sign in", class: "idb-button-primary"
-  - else
-    %p
-      = link_to "Sign in with NetID", "/auth/shibboleth", class: "idb-button-primary"
+%h1 Login
+%p You can sign in using the developer strategy using any email address and name combination. The role you select will determine the permissions you have in the application.
+%figure
+  %figcaption Pre-loaded Depositors (association with dataset is by email address, which is the identifier field for users)
+  %ul
+    %li Researcher1 - researcher1@mailinator.com
+    %li Researcher2 - researcher2@mailinator.com
+%figure
+  %figcaption Selectable Roles
+  %ul
+    %li Depositor: Can create datasets, and edit created datasets
+    %li Curator: Can do anything to anything
+    %li Guest: Not signed in. Can view info (guides, policies), and released datasets
+    %li No Deposit: Signed in, but not authorized to create datasets.
+%hr
+= form_tag("/auth/developer/callback", method: :post, no_validate: "noValidate") do
+  = label_tag :email, "Email:"
+  = text_field_tag :email
+  = label_tag :name, "Name:"
+  = text_field_tag :name
+  = label_tag :role, "Role:"
+  = select_tag :role, options_for_select([["Depositor", "depositor"], ["Curator", "admin"], ["Guest", "guest"], ["No Deposit", "no_deposit"]]), { prompt: "Please select" }
+  %button{type: "submit"} Sign in
+%hr

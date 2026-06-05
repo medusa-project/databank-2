@@ -9,6 +9,7 @@ class Dataset < ApplicationRecord
   CREATOR_TYPE_INSTITUTION = 1
 
   has_many :datafiles,         dependent: :destroy
+  has_many :dataset_access_grants, -> { order(:email, :access_level) }, dependent: :destroy
   has_many :creators,          -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_many :contributors,      -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_many :funders,           -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy

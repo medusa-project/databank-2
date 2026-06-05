@@ -9,8 +9,10 @@ gem "propshaft"
 # from precompiled platform gems.
 if RUBY_PLATFORM.include?("linux")
   gem "pg", "~> 1.1", force_ruby_platform: true
+  gem "nokogiri", force_ruby_platform: true
 else
   gem "pg", "~> 1.1"
+  gem "nokogiri"
 end
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
@@ -28,8 +30,11 @@ gem "cancancan", "~> 3.6"
 # OmniAuth authentication
 gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
+gem "omniauth-shibboleth"
 # AWS S3 for production file storage
 gem "aws-sdk-s3", "~> 1.0", require: false
+# Required by Active Storage variant generation
+gem "image_processing", "~> 1.2"
 gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", ref: "2523839f6f75b9fc5500c226dd9c4212d7f54691"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"

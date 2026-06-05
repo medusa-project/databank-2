@@ -9,7 +9,7 @@ development:
 # Configure this with credentials and environment variables in production.
 amazon:
   service: S3
-  access_key_id: <%= ENV.fetch("AWS_ACCESS_KEY_ID", "") %>
-  secret_access_key: <%= ENV.fetch("AWS_SECRET_ACCESS_KEY", "") %>
-  region: <%= ENV.fetch("AWS_REGION", "") %>
-  bucket: <%= ENV.fetch("AWS_S3_BUCKET", "") %>
+  access_key_id: <%= Rails.application.credentials.dig(:aws, :access_key_id) || ENV.fetch("AWS_ACCESS_KEY_ID", "") %>
+  secret_access_key: <%= Rails.application.credentials.dig(:aws, :secret_access_key) || ENV.fetch("AWS_SECRET_ACCESS_KEY", "") %>
+  region: <%= Rails.application.credentials.dig(:aws, :region) || ENV.fetch("AWS_REGION", "") %>
+  bucket: <%= Rails.application.credentials.dig(:storage, :active_storage_bucket) || Rails.application.credentials.dig(:storage, :draft_bucket) || ENV.fetch("AWS_S3_BUCKET", "") %>

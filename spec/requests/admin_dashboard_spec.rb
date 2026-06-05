@@ -11,6 +11,7 @@ RSpec.describe "Admin page", type: :request do
 
   before do
     ManagedCurator.delete_all
+    ManagedDepositException.delete_all
     AppSetting.delete_all
     allow(CuratorDirectory).to receive(:core_emails).and_return([ "core.curator@example.edu" ])
   end
@@ -73,6 +74,22 @@ RSpec.describe "Admin page", type: :request do
     expect(response.body).to include("already a core curator")
   end
 
+  it "allows admin to add and remove admin-managed deposit exceptions" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    expect {
+      post admin_managed_deposit_exceptions_path, params: {
+        managed_deposit_exception: { email: "special.depositor@example.edu" }
+      }
+    }.to change(ManagedDepositException, :count).by(1)
+
+    managed_exception = ManagedDepositException.find_by!(email: "special.depositor@example.edu")
+
+    expect {
+      delete admin_managed_deposit_exception_path(managed_exception)
+    }.to change(ManagedDepositException, :count).by(-1)
+  end
+
   it "allows admin to set system-wide message and displays it on welcome page" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
@@ -85,6 +102,18 @@ RSpec.describe "Admin page", type: :request do
 
     get root_path
     expect(response.body).to include("Planned maintenance tonight")
+  end
+
+  it "allows admin to clear the Rails cache" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    allow(Rails.cache).to receive(:clear).and_return(true)
+
+    post clear_admin_cache_path
+
+    expect(Rails.cache).to have_received(:clear)
+    expect(response).to redirect_to(admin_path)
+    follow_redirect!
+    expect(response.body).to include("Rails cache cleared successfully.")
   end
 
   it "allows admin-managed curator email to receive curator-level access" do

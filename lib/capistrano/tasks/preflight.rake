@@ -18,6 +18,17 @@ namespace :deploy do
       end
     end
   end
+
+  desc "Validate runtime configuration contract before assets precompile"
+  task :config_contract do
+    on roles(:app) do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          execute :bundle, :exec, :rake, "config:contract"
+        end
+      end
+    end
+  end
 end
 
 namespace :bundler do
@@ -36,3 +47,4 @@ end
 
 before "deploy:check:linked_files", "deploy:preflight"
 before "bundler:install", "bundler:clean_cache"
+before "deploy:assets:precompile", "deploy:config_contract"

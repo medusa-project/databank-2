@@ -16,11 +16,29 @@ RSpec.describe "Metrics", type: :request do
     Metric::LOCK_KEYS.each { |key| Metric.clear_in_progress(key) }
   end
 
-  it "serves the metrics index without authentication" do
+  it "serves the public metrics dashboard without authentication" do
     get metrics_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Metrics")
+    expect(response.body).to include("Illinois Data Bank Metrics")
+  end
+
+  it "blocks admin metrics for non-admin users" do
+    sign_in_as(email: "depositor@example.edu", name: "Depositor", role: "depositor")
+
+    get admin_metrics_path
+
+    expect(response).to redirect_to(metrics_path)
+    expect(flash[:alert]).to include("not authorized")
+  end
+
+  it "serves admin metrics for admins" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    get admin_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Metrics exports")
   end
 
   it "blocks refresh actions for non-admin users" do
@@ -29,8 +47,7 @@ RSpec.describe "Metrics", type: :request do
     get refresh_dataset_downloads_metrics_path
 
     expect(response).to redirect_to(metrics_path)
-    follow_redirect!
-    expect(response.body).to include("You are not authorized")
+    expect(flash[:alert]).to include("not authorized")
   end
 
   it "enqueues refresh actions for admins" do

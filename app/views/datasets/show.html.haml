@@ -182,7 +182,7 @@
           %summary
             %h2.dataset-show-section-title Files
           .idb-section-body
-            - if @dataset.files_publicly_readable_now? && @dataset.datafiles.count > 1
+            - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1
               .dataset-show-custom-download
                 %h3 Download Selected Files
                 %p= "Create a custom zip file with selected files from this dataset."
@@ -222,7 +222,7 @@
                   .dataset-show-file-row
                     %span.dataset-show-list-primary.dataset-show-file-name= datafile.binary_name.presence || datafile.web_id
                     %span.dataset-show-list-secondary.dataset-show-file-size= file_size.present? ? number_to_human_size(file_size) : "-"
-                    - if can?(:read, @dataset)
+                    - if can?(:view_files, @dataset)
                       %span.dataset-show-download.dataset-show-download-cell= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary dataset-show-download-button"
                   - if datafile.description.present?
                     %span.dataset-show-list-tertiary.dataset-show-file-description= datafile.description

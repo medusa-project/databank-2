@@ -1,63 +1,83 @@
 class SessionsController < ApplicationController
   skip_before_action :authenticate_user!
+  skip_before_action :verify_authenticity_token
 
-  def new; end
+  # Responds to `GET /login`
+  def new
+    unless Rails.env.test? || Rails.env.development?
+      session[:login_return_referer] = request.env["HTTP_REFERER"]
+      redirect_to(shibboleth_login_path(Databank2::Application.shibboleth_host))
+      nil
+    end
+  end
 
+  # Responds to `POST /auth/:provider/callback`
   def create
-    auth = request.env["omniauth.auth"] || shibboleth_auth_from_headers
-    unless auth
-      redirect_to login_path, alert: "Authentication failed."
+    auth = request.env["omniauth.auth"]
+
+    unless auth&.[](:provider) && [ "shibboleth", "developer" ].include?(auth[:provider])
+      unauthorized
+      return
+    end
+
+    if auth[:provider] == "developer" && !(Rails.env.test? || Rails.env.development?)
+      unauthorized
       return
     end
 
     user = User.from_omniauth(auth)
-    session[:user_id] = user.id
-    redirect_to root_path
+
+    if user&.id
+      session[:user_id] = user.id
+      if user.role == "no_deposit" && !user.depositor?
+        redirect_to root_url, notice: "ACCOUNT NOT ELIGABLE TO DEPOSIT DATA.<br/>Faculty, staff, and graduate students are eligable to deposit data in Illinois Data Bank.<br/>Please <a href='/help'>contact the Research Data Service</a> if this determination is in error, or if you have any questions."
+      else
+        redirect_to return_url
+      end
+    else
+      redirect_to root_url
+    end
   end
 
   def destroy
     session[:user_id] = nil
-    redirect_to root_path, notice: "Signed out."
+    redirect_to root_url
   end
 
-  # Development-only role switching
+  # Responds to `GET /auth/failure`
+  def unauthorized
+    redirect_to root_url, notice: "The supplied credentials could not be authenciated."
+  end
+
+  # Responds to `POST /role_switch`
   def role_switch
-    unless Rails.env.development? || Rails.env.test?
-      redirect_back fallback_location: root_path, alert: "Role switching is only available in development and test."
-      return
+    new_role = params["role"]
+    if [ "depositor", "guest", "no_deposit" ].include?(new_role)
+      new_role_text = "new role"
+      case new_role
+      when "depositor"
+        current_user.update_attribute(:role, "depositor") # rubocop:disable Rails/SkipsModelValidations
+        new_role_text = "depositor"
+      when "guest"
+        current_user.update_attribute(:role, "guest") # rubocop:disable Rails/SkipsModelValidations
+        new_role_text = "guest"
+      when "no_deposit"
+        current_user.update_attribute(:role, "no_deposit") # rubocop:disable Rails/SkipsModelValidations
+        new_role_text = "undergrad, or other authenticated but not authorized agent"
+      end
+      redirect_to root_url, notice: "Successfully switched role to #{new_role_text}."
+    else
+      redirect_to root_url, notice: "Unable to switch roles."
     end
-
-    user = current_user
-    if user && params[:role].present?
-      user.update!(role: params[:role])
-      session[:user_id] = user.id
-    end
-    redirect_back fallback_location: root_path
   end
 
-  private
+  protected
 
-  def shibboleth_auth_from_headers
-    return nil unless params[:provider] == "shibboleth"
+  def return_url
+    session[:login_return_uri] || session[:login_return_referer] || root_path
+  end
 
-    uid = request.env["HTTP_EPPN"].presence ||
-          request.env["REMOTE_USER"].presence ||
-          request.env["HTTP_UID"].presence
-    email = request.env["HTTP_MAIL"].presence || uid
-    name = request.env["HTTP_DISPLAYNAME"].presence ||
-           request.env["HTTP_CN"].presence ||
-           uid
-
-    return nil if uid.blank? || email.blank?
-
-    OmniAuth::AuthHash.new(
-      provider: "shibboleth",
-      uid: uid,
-      info: {
-        email: email,
-        name: name,
-        nickname: uid
-      }
-    )
+  def shibboleth_login_path(host)
+    "/Shibboleth.sso/Login?target=https://#{host}/auth/shibboleth/callback"
   end
 end

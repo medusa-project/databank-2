@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+# Deploy-only bundle for running Capistrano from local macOS without
+# installing the full application bundle.
+gem "capistrano", "~> 3.20"
+gem "capistrano-bundler", "~> 2.2"
+gem "capistrano-passenger", "~> 0.2.1"
+gem "capistrano-rails", "~> 1.7"
+gem "capistrano-rbenv", "~> 2.2"
+gem "airbrussh", "~> 1.6"

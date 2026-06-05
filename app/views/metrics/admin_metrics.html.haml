@@ -1,4 +1,4 @@
-- content_for :title, "Metrics"
+- content_for :title, "Admin metrics"
 - modified_times = @modified_times || {}
 - refresh_status = @refresh_status || {}
 - metrics_rows = @metrics_rows || []
@@ -8,7 +8,7 @@
     %h1.dataset-show-section-title Metrics
 
     %p
-      = link_to "Metrics Dashboard", "/metrics_dashboard.html", class: "idb-button-primary"
+      = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
 
     %ul.dataset-show-list
       - metrics_rows.each do |row|

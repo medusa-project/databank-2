@@ -6,12 +6,14 @@
     %ul
       - if logged_in?
         %li
-          %a{href: datasets_path}= current_user.name
+          %a{href: "/datasets?editor=#{current_user.username}"}= current_user.name
         %li
-          = link_to "Sign out", logout_path, data: { turbo_method: :delete }
+          %a{href: "/logout"} Log out
       - else
         %li
-          %a{href: login_path} Sign in
+          %a{href: "/"} Welcome
+        %li
+          %a{href: "/login"} Log in
   %il-header-nav{slot: "navigation"}
     %ul
       %li
