@@ -16,9 +16,18 @@ RSpec.describe "cutover tasks" do
     smoke_task.reenable
   end
 
-  it "runs migration imports in required order" do
+  it "runs migration imports in required order using latest timestamped subdirs" do
     bundle_root = Rails.root.join("tmp", "cutover_orchestration")
     FileUtils.mkdir_p(bundle_root)
+
+    # Create one timestamped subdir per step matching each dir_prefix.
+    # CUTOVER_IMPORT_STEPS is a top-level constant defined inside the Rake namespace block.
+    step_dirs = {}
+    CUTOVER_IMPORT_STEPS.each do |step|
+      subdir = bundle_root.join("#{step[:dir_prefix]}20260605T120000Z")
+      FileUtils.mkdir_p(subdir)
+      step_dirs[step[:key]] = subdir.to_s
+    end
 
     expected_order = [
       "migration:bundle:import_from_dir",
@@ -41,7 +50,6 @@ RSpec.describe "cutover tasks" do
           task: task_name,
           dir: ENV["DIR"],
           bundle_file: ENV["BUNDLE_FILE"],
-          report_file: ENV["REPORT_FILE"],
           dry_run: ENV["DRY_RUN"]
         }
       end
@@ -58,7 +66,11 @@ RSpec.describe "cutover tasks" do
     import_all_task.invoke
 
     expect(invocations.map { |call| call[:task] }).to eq(expected_order)
-    expect(invocations).to all(include(dir: bundle_root.to_s, dry_run: "true"))
+    # Each step's DIR should point into the correct timestamped subdir, not the root
+    CUTOVER_IMPORT_STEPS.each_with_index do |step, index|
+      expect(invocations[index][:dir]).to eq(step_dirs[step[:key]])
+    end
+    expect(invocations).to all(include(dry_run: "true"))
   ensure
     ENV.delete("BUNDLE_ROOT")
     ENV.delete("DRY_RUN")
