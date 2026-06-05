@@ -7,6 +7,8 @@
       = link_to "Manage Researcher Spotlights", featured_researchers_path, class: "idb-button-primary"
     %p
       = link_to "External Delivery Audit", admin_external_delivery_attempts_path, class: "idb-button-primary"
+    %p
+      = button_to "Clear Rails Cache", clear_admin_cache_path, method: :post, class: "idb-button-danger", form: { data: { turbo_confirm: "Clear the Rails cache?" } }
 
   %section.idb-section-card
     %h2.idb-section-title Manage Service Message

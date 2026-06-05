@@ -1,6 +1,6 @@
 class WelcomeController < ApplicationController
   skip_before_action :authenticate_user!
-  before_action :require_admin!, only: %i[admin update_system_message create_managed_curator destroy_managed_curator create_managed_deposit_exception destroy_managed_deposit_exception]
+  before_action :require_admin!, only: %i[admin clear_cache update_system_message create_managed_curator destroy_managed_curator create_managed_deposit_exception destroy_managed_deposit_exception]
   before_action :load_admin_page_data, only: :admin
 
   def index
@@ -8,6 +8,13 @@ class WelcomeController < ApplicationController
   end
 
   def admin; end
+
+  def clear_cache
+    Rails.cache.clear
+    redirect_to admin_path, notice: "Rails cache cleared successfully."
+  rescue StandardError => e
+    redirect_to admin_path, alert: "Rails cache could not be cleared: #{e.message}"
+  end
 
   def update_system_message
     AppSetting.system_message = admin_message_params[:system_message]

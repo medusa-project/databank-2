@@ -104,6 +104,18 @@ RSpec.describe "Admin page", type: :request do
     expect(response.body).to include("Planned maintenance tonight")
   end
 
+  it "allows admin to clear the Rails cache" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    allow(Rails.cache).to receive(:clear).and_return(true)
+
+    post clear_admin_cache_path
+
+    expect(Rails.cache).to have_received(:clear)
+    expect(response).to redirect_to(admin_path)
+    follow_redirect!
+    expect(response.body).to include("Rails cache cleared successfully.")
+  end
+
   it "allows admin-managed curator email to receive curator-level access" do
     ManagedCurator.create!(email: "managed.curator@example.edu")
     source = Dataset.create!(

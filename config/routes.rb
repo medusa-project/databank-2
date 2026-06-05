@@ -58,6 +58,7 @@ Rails.application.routes.draw do
   post "datasets/:id/version", to: "datasets#create_version", as: :version_dataset
 
   get "admin", to: "welcome#admin", as: :admin
+  post "admin/clear_cache", to: "welcome#clear_cache", as: :clear_admin_cache
   patch "admin/update_system_message", to: "welcome#update_system_message", as: :update_admin_system_message
   post "admin/managed_curators", to: "welcome#create_managed_curator", as: :admin_managed_curators
   delete "admin/managed_curators/:id", to: "welcome#destroy_managed_curator", as: :admin_managed_curator
