@@ -15,5 +15,14 @@ class Ability
     can %i[read update destroy publish], Dataset do |dataset|
       dataset.depositor_email == user.email
     end
+
+    # Creators have read and edit access to their datasets
+    can :read, Dataset do |dataset|
+      user.email.present? && Creator.exists?(dataset_id: dataset.id, email: user.email.downcase)
+    end
+
+    can :update, Dataset do |dataset|
+      user.email.present? && Creator.exists?(dataset_id: dataset.id, email: user.email.downcase)
+    end
   end
 end

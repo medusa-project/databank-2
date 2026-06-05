@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_01_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -97,6 +97,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_01_233000) do
     t.integer "row_position"
     t.integer "type_of"
     t.datetime "updated_at", null: false
+    t.index ["dataset_id", "email"], name: "index_creators_on_dataset_id_and_email"
     t.index ["dataset_id"], name: "index_creators_on_dataset_id"
   end
 
