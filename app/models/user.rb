@@ -34,7 +34,10 @@ class User < ApplicationRecord
   end
 
   def depositor?
-    role == "depositor"
+    return true if role == "depositor"
+    return false if email.blank?
+
+    ManagedDepositException.exists?(email: email.strip.downcase)
   end
 
   def self.create_with_omniauth(auth)

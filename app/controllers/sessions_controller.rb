@@ -29,7 +29,7 @@ class SessionsController < ApplicationController
 
     if user&.id
       session[:user_id] = user.id
-      if user.role == "no_deposit"
+      if user.role == "no_deposit" && !user.depositor?
         redirect_to root_url, notice: "ACCOUNT NOT ELIGABLE TO DEPOSIT DATA.<br/>Faculty, staff, and graduate students are eligable to deposit data in Illinois Data Bank.<br/>Please <a href='/help'>contact the Research Data Service</a> if this determination is in error, or if you have any questions."
       else
         redirect_to return_url

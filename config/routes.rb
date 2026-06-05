@@ -60,6 +60,8 @@ Rails.application.routes.draw do
   patch "admin/update_system_message", to: "welcome#update_system_message", as: :update_admin_system_message
   post "admin/managed_curators", to: "welcome#create_managed_curator", as: :admin_managed_curators
   delete "admin/managed_curators/:id", to: "welcome#destroy_managed_curator", as: :admin_managed_curator
+  post "admin/managed_deposit_exceptions", to: "welcome#create_managed_deposit_exception", as: :admin_managed_deposit_exceptions
+  delete "admin/managed_deposit_exceptions/:id", to: "welcome#destroy_managed_deposit_exception", as: :admin_managed_deposit_exception
 
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt

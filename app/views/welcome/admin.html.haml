@@ -51,6 +51,33 @@
       %p No admin-managed curators configured.
 
   %section.idb-section-card
+    %h2.idb-section-title Manage Deposit Exceptions
+    %p
+      Add users who should be allowed to deposit even when authentication assigns them a no-deposit role.
+
+    = form_with url: admin_managed_deposit_exceptions_path, method: :post, scope: :managed_deposit_exception, local: true do |f|
+      %div
+        = f.label :email, "Deposit exception email"
+        = f.email_field :email, required: true, autocomplete: "email"
+      %p
+        = f.submit "Add Deposit Exception", class: "idb-button-primary"
+
+    - if @managed_deposit_exceptions.any?
+      %table.idb-compact-table
+        %thead
+          %tr
+            %th Email
+            %th Actions
+        %tbody
+          - @managed_deposit_exceptions.each do |managed_exception|
+            %tr
+              %td= managed_exception.email
+              %td
+                = button_to "Remove", admin_managed_deposit_exception_path(managed_exception), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Remove #{managed_exception.email} from admin-managed deposit exceptions?" } }
+    - else
+      %p No admin-managed deposit exceptions configured.
+
+  %section.idb-section-card
     %h2.idb-section-title File Audit Report
     %p Generate a CSV audit of all dataset files and storage status.
     = form_with url: request_file_audit_curator_reports_path, method: :post, local: true do |f|

@@ -24,4 +24,19 @@ RSpec.describe "Sessions Shibboleth", type: :request do
     follow_redirect!
     expect(response.body).to include("The supplied credentials could not be authenciated.")
   end
+
+  it "does not show no-deposit warning when user has an admin-managed deposit exception" do
+    ManagedDepositException.create!(email: "special.depositor@example.edu")
+
+    post "/auth/developer/callback", params: {
+      name: "Exception User",
+      email: "special.depositor@example.edu",
+      role: "no_deposit"
+    }
+
+    expect(response).to redirect_to(root_path)
+
+    follow_redirect!
+    expect(response.body).not_to include("ACCOUNT NOT ELIGABLE TO DEPOSIT DATA")
+  end
 end
