@@ -4,7 +4,7 @@ class ExternalDeliveryAttemptsController < ApplicationController
   PER_PAGE_DEFAULT = 50
   PER_PAGE_MAX = 200
   CSV_EXPORT_MAX = 5000
-  SORTABLE_COLUMNS = %w[created_at integration event_name status attempt].freeze
+  SORTABLE_COLUMNS = %w[created_at integration event_name status response_status response_received_at attempt].freeze
 
   helper_method :sort_column, :sort_direction, :next_direction_for, :query_params_for
 
@@ -14,10 +14,12 @@ class ExternalDeliveryAttemptsController < ApplicationController
     @dataset_key = params[:dataset_key].to_s.strip
     @integration = normalize_integration(params[:integration])
     @status = normalize_status(params[:status])
+    @response_status = normalize_response_status(params[:response_status])
     @event_name = params[:event_name].to_s.strip
 
     @integrations = ExternalDeliveryAttempt.integrations.keys
     @statuses = ExternalDeliveryAttempt.statuses.keys
+    @response_statuses = ExternalDeliveryAttempt.response_statuses.keys
 
     base_attempts = filtered_attempts_scope
 
@@ -28,6 +30,7 @@ class ExternalDeliveryAttemptsController < ApplicationController
         @page = page
         @total_pages = [ (@total_count.to_f / @per_page).ceil, 1 ].max
         @attempts = base_attempts.limit(@per_page).offset((@page - 1) * @per_page)
+        @orphaned_ingest_responses = IngestResponseEvent.unresolved_orphaned.order(received_at: :desc).limit(20)
       end
 
       format.csv do
@@ -48,6 +51,11 @@ class ExternalDeliveryAttemptsController < ApplicationController
 
     unless attempt.status == "failed"
       redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Only failed attempts can be replayed."
+      return
+    end
+
+    unless replay_allowed?(attempt, force_replay: force_replay?)
+      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: replay_block_message(attempt)
       return
     end
 
@@ -73,10 +81,16 @@ class ExternalDeliveryAttemptsController < ApplicationController
 
     replayed = 0
     skipped = 0
+    blocked = 0
 
     attempts.each do |attempt|
       if attempt.status != "failed"
         skipped += 1
+        next
+      end
+
+      unless replay_allowed?(attempt, force_replay: force_replay?)
+        blocked += 1
         next
       end
 
@@ -90,10 +104,26 @@ class ExternalDeliveryAttemptsController < ApplicationController
     if replayed.positive?
       message = "Replayed #{replayed} selected failed attempt(s)."
       message += " Skipped #{skipped}." if skipped.positive?
+      message += " Blocked #{blocked} by ingest response guardrails." if blocked.positive?
       redirect_back fallback_location: admin_external_delivery_attempts_path, notice: message
     else
-      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed."
+      if blocked.positive? && skipped.zero?
+        redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed because ingest response guardrails blocked #{blocked}."
+      else
+        redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed."
+      end
     end
+  end
+
+  def acknowledge_orphan_response
+    authorize! :manage, Dataset
+
+    event = IngestResponseEvent.unresolved_orphaned.find(params[:id])
+    event.acknowledge!(by_email: current_user&.email, note: params[:acknowledged_note])
+
+    redirect_back fallback_location: admin_external_delivery_attempts_path, notice: "Orphaned ingest response acknowledged."
+  rescue ActiveRecord::RecordNotFound
+    redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Orphaned ingest response could not be found."
   end
 
   private
@@ -110,6 +140,14 @@ class ExternalDeliveryAttemptsController < ApplicationController
     key = value.to_s.strip
     return nil if key.blank?
     return key if ExternalDeliveryAttempt.statuses.key?(key)
+
+    nil
+  end
+
+  def normalize_response_status(value)
+    key = value.to_s.strip
+    return nil if key.blank?
+    return key if ExternalDeliveryAttempt.response_statuses.key?(key)
 
     nil
   end
@@ -150,6 +188,7 @@ class ExternalDeliveryAttemptsController < ApplicationController
       dataset_key: @dataset_key,
       integration: @integration,
       status: @status,
+      response_status: @response_status,
       event_name: @event_name,
       per_page: @per_page,
       sort: sort_column,
@@ -169,13 +208,14 @@ class ExternalDeliveryAttemptsController < ApplicationController
 
     attempts = attempts.where(integration: @integration) if @integration.present?
     attempts = attempts.where(status: @status) if @status.present?
+    attempts = attempts.where(response_status: @response_status) if @response_status.present?
     attempts = attempts.where(event_name: @event_name) if @event_name.present?
     attempts
   end
 
   def generate_csv(attempts)
     CSV.generate(headers: true) do |csv|
-      csv << [ "created_at", "dataset_key", "integration", "event_name", "status", "attempt", "idempotency_key", "error_class", "error_message" ]
+      csv << [ "created_at", "dataset_key", "integration", "event_name", "status", "response_status", "response_received_at", "response_uuid", "response_target_key", "attempt", "idempotency_key", "correlation_key", "error_class", "error_message" ]
 
       attempts.each do |attempt|
         csv << [
@@ -184,8 +224,13 @@ class ExternalDeliveryAttemptsController < ApplicationController
           attempt.integration,
           attempt.event_name,
           attempt.status,
+          attempt.response_status,
+          attempt.response_received_at&.utc&.iso8601,
+          attempt.response_uuid,
+          attempt.response_target_key,
           attempt.attempt,
           attempt.idempotency_key,
+          attempt.correlation_key,
           attempt.error_class,
           attempt.error_message
         ]
@@ -213,5 +258,24 @@ class ExternalDeliveryAttemptsController < ApplicationController
 
   def selected_attempt_ids
     Array(params[:attempt_ids]).map(&:to_i).select(&:positive?).uniq
+  end
+
+  def force_replay?
+    ActiveModel::Type::Boolean.new.cast(params[:force_replay])
+  end
+
+  def replay_allowed?(attempt, force_replay:)
+    return true unless attempt.integration == "ingest"
+    return true if force_replay
+
+    !attempt.response_succeeded?
+  end
+
+  def replay_block_message(attempt)
+    if attempt.integration == "ingest" && attempt.response_succeeded?
+      "Replay blocked: ingest response is already acknowledged as succeeded. Use force replay to override."
+    else
+      "Replay blocked by delivery guardrails."
+    end
   end
 end

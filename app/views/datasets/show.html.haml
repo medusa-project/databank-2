@@ -271,6 +271,18 @@
           %p
             = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
 
+          - if @ingest_health_summary.present?
+            %h3 Ingest Response Health
+            %p
+              %strong= "Status: #{@ingest_health_summary[:state].titleize}"
+            %p= @ingest_health_summary[:freshness_message]
+            %p= "Orphaned responses in last #{@ingest_health_summary[:orphan_lookback_minutes]} minute(s): #{@ingest_health_summary[:orphan_count]}"
+            - if @ingest_health_summary[:alerts].any?
+              %ul.dataset-show-list
+                - @ingest_health_summary[:alerts].each do |alert|
+                  %li
+                    %span.dataset-show-list-tertiary= alert
+
           - if @latest_delivery_attempts.present?
             %ul.dataset-show-list
               - @latest_delivery_attempts.each do |integration, attempt|
@@ -290,7 +302,10 @@
               = total_failed
             %p
               = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
+              = button_to "Force Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all", force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures for all integrations?" } }
             - @failed_delivery_counts.each do |integration, count|
               %p
                 = "#{integration} failures: #{count}"
                 = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"
+                - if integration.to_s == "ingest"
+                  = button_to "Force Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration, force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures?" } }

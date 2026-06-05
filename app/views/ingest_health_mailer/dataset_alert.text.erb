@@ -1,0 +1,14 @@
+Ingest health alert for <%= @dataset.key %>
+
+Dataset: <%= @dataset.title %> (<%= @dataset.key %>)
+Status: <%= @summary[:state] %>
+
+<%= @summary[:freshness_message] %>
+Orphaned responses in last <%= @summary[:orphan_lookback_minutes] %> minute(s): <%= @summary[:orphan_count] %>
+
+Alerts:
+<% @summary[:alerts].each do |alert| %>
+- <%= alert %>
+<% end %>
+
+Delivery audit: <%= admin_external_delivery_attempts_url(dataset_key: @dataset.key) %>

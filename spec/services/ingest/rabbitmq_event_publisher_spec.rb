@@ -50,11 +50,11 @@ RSpec.describe Ingest::RabbitmqEventPublisher, type: :service do
     stub_const("Bunny", bunny_class)
     allow(Bunny).to receive(:new).and_return(fake_session)
 
-    result = described_class.new.publish_dataset_published(dataset)
+    result = described_class.new.publish_dataset_published(dataset, correlation_key: "corr-123")
 
     expect(result).to eq(true)
     expect(fake_exchange).to have_received(:publish).with(
-      include('"event":"dataset.published"', '"key":"IDB-7333333"'),
+      include('"event":"dataset.published"', '"key":"IDB-7333333"', '"correlation_key":"corr-123"'),
       hash_including(
         routing_key: "dataset.published",
         content_type: "application/json",

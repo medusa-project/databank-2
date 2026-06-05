@@ -19,13 +19,15 @@ RSpec.describe Ingest::PublishDatasetEventJob, type: :job do
     allow(Ingest::RabbitmqEventPublisher).to receive(:new).and_return(publisher)
 
     expect { described_class.perform_now(dataset.id) }.not_to raise_error
-    expect(publisher).to have_received(:publish_dataset_published).with(dataset)
+    expected_key = "dataset.published:#{dataset.id}:#{dataset.published_at.utc.iso8601}"
+    expect(publisher).to have_received(:publish_dataset_published).with(dataset, correlation_key: expected_key)
 
     attempt = ExternalDeliveryAttempt.order(:created_at).last
     expect(attempt.dataset_id).to eq(dataset.id)
     expect(attempt.integration).to eq("ingest")
     expect(attempt.status).to eq("succeeded")
     expect(attempt.idempotency_key).to include("dataset.published:")
+    expect(attempt.correlation_key).to eq(expected_key)
   end
 
   it "enqueues a retry when publisher returns false" do

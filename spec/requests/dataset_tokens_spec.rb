@@ -44,8 +44,8 @@ RSpec.describe "Dataset token endpoints", type: :request do
     new_identifier = JSON.parse(response.body).fetch("token")
 
     expect(new_identifier).not_to eq(old_identifier)
+    expect(dataset.reload.token&.identifier).to eq(new_identifier)
     expect(Token.where(dataset_key: dataset.key).count).to eq(1)
-    expect(Token.find_by(dataset_key: dataset.key)&.identifier).to eq(new_identifier)
   end
 
   it "blocks users who cannot edit the dataset" do

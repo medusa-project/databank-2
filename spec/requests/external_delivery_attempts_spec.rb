@@ -226,6 +226,50 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(ingest_jobs.map { |job| job[:args] }).to include([ dataset_one.id, attempt.idempotency_key ])
   end
 
+  it "blocks replay of ingest attempt already acknowledged by response unless forced" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      response_status: :succeeded,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:guardrail-single"
+    )
+
+    post replay_admin_external_delivery_attempt_path(attempt)
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("Replay blocked: ingest response is already acknowledged as succeeded")
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs).to be_empty
+  end
+
+  it "allows forced replay of ingest attempt acknowledged by response" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      response_status: :succeeded,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:guardrail-force"
+    )
+
+    post replay_admin_external_delivery_attempt_path(attempt), params: { force_replay: true }
+
+    expect(response).to have_http_status(:redirect)
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs.map { |job| job[:args] }).to include([ dataset_one.id, attempt.idempotency_key ])
+  end
+
   it "does not replay non-failed attempts" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
@@ -289,6 +333,31 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(globus_jobs.map { |job| job[:args] }).to include([ dataset_one.id, failed_globus.idempotency_key ])
   end
 
+  it "blocks bulk replay for response-acknowledged ingest attempts unless forced" do
+    clear_enqueued_jobs
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    blocked_attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :failed,
+      response_status: :succeeded,
+      attempt: 1,
+      idempotency_key: "dataset.published:#{dataset_one.id}:bulk-guardrail"
+    )
+
+    post replay_selected_admin_external_delivery_attempts_path, params: {
+      attempt_ids: [ blocked_attempt.id ]
+    }
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("No selected attempts were replayed because ingest response guardrails blocked")
+    ingest_jobs = enqueued_jobs.select { |job| job[:job] == Ingest::PublishDatasetEventJob }
+    expect(ingest_jobs).to be_empty
+  end
+
   it "alerts when no attempts are selected for bulk replay" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
@@ -297,6 +366,54 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(response).to have_http_status(:redirect)
     follow_redirect!
     expect(response.body).to include("No attempts were selected for replay.")
+  end
+
+  it "shows orphaned ingest responses on the audit page" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    IngestResponseEvent.create!(
+      status: :unmatched,
+      integration: "ingest",
+      correlation_key: "missing-correlation",
+      received_at: Time.current,
+      payload: { status: "ok" },
+      raw_payload: "{\"status\":\"ok\"}",
+      error_message: "No matching delivery attempt"
+    )
+
+    get admin_external_delivery_attempts_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Orphaned Ingest Responses")
+    expect(response.body).to include("missing-correlation")
+    expect(response.body).to include("No matching delivery attempt")
+  end
+
+  it "allows admin to acknowledge orphaned ingest responses" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    orphan_event = IngestResponseEvent.create!(
+      status: :unmatched,
+      integration: "ingest",
+      correlation_key: "dataset.published:#{dataset_one.id}:orphan-ack",
+      received_at: Time.current,
+      payload: { status: "ok" },
+      raw_payload: "{\"status\":\"ok\"}",
+      error_message: "No matching delivery attempt"
+    )
+
+    post acknowledge_admin_ingest_response_event_path(orphan_event)
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("Orphaned ingest response acknowledged.")
+
+    orphan_event.reload
+    expect(orphan_event.acknowledged_at).to be_present
+    expect(orphan_event.acknowledged_by_email).to eq("admin@example.edu")
+
+    get admin_external_delivery_attempts_path
+    expect(response.body).not_to include("dataset.published:#{dataset_one.id}:orphan-ack")
   end
 
   def sign_in_as(email:, name:, role:)

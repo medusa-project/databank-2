@@ -35,6 +35,12 @@ RSpec.describe Migration::BundleImportService do
       "owner_uid" => "legacy-owner",
       "depositor_name" => "Legacy User",
       "depositor_email" => "legacy@example.edu",
+      "token" => {
+        "identifier" => "legacy-upload-token",
+        "expires" => "2026-06-02T12:00:00Z",
+        "created_at" => "2026-06-01T08:00:00Z",
+        "updated_at" => "2026-06-01T09:00:00Z"
+      },
       "notes" => [
         {
           "body" => "Curator migration note",
@@ -54,6 +60,7 @@ RSpec.describe Migration::BundleImportService do
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset.depositor_name).to eq("Legacy User")
     expect(dataset.depositor_email).to eq("legacy@example.edu")
+    expect(dataset.token&.identifier).to eq("legacy-upload-token")
     expect(dataset.notes.count).to eq(1)
     expect(dataset.notes.first.body).to eq("Curator migration note")
     expect(dataset.notes.first.author).to eq("curator@example.edu")
@@ -93,6 +100,43 @@ RSpec.describe Migration::BundleImportService do
     dataset.reload
     expect(dataset.notes.pluck(:body)).to eq([ "Imported replacement note" ])
     expect(dataset.notes.pluck(:author)).to eq([ "new-curator@example.edu" ])
+  end
+
+  it "updates the single owned token when re-importing a dataset bundle" do
+    dataset = Dataset.create!(
+      key: "IDB-8888888",
+      identifier: "10.13012/B2IDB-8888888_V1",
+      title: "Original",
+      owner_uid: "legacy-owner",
+      depositor_name: "Legacy User",
+      depositor_email: "legacy@example.edu"
+    )
+    dataset.create_token!(identifier: "old-token", expires: Time.zone.parse("2026-06-01T12:00:00Z"))
+
+    payload = {
+      "title" => "Updated Bundle Dataset",
+      "identifier" => "10.13012/B2IDB-8888888_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-8888888.json",
+      "owner_uid" => "legacy-owner",
+      "depositor_name" => "Legacy User",
+      "depositor_email" => "legacy@example.edu",
+      "token" => {
+        "identifier" => "replacement-token",
+        "expires" => "2026-06-05T12:00:00Z",
+        "created_at" => "2026-06-05T10:00:00Z",
+        "updated_at" => "2026-06-05T11:00:00Z"
+      }
+    }
+
+    File.write(bundle_path, "#{payload.to_json}\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s, overwrite: true).call
+
+    expect(summary[:updated]).to eq(1)
+    dataset.reload
+    expect(dataset.token.identifier).to eq("replacement-token")
+    expect(dataset.token.expires).to eq(Time.zone.parse("2026-06-05T12:00:00Z"))
+    expect(Token.where(dataset_key: dataset.key).count).to eq(1)
   end
 
   it "fails when checksum does not match" do

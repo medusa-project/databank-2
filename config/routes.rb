@@ -68,6 +68,7 @@ Rails.application.routes.draw do
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts
+  post "admin/ingest_response_events/:id/acknowledge", to: "external_delivery_attempts#acknowledge_orphan_response", as: :acknowledge_admin_ingest_response_event
 
   namespace :guide do
     resources :sections, except: :show
@@ -116,6 +117,7 @@ Rails.application.routes.draw do
 
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples
+  get "/curator_guide", to: "welcome#curator_guide", as: :curator_guide
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides

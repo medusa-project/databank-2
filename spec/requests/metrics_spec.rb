@@ -41,6 +41,15 @@ RSpec.describe "Metrics", type: :request do
     expect(response.body).to include("Metrics exports")
   end
 
+  it "serves admin metrics for curators" do
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    get admin_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Metrics exports")
+  end
+
   it "blocks refresh actions for non-admin users" do
     sign_in_as(email: "depositor@example.edu", name: "Depositor", role: "depositor")
 
@@ -52,6 +61,16 @@ RSpec.describe "Metrics", type: :request do
 
   it "enqueues refresh actions for admins" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    expect do
+      get refresh_dataset_downloads_metrics_path
+    end.to have_enqueued_job(MetricRefreshJob).with(:dataset_downloads_json)
+
+    expect(response).to redirect_to(metrics_path)
+  end
+
+  it "enqueues refresh actions for curators" do
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     expect do
       get refresh_dataset_downloads_metrics_path

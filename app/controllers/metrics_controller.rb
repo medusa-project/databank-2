@@ -10,7 +10,7 @@ class MetricsController < ApplicationController
     related_materials_csv
   ]
 
-  before_action :require_admin!, only: %i[
+  before_action :require_admin_or_curator!, only: %i[
     admin_metrics
     refresh_dataset_downloads
     refresh_datafile_downloads
@@ -174,8 +174,8 @@ class MetricsController < ApplicationController
     send_file file_path, type: type, disposition: "inline"
   end
 
-  def require_admin!
-    return if current_user&.admin?
+  def require_admin_or_curator!
+    return if current_user&.admin? || current_user&.curator?
 
     redirect_to metrics_path, alert: "You are not authorized to perform this action."
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -207,6 +207,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
 
   create_table "external_delivery_attempts", force: :cascade do |t|
     t.integer "attempt", default: 1, null: false
+    t.string "correlation_key"
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
     t.jsonb "details", default: {}, null: false
@@ -216,11 +217,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
     t.string "idempotency_key"
     t.string "integration", null: false
     t.string "job_id"
+    t.jsonb "response_payload", default: {}, null: false
+    t.datetime "response_received_at"
+    t.string "response_staging_key"
+    t.string "response_status"
+    t.string "response_target_key"
+    t.string "response_uuid"
     t.string "status", null: false
     t.datetime "updated_at", null: false
     t.index ["dataset_id", "integration", "created_at"], name: "index_delivery_attempts_on_dataset_integration_created"
     t.index ["dataset_id", "integration", "event_name", "idempotency_key", "status"], name: "index_delivery_attempts_idempotency_status"
     t.index ["dataset_id"], name: "index_external_delivery_attempts_on_dataset_id"
+    t.index ["integration", "correlation_key"], name: "index_delivery_attempts_on_integration_correlation"
+    t.index ["integration", "response_status", "created_at"], name: "index_delivery_attempts_on_integration_response_status_created"
     t.index ["integration"], name: "index_external_delivery_attempts_on_integration"
     t.index ["status"], name: "index_external_delivery_attempts_on_status"
   end
@@ -305,6 +314,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
     t.index ["item_id"], name: "index_guide_subitems_on_item_id"
   end
 
+  create_table "ingest_response_events", force: :cascade do |t|
+    t.datetime "acknowledged_at"
+    t.string "acknowledged_by_email"
+    t.text "acknowledged_note"
+    t.string "correlation_key"
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.bigint "external_delivery_attempt_id"
+    t.string "integration", default: "ingest", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.text "raw_payload"
+    t.datetime "received_at", null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["acknowledged_at"], name: "index_ingest_response_events_on_acknowledged_at"
+    t.index ["correlation_key"], name: "index_ingest_response_events_on_correlation_key"
+    t.index ["external_delivery_attempt_id"], name: "index_ingest_response_events_on_external_delivery_attempt_id"
+    t.index ["integration", "status", "received_at"], name: "index_ingest_response_events_on_integration_status_received"
+    t.index ["status"], name: "index_ingest_response_events_on_status"
+  end
+
   create_table "managed_curators", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
@@ -379,12 +409,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
 
   create_table "tokens", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "dataset_key"
+    t.string "dataset_key", null: false
     t.datetime "expires"
-    t.string "identifier"
+    t.string "identifier", null: false
     t.datetime "updated_at", null: false
-    t.index ["dataset_key"], name: "index_tokens_on_dataset_key"
-    t.index ["identifier"], name: "index_tokens_on_identifier"
+    t.index ["dataset_key"], name: "index_tokens_on_dataset_key", unique: true
+    t.index ["identifier"], name: "index_tokens_on_identifier", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -429,8 +459,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
   add_foreign_key "funders", "datasets"
   add_foreign_key "guide_items", "guide_sections", column: "section_id"
   add_foreign_key "guide_subitems", "guide_items", column: "item_id"
+  add_foreign_key "ingest_response_events", "external_delivery_attempts"
   add_foreign_key "notes", "datasets"
   add_foreign_key "related_materials", "datasets"
+  add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"
 end

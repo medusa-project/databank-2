@@ -1,0 +1,79 @@
+- content_for :title, "Curator Guide"
+
+%section.idb-section-card
+  %h1.idb-section-title Illinois Data Bank Curator Guide
+  %p
+    This guide describes the current curator-facing interface in Illinois Data Bank.
+    It focuses on where work happens in the app and what each screen is used for.
+  %p
+    Curator access is role-based. When you are signed in with curator access, you can review,
+    edit, publish, report on, and troubleshoot records across the application.
+
+%section.idb-section-card
+  %h2.idb-section-title Start From the Dataset Record
+  %p
+    Most curation work starts on a dataset page. Use the main dataset views to inspect
+    metadata, review file listings, open notes, and move into publishing or version work.
+  %ul
+    %li Open a dataset record to see its publication state, DOI details, creators, access settings, notes, and related materials in one place.
+    %li Use Edit actions on the dataset to move through the metadata forms and save curator-approved changes.
+    %li Use the notes area to capture dataset-specific context that should stay with the record inside the application.
+
+%section.idb-section-card
+  %h2.idb-section-title Review Metadata and Files
+  %p
+    Curators should treat the edit screens as the main working interface for metadata and file review.
+  %ul
+    %li Metadata forms are organized by record sections such as title, description, creators, contributors, funders, keywords, and related materials.
+    %li File management lives inside the dataset workflow, where you can inspect uploaded files and confirm that documentation and file organization are understandable from the interface.
+    %li Access grants can be managed directly on the dataset so you can confirm who can view or edit a private record before publication.
+
+%section.idb-section-card
+  %h2.idb-section-title Handle Review and Publication
+  %p
+    Illinois Data Bank now supports curator-driven publication work directly in the application.
+  %ul
+    %li Use review-related controls on the dataset record to inspect deposits that need attention before publication.
+    %li Use the publish action on the dataset when the record is ready to move from draft to published state.
+    %li After publication, return to the dataset page to confirm status changes, DOI display, and delivery tracking details.
+
+%section.idb-section-card
+  %h2.idb-section-title Manage Versions
+  %p
+    Versioning tools are attached to the dataset record rather than separated into a legacy workflow.
+  %ul
+    %li Use version controls to review pending version requests and compare the current record with the requested update.
+    %li Approve or reject version requests from the dataset workflow when a depositor submits changes to an existing published record.
+    %li Use the version acknowledgement and version history views to confirm what has already been processed.
+
+%section.idb-section-card
+  %h2.idb-section-title Audit Deliveries and Storage Work
+  %p
+    Curator operations that involve downstream systems are available from the staff tools area.
+  %ul
+    %li The External Delivery Audit page shows ingest and delivery attempts, response status, replay controls, and unmatched response events.
+    %li Dataset pages surface delivery health summaries so you can see whether ingest activity succeeded, failed, or needs follow-up.
+    %li The file audit report workflow generates curator reports for storage and file review tasks, with downloadable outputs from the reports area.
+
+%section.idb-section-card
+  %h2.idb-section-title Use Metrics and Reports
+  %p
+    Illinois Data Bank includes built-in reporting screens for curator review and service monitoring.
+  %ul
+    %li Curator Reports tracks generated operational reports, including file audits.
+    %li Metrics pages provide dataset, file, and download reporting for service analysis.
+    %li Administrative metrics are available to support higher-level oversight of repository activity.
+
+%section.idb-section-card
+  %h2.idb-section-title Staff Tools Page
+  %p
+    The Curator and Admin Page is the main staff landing page for operational actions.
+  %ul
+    %li Use it to open curator reports, delivery audit tools, and other operational screens.
+    %li Admin-only controls appear there for service configuration, but curator-facing operational tools are grouped on the same page.
+    %li If you need to troubleshoot a dataset, start on the dataset record and then move to reports or delivery audit views as needed.
+
+.idb-workflow-strip.idb-workflow-strip-bottom
+  %nav.idb-workflow-actions-right{aria: { label: "Curator guide actions" }}
+    = link_to "Curator and Admin Page", admin_path, class: "idb-button-secondary"
+    = link_to "Back", root_path, class: "idb-button-secondary"
