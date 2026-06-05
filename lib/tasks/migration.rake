@@ -113,11 +113,14 @@ namespace :migration do
           records: []
         }
 
-        line_count = 0
+        total_line_count = 0
+        grants_line_count = 0
         access_counts = Hash.new(0)
 
         File.foreach(bundle_path).with_index(1) do |line, line_number|
           next if line.strip.empty?
+
+          total_line_count += 1
 
           payload = JSON.parse(line)
           type = payload["type"].to_s
@@ -131,6 +134,8 @@ namespace :migration do
             summary[:records] << { line: line_number, status: :failed, type: type, message: "unsupported type" }
             next
           end
+
+          grants_line_count += 1
 
           if dataset_key.blank?
             summary[:failed] += 1
@@ -150,15 +155,14 @@ namespace :migration do
             next
           end
 
+          access_counts[access_level] += 1
+
           dataset = Dataset.find_by(key: dataset_key)
           if dataset.nil?
             summary[:failed] += 1
             summary[:records] << { line: line_number, status: :failed, type: type, dataset_key: dataset_key, email: email, message: "dataset not found" }
             next
           end
-
-          line_count += 1
-          access_counts[access_level] += 1
 
           existing = dataset.dataset_access_grants.find_by(email: email)
           if dry_run
@@ -201,12 +205,12 @@ namespace :migration do
 
         if manifest_data&.dig("record_count").present?
           expected_count = manifest_data["record_count"].to_i
-          raise ArgumentError, "bundle record count mismatch" if expected_count != line_count
+          raise ArgumentError, "bundle record count mismatch" if expected_count != total_line_count
         end
 
         if manifest_data&.dig("counts").is_a?(Hash)
           expected_total = manifest_data["counts"]["DatasetAccessGrant"]
-          if expected_total.present? && expected_total.to_i != line_count
+          if expected_total.present? && expected_total.to_i != grants_line_count
             raise ArgumentError, "manifest count mismatch for DatasetAccessGrant"
           end
 
@@ -218,11 +222,11 @@ namespace :migration do
           end
         end
 
-        summary[:processed_count] = line_count
+        summary[:processed_count] = grants_line_count
         summary[:expected_record_count] = manifest_data&.dig("record_count")
         summary[:checksum] = expected_checksum
         summary[:counts] = {
-          "DatasetAccessGrant" => line_count,
+          "DatasetAccessGrant" => grants_line_count,
           "viewer" => access_counts["viewer"].to_i,
           "editor" => access_counts["editor"].to_i
         }
