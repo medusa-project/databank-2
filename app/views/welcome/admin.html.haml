@@ -93,6 +93,7 @@
 
   .idb-workflow-strip.idb-workflow-strip-bottom
     %nav.idb-workflow-actions-right{aria: { label: "Admin page actions" }}
+      = link_to "Curator Guide", curator_guide_path, class: "idb-button-secondary"
       = link_to "Back", root_path, class: "idb-button-secondary"
 - else
   %h2 You are not authorized to view this page.

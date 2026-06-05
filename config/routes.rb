@@ -117,6 +117,7 @@ Rails.application.routes.draw do
 
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples
+  get "/curator_guide", to: "welcome#curator_guide", as: :curator_guide
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides
