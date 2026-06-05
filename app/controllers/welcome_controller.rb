@@ -1,6 +1,6 @@
 class WelcomeController < ApplicationController
   skip_before_action :authenticate_user!
-  before_action :require_admin!, only: %i[admin clear_cache update_system_message create_managed_curator destroy_managed_curator create_managed_deposit_exception destroy_managed_deposit_exception]
+  before_action :require_admin_or_curator!, only: %i[admin clear_cache update_system_message create_managed_curator destroy_managed_curator create_managed_deposit_exception destroy_managed_deposit_exception]
   before_action :load_admin_page_data, only: :admin
 
   def index
@@ -86,8 +86,8 @@ class WelcomeController < ApplicationController
 
   private
 
-  def require_admin!
-    return if current_user&.admin?
+  def require_admin_or_curator!
+    return if current_user&.admin? || current_user&.curator?
 
     redirect_to root_path, alert: "You are not authorized to perform this action."
   end

@@ -1,5 +1,5 @@
 class CuratorReportsController < ApplicationController
-  before_action :require_admin!
+  before_action :require_admin_or_curator!
   before_action :set_curator_report, only: %i[show destroy download]
 
   def index
@@ -48,8 +48,8 @@ class CuratorReportsController < ApplicationController
     @curator_report = CuratorReport.find(params[:id])
   end
 
-  def require_admin!
-    return if current_user&.admin?
+  def require_admin_or_curator!
+    return if current_user&.admin? || current_user&.curator?
 
     redirect_to root_path, alert: "You are not authorized to perform this action."
   end

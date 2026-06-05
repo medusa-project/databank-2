@@ -31,7 +31,7 @@ RSpec.describe "Admin page", type: :request do
     expect(response.body).to include("Change role")
   end
 
-  it "allows admins to access admin page and blocks curators" do
+  it "allows admins and curators to access admin page" do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
     get admin_path
@@ -40,9 +40,7 @@ RSpec.describe "Admin page", type: :request do
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     get admin_path
-    expect(response).to redirect_to(root_path)
-    follow_redirect!
-    expect(response.body).to include("You are not authorized to perform this action.")
+    expect(response).to have_http_status(:ok)
   end
 
   it "allows admin to add and remove admin-managed curators" do
@@ -114,6 +112,16 @@ RSpec.describe "Admin page", type: :request do
     expect(response).to redirect_to(admin_path)
     follow_redirect!
     expect(response.body).to include("Rails cache cleared successfully.")
+  end
+
+  it "allows curator to clear the Rails cache" do
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+    allow(Rails.cache).to receive(:clear).and_return(true)
+
+    post clear_admin_cache_path
+
+    expect(Rails.cache).to have_received(:clear)
+    expect(response).to redirect_to(admin_path)
   end
 
   it "allows admin-managed curator email to receive curator-level access" do

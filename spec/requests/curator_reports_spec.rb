@@ -26,6 +26,18 @@ RSpec.describe "Curator reports", type: :request do
     expect(report.notes).to eq("audit notes")
   end
 
+  it "allows a curator to request file audit generation" do
+    sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+
+    expect do
+      post request_file_audit_curator_reports_path, params: { notes: "audit notes" }
+    end.to change(CuratorReport, :count).by(1)
+
+    expect(response).to redirect_to(curator_reports_path)
+    report = CuratorReport.last
+    expect(report.requestor_email).to eq("curator@example.edu")
+  end
+
   it "blocks non-admin users" do
     sign_in_as(email: "depositor@example.edu", name: "Depositor User", role: "depositor")
 
