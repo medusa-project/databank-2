@@ -19,7 +19,7 @@ class User < ApplicationRecord
   end
 
   def self.guest
-    new(role: "depositor")
+    new(role: "guest")
   end
 
   def admin?

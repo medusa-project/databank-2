@@ -1,5 +1,5 @@
 class MigrationRun < ApplicationRecord
-  RUN_TYPES = %w[bundle_import guides_bundle_import featured_researchers_bundle_import permissions_bundle_import sample_fetch sample_import].freeze
+  RUN_TYPES = %w[bundle_import guides_bundle_import featured_researchers_bundle_import permissions_bundle_import dataset_access_grants_bundle_import sample_fetch sample_import].freeze
   STATUSES = %w[started completed failed].freeze
 
   validates :run_type, presence: true, inclusion: { in: RUN_TYPES }

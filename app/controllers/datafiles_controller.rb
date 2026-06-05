@@ -32,8 +32,12 @@ class DatafilesController < ApplicationController
   end
 
   def download
-    unless can?(:update, @dataset) || @dataset.files_publicly_readable_now?
-      head :forbidden
+    unless can?(:view_files, @dataset)
+      if !logged_in? && !@dataset.publicly_readable_now?
+        redirect_to(root_path, alert: "You are not authorized to perform this action.")
+      else
+        head :forbidden
+      end
       return
     end
 
@@ -70,11 +74,7 @@ class DatafilesController < ApplicationController
 
   def set_dataset
     @dataset = Dataset.find_by!(key: params[:dataset_id])
-      if action_name == "download"
-        authorize! :read, @dataset
-      else
-        authorize! :update, @dataset
-      end
+    authorize! :update, @dataset unless action_name == "download"
   end
 
   def set_datafile

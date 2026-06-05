@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_143000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -129,6 +129,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_110000) do
     t.index ["dataset_id"], name: "index_datafiles_on_dataset_id"
     t.index ["storage_root", "storage_key"], name: "index_datafiles_on_storage_location"
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
+  end
+
+  create_table "dataset_access_grants", force: :cascade do |t|
+    t.integer "access_level", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.string "email", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_id", "email"], name: "index_dataset_access_grants_on_dataset_id_and_email", unique: true
+    t.index ["dataset_id"], name: "index_dataset_access_grants_on_dataset_id"
+    t.index ["email", "access_level"], name: "index_dataset_access_grants_on_email_and_access_level"
   end
 
   create_table "dataset_download_tallies", force: :cascade do |t|
@@ -413,6 +424,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_110000) do
   add_foreign_key "contributors", "datasets"
   add_foreign_key "creators", "datasets"
   add_foreign_key "datafiles", "datasets"
+  add_foreign_key "dataset_access_grants", "datasets"
   add_foreign_key "external_delivery_attempts", "datasets"
   add_foreign_key "funders", "datasets"
   add_foreign_key "guide_items", "guide_sections", column: "section_id"

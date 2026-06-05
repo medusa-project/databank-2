@@ -43,6 +43,7 @@ Rails.application.routes.draw do
     resources :datafiles, param: :web_id, except: %i[index new show] do
       member { get :download }
     end
+    resources :dataset_access_grants, only: %i[create destroy]
     resources :creators,          except: %i[index new show] do
       collection do
         get :orcid_lookup
