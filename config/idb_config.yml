@@ -31,6 +31,9 @@ default: &default
     responses_enabled: <%= ENV.fetch("ENABLE_INGEST_RESPONSES", "false") %>
     responses_queue: <%= ENV.fetch("INGEST_RESPONSES_QUEUE", "medusa_to_databank") %>
     response_batch_size: <%= ENV.fetch("INGEST_RESPONSE_BATCH_SIZE", "50") %>
+    health_response_stale_minutes: <%= ENV.fetch("INGEST_HEALTH_RESPONSE_STALE_MINUTES", "60") %>
+    health_orphan_lookback_minutes: <%= ENV.fetch("INGEST_HEALTH_ORPHAN_LOOKBACK_MINUTES", "120") %>
+    health_orphan_alert_threshold: <%= ENV.fetch("INGEST_HEALTH_ORPHAN_ALERT_THRESHOLD", "1") %>
   downloader:
     endpoint: <%= ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= ENV.fetch("DOWNLOADER_USER", "") %>

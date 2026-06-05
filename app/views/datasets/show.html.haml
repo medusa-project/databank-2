@@ -271,6 +271,18 @@
           %p
             = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
 
+          - if @ingest_health_summary.present?
+            %h3 Ingest Response Health
+            %p
+              %strong= "Status: #{@ingest_health_summary[:state].titleize}"
+            %p= @ingest_health_summary[:freshness_message]
+            %p= "Orphaned responses in last #{@ingest_health_summary[:orphan_lookback_minutes]} minute(s): #{@ingest_health_summary[:orphan_count]}"
+            - if @ingest_health_summary[:alerts].any?
+              %ul.dataset-show-list
+                - @ingest_health_summary[:alerts].each do |alert|
+                  %li
+                    %span.dataset-show-list-tertiary= alert
+
           - if @latest_delivery_attempts.present?
             %ul.dataset-show-list
               - @latest_delivery_attempts.each do |integration, attempt|
