@@ -30,7 +30,7 @@ class ExternalDeliveryAttemptsController < ApplicationController
         @page = page
         @total_pages = [ (@total_count.to_f / @per_page).ceil, 1 ].max
         @attempts = base_attempts.limit(@per_page).offset((@page - 1) * @per_page)
-        @orphaned_ingest_responses = IngestResponseEvent.orphaned.order(received_at: :desc).limit(20)
+        @orphaned_ingest_responses = IngestResponseEvent.unresolved_orphaned.order(received_at: :desc).limit(20)
       end
 
       format.csv do
@@ -113,6 +113,17 @@ class ExternalDeliveryAttemptsController < ApplicationController
         redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed."
       end
     end
+  end
+
+  def acknowledge_orphan_response
+    authorize! :manage, Dataset
+
+    event = IngestResponseEvent.unresolved_orphaned.find(params[:id])
+    event.acknowledge!(by_email: current_user&.email, note: params[:acknowledged_note])
+
+    redirect_back fallback_location: admin_external_delivery_attempts_path, notice: "Orphaned ingest response acknowledged."
+  rescue ActiveRecord::RecordNotFound
+    redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Orphaned ingest response could not be found."
   end
 
   private

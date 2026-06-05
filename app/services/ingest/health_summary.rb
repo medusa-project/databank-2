@@ -91,7 +91,7 @@ module Ingest
 
     def orphaned_responses_for_dataset(lookback_minutes:)
       lower_bound = lookback_minutes.minutes.ago
-      base = IngestResponseEvent.orphaned.where(received_at: lower_bound..@now)
+      base = IngestResponseEvent.unresolved_orphaned.where(received_at: lower_bound..@now)
       correlation_pattern = "dataset.published:#{@dataset.id}:%"
 
       by_correlation = base.where("correlation_key LIKE ?", correlation_pattern)

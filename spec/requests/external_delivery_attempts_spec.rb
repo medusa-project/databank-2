@@ -389,6 +389,33 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(response.body).to include("No matching delivery attempt")
   end
 
+  it "allows admin to acknowledge orphaned ingest responses" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+
+    orphan_event = IngestResponseEvent.create!(
+      status: :unmatched,
+      integration: "ingest",
+      correlation_key: "dataset.published:#{dataset_one.id}:orphan-ack",
+      received_at: Time.current,
+      payload: { status: "ok" },
+      raw_payload: "{\"status\":\"ok\"}",
+      error_message: "No matching delivery attempt"
+    )
+
+    post acknowledge_admin_ingest_response_event_path(orphan_event)
+
+    expect(response).to have_http_status(:redirect)
+    follow_redirect!
+    expect(response.body).to include("Orphaned ingest response acknowledged.")
+
+    orphan_event.reload
+    expect(orphan_event.acknowledged_at).to be_present
+    expect(orphan_event.acknowledged_by_email).to eq("admin@example.edu")
+
+    get admin_external_delivery_attempts_path
+    expect(response.body).not_to include("dataset.published:#{dataset_one.id}:orphan-ack")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

@@ -68,6 +68,7 @@ Rails.application.routes.draw do
   get "admin/external_delivery_attempts", to: "external_delivery_attempts#index", as: :admin_external_delivery_attempts
   post "admin/external_delivery_attempts/:id/replay", to: "external_delivery_attempts#replay", as: :replay_admin_external_delivery_attempt
   post "admin/external_delivery_attempts/replay_selected", to: "external_delivery_attempts#replay_selected", as: :replay_selected_admin_external_delivery_attempts
+  post "admin/ingest_response_events/:id/acknowledge", to: "external_delivery_attempts#acknowledge_orphan_response", as: :acknowledge_admin_ingest_response_event
 
   namespace :guide do
     resources :sections, except: :show

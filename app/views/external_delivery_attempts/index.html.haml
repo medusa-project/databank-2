@@ -105,6 +105,7 @@
           %th Status
           %th Correlation Key
           %th Error
+          %th Actions
       %tbody
         - @orphaned_ingest_responses.each do |event|
           %tr
@@ -112,5 +113,7 @@
             %td= event.status
             %td= event.correlation_key.presence || "-"
             %td= event.error_message.presence || "-"
+            %td
+              = button_to "Acknowledge", acknowledge_admin_ingest_response_event_path(event), method: :post, class: "idb-button-secondary"
   - else
     %p No unmatched or invalid ingest responses have been recorded.

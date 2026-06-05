@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -315,6 +315,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_183000) do
   end
 
   create_table "ingest_response_events", force: :cascade do |t|
+    t.datetime "acknowledged_at"
+    t.string "acknowledged_by_email"
+    t.text "acknowledged_note"
     t.string "correlation_key"
     t.datetime "created_at", null: false
     t.text "error_message"
@@ -325,6 +328,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_183000) do
     t.datetime "received_at", null: false
     t.string "status", null: false
     t.datetime "updated_at", null: false
+    t.index ["acknowledged_at"], name: "index_ingest_response_events_on_acknowledged_at"
     t.index ["correlation_key"], name: "index_ingest_response_events_on_correlation_key"
     t.index ["external_delivery_attempt_id"], name: "index_ingest_response_events_on_external_delivery_attempt_id"
     t.index ["integration", "status", "received_at"], name: "index_ingest_response_events_on_integration_status_received"
