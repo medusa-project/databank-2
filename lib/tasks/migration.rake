@@ -259,6 +259,248 @@ namespace :migration do
     end
   end
 
+  namespace :medusa_ingests do
+    desc "Import legacy Medusa ingest bundle into external delivery tracking"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_medusa_ingests.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "medusa_ingests_bundle_import",
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run
+        }
+      ) do
+        raise ArgumentError, "bundle not found: #{bundle_path}" unless bundle_path.file?
+        raise ArgumentError, "checksum file not found: #{checksum_path}" if checksum_path.present? && !File.file?(checksum_path)
+        raise ArgumentError, "manifest file not found: #{manifest_path}" if manifest_path.present? && !File.file?(manifest_path)
+
+        manifest_data = manifest_path.present? ? JSON.parse(File.read(manifest_path)) : nil
+        expected_checksum = manifest_data&.dig("sha256").to_s.strip.presence
+        if expected_checksum.blank? && checksum_path.present?
+          expected_checksum = File.read(checksum_path).strip.split.first.to_s.strip.presence
+        end
+
+        if expected_checksum.present?
+          actual_checksum = Digest::SHA256.file(bundle_path).hexdigest
+          raise ArgumentError, "bundle checksum mismatch" unless actual_checksum == expected_checksum
+        end
+
+        map_statuses = lambda do |request_status|
+          normalized = request_status.to_s.strip.downcase
+          case normalized
+          when "ok", "success", "succeeded"
+            [ "succeeded", "succeeded" ]
+          when "error", "failed"
+            [ "failed", "failed" ]
+          when "resent"
+            [ "started", "pending" ]
+          else
+            [ "started", "pending" ]
+          end
+        end
+
+        parse_time = lambda do |value|
+          next nil if value.blank?
+
+          Time.zone.parse(value.to_s)
+        rescue StandardError
+          nil
+        end
+
+        summary = {
+          bundle_path: bundle_path.to_s,
+          created: 0,
+          updated: 0,
+          skipped_existing: 0,
+          would_create: 0,
+          would_update: 0,
+          failed: 0,
+          validation_error: nil,
+          records: []
+        }
+
+        line_count = 0
+        type_counts = Hash.new(0)
+
+        File.foreach(bundle_path).with_index(1) do |line, line_number|
+          next if line.strip.empty?
+
+          payload = JSON.parse(line)
+          type = payload["type"].to_s
+          attributes = payload["attributes"] || {}
+
+          unless type == "MedusaIngest"
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, message: "unsupported type" }
+            next
+          end
+
+          dataset_key = attributes["dataset_key"].to_s.strip
+          if dataset_key.blank?
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, message: "missing dataset_key" }
+            next
+          end
+
+          dataset = Dataset.find_by(key: dataset_key)
+          if dataset.nil?
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, dataset_key: dataset_key, message: "dataset not found" }
+            next
+          end
+
+          line_count += 1
+          type_counts[type] += 1
+
+          request_status = attributes["request_status"].to_s
+          attempt_status, response_status = map_statuses.call(request_status)
+          correlation_key = attributes["staging_key"].to_s.strip.presence || "legacy.medusa_ingest:#{attributes['legacy_id'] || line_number}"
+          idempotency_key = "legacy.medusa_ingest:#{attributes['legacy_id'] || dataset.id}:#{line_number}"
+          response_received_at = parse_time.call(attributes["response_time"])
+
+          response_payload = {
+            "status" => response_status == "succeeded" ? "ok" : (response_status == "failed" ? "error" : "pending"),
+            "request_status" => request_status,
+            "staging_key" => attributes["staging_key"],
+            "target_key" => attributes["target_key"],
+            "medusa_path" => attributes["medusa_path"],
+            "uuid" => attributes["medusa_uuid"]
+          }.compact
+
+          values = {
+            dataset: dataset,
+            integration: :ingest,
+            event_name: "dataset.published",
+            status: attempt_status,
+            attempt: 1,
+            idempotency_key: idempotency_key,
+            correlation_key: correlation_key,
+            response_status: response_status,
+            response_received_at: response_received_at,
+            response_staging_key: attributes["staging_key"],
+            response_target_key: attributes["target_key"],
+            response_uuid: attributes["medusa_uuid"],
+            response_payload: response_payload,
+            error_class: response_status == "failed" ? "LegacyMedusaIngestError" : nil,
+            error_message: attributes["error_text"].to_s.presence,
+            details: {
+              "legacy" => {
+                "source" => "medusa_ingests_bundle",
+                "legacy_id" => attributes["legacy_id"],
+                "idb_class" => attributes["idb_class"],
+                "idb_identifier" => attributes["idb_identifier"],
+                "staging_path" => attributes["staging_path"],
+                "medusa_dataset_dir" => attributes["medusa_dataset_dir"],
+                "created_at" => attributes["created_at"],
+                "updated_at" => attributes["updated_at"]
+              }
+            }
+          }
+
+          existing = ExternalDeliveryAttempt.find_by(integration: :ingest, correlation_key: correlation_key)
+          if dry_run
+            status = existing.nil? ? :would_create : :would_update
+            summary[status] += 1
+            summary[:records] << { line: line_number, status: status, type: type, dataset_key: dataset_key, correlation_key: correlation_key }
+            next
+          end
+
+          if existing.nil?
+            record = ExternalDeliveryAttempt.new(values)
+            if record.save
+              summary[:created] += 1
+              summary[:records] << { line: line_number, status: :created, type: type, dataset_key: dataset_key, correlation_key: correlation_key }
+            else
+              summary[:failed] += 1
+              summary[:records] << { line: line_number, status: :failed, type: type, dataset_key: dataset_key, correlation_key: correlation_key, message: record.errors.full_messages.to_sentence }
+            end
+          elsif existing.update(values.except(:dataset, :integration, :event_name))
+            summary[:updated] += 1
+            summary[:records] << { line: line_number, status: :updated, type: type, dataset_key: dataset_key, correlation_key: correlation_key }
+          else
+            summary[:failed] += 1
+            summary[:records] << { line: line_number, status: :failed, type: type, dataset_key: dataset_key, correlation_key: correlation_key, message: existing.errors.full_messages.to_sentence }
+          end
+        rescue JSON::ParserError => e
+          summary[:failed] += 1
+          summary[:records] << { line: line_number, status: :failed, message: "invalid JSON: #{e.message}" }
+        end
+
+        if manifest_data&.dig("record_count").present?
+          expected_count = manifest_data["record_count"].to_i
+          raise ArgumentError, "bundle record count mismatch" if expected_count != line_count
+        end
+
+        if manifest_data&.dig("counts").is_a?(Hash)
+          expected_total = manifest_data["counts"]["MedusaIngest"]
+          if expected_total.present? && expected_total.to_i != line_count
+            raise ArgumentError, "manifest count mismatch for MedusaIngest"
+          end
+        end
+
+        summary[:processed_count] = line_count
+        summary[:expected_record_count] = manifest_data&.dig("record_count")
+        summary[:checksum] = expected_checksum
+        summary[:counts] = type_counts
+
+        Migration::RunReportWriter.new(
+          report_path: resolved_report_path,
+          report: {
+            generated_at: Time.current.utc.iso8601,
+            import_type: "medusa_ingests_bundle",
+            bundle_path: bundle_path.to_s,
+            checksum_path: checksum_path,
+            manifest_path: manifest_path,
+            summary: summary
+          }
+        ).call
+
+        summary
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Updated: #{summary[:updated]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      if dry_run
+        puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
+      end
+      if summary[:counts].is_a?(Hash)
+        puts "MedusaIngest records processed: #{summary[:counts].fetch('MedusaIngest', 0)}"
+      end
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+  end
+
   namespace :permissions do
     desc "Import legacy curator/deposit-exception permissions bundle into typed records"
     task import_from_dir: :environment do
