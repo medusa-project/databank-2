@@ -16,3 +16,6 @@ production:
   ingest_process_response_queue:
     class: Ingest::ProcessResponseQueueJob
     schedule: every minute
+  ingest_send_health_alerts:
+    class: Ingest::SendHealthAlertsJob
+    schedule: every 10 minutes

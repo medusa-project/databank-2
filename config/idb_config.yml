@@ -34,6 +34,9 @@ default: &default
     health_response_stale_minutes: <%= ENV.fetch("INGEST_HEALTH_RESPONSE_STALE_MINUTES", "60") %>
     health_orphan_lookback_minutes: <%= ENV.fetch("INGEST_HEALTH_ORPHAN_LOOKBACK_MINUTES", "120") %>
     health_orphan_alert_threshold: <%= ENV.fetch("INGEST_HEALTH_ORPHAN_ALERT_THRESHOLD", "1") %>
+    health_alerts_enabled: <%= ENV.fetch("ENABLE_INGEST_HEALTH_ALERTS", "false") %>
+    health_alert_emails: <%= ENV.fetch("INGEST_HEALTH_ALERT_EMAILS", "") %>
+    health_alert_cooldown_minutes: <%= ENV.fetch("INGEST_HEALTH_ALERT_COOLDOWN_MINUTES", "60") %>
   downloader:
     endpoint: <%= ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= ENV.fetch("DOWNLOADER_USER", "") %>
