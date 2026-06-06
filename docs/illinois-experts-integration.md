@@ -1,4 +1,4 @@
-# Illinois Data Bank Integration with Illinois Experts
+# Illinois Data Bank integration with Illinois Experts
 
 Illinois Data Bank serves information about datasets in Illinois authored by members of the University of Illinois at Urbana-Champaign.
 
