@@ -47,6 +47,12 @@ default: &default
     sample_owner_uid: <%= ENV.fetch("MIGRATION_SAMPLE_OWNER_UID", "legacy-import") %>
     sample_depositor_name: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_NAME", "Legacy Import") %>
     sample_depositor_email: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_EMAIL", "legacy-import@example.edu") %>
+  illinois_experts:
+    key: <%= Rails.application.credentials.dig(:illinois_experts, :key) || ENV.fetch("ILLINOIS_EXPERTS_KEY", "") %>
+    endpoint: <%= Rails.application.credentials.dig(:illinois_experts, :endpoint) || ENV.fetch("ILLINOIS_EXPERTS_ENDPOINT", "") %>
+    org_id: <%= Rails.application.credentials.dig(:illinois_experts, :org_id) || ENV.fetch("ILLINOIS_EXPERTS_ORG_ID", "") %>
+    publisher_id: <%= Rails.application.credentials.dig(:illinois_experts, :publisher_id) || ENV.fetch("ILLINOIS_EXPERTS_PUBLISHER_ID", "") %>
+    illinois_external_org_id: <%= Rails.application.credentials.dig(:illinois_experts, :illinois_external_org_id) || ENV.fetch("ILLINOIS_EXPERTS_EXTERNAL_ORG_ID", "") %>
 
 development:
   <<: *default
