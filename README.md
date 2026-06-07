@@ -1,8 +1,8 @@
-# README
+# Illinois Data Bank databank-2
 
 ## Project Overview
 
-databank-2 is the Rails application for Illinois Data Bank dataset management and publication workflows, including authentication, metadata publishing, preservation/storage integrations, and operational delivery tracking.
+databank-2 is the Rails application for Illinois Data Bank dataset management and publication workflows, including authentication, metadata publishing, and preservation storage integrations.
 
 ## Quick Start
 
