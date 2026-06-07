@@ -35,10 +35,26 @@ Configure these keys in `idb_config.yml` (typically via credentials or environme
 - `globus.source_base_path`
 - `globus.destination_base_path`
 
+Environment variable names for those keys:
+
+- `ENABLE_GLOBUS_TRANSFER`
+- `GLOBUS_TRANSFER_ENDPOINT`
+- `GLOBUS_TRANSFER_TOKEN`
+- `GLOBUS_SOURCE_COLLECTION`
+- `GLOBUS_DESTINATION_COLLECTION`
+- `GLOBUS_SOURCE_BASE_PATH`
+- `GLOBUS_DESTINATION_BASE_PATH`
+
 When enabled, dataset file transfer payload paths are generated as:
 
 - source: `<source_base_path>/<dataset_key>/<binary_name>`
 - destination: `<destination_base_path>/<dataset_key>/<binary_name>`
+
+Publish-flow behavior:
+
+- transfer submission is enqueued after successful publish,
+- if transfer is disabled, submission is skipped,
+- if submission fails, a warning is logged and publish remains successful.
 
 ## Download
 

@@ -13,6 +13,11 @@ Medusa integration in `databank-2` has two related parts:
 - storage roots (where files live and are referenced), and
 - ingest event delivery/response tracking (publish notifications to Medusa and response reconciliation).
 
+Related docs:
+
+- event publish/consume flow: [Ingest events integration](ingest-events-integration.md)
+- delivery attempt lifecycle and replay operations: [External delivery audit](external-delivery-audit.md)
+
 ## Storage Roots and File Location Metadata
 
 Storage roots are defined with `medusa-storage.yml` (demo/production) or `medusa-storage-ci.yml` (development/test).
@@ -70,24 +75,6 @@ Local/CI MinIO configuration also uses:
 
 In `demo`/`production`, credentials are preferred for most storage and AWS values, with environment fallback.
 
-### Ingest event/response configuration
-
-`IdbConfig.ingest` controls event publishing and response consumption:
-
-- `ENABLE_INGEST_EVENTS`
-- `RABBITMQ_URL`
-- `INGEST_EVENTS_EXCHANGE` (default `databank.ingest`)
-- `INGEST_EVENTS_ROUTING_KEY` (default `dataset.published`)
-- `ENABLE_INGEST_RESPONSES`
-- `INGEST_RESPONSES_QUEUE` (default `medusa_to_databank`)
-- `INGEST_RESPONSE_BATCH_SIZE`
-- `INGEST_HEALTH_RESPONSE_STALE_MINUTES`
-- `INGEST_HEALTH_ORPHAN_LOOKBACK_MINUTES`
-- `INGEST_HEALTH_ORPHAN_ALERT_THRESHOLD`
-- `ENABLE_INGEST_HEALTH_ALERTS`
-- `INGEST_HEALTH_ALERT_EMAILS`
-- `INGEST_HEALTH_ALERT_COOLDOWN_MINUTES`
-
 Downloader integration (for assembled downloads) uses:
 
 - `DOWNLOADER_ENDPOINT`
@@ -108,59 +95,23 @@ Legacy migration support:
 - `migration:medusa_ingests:import_from_dir` converts legacy `MedusaIngest` bundle records into `ExternalDeliveryAttempt` rows.
 - run type is recorded as `medusa_ingests_bundle_import`.
 
-## Publish and Response Flow
+## Event and delivery operations
 
-### Outbound publish event
+Event publishing/consumption and delivery replay are documented in dedicated files:
 
-On dataset publish:
+- [Ingest events integration](ingest-events-integration.md)
+- [External delivery audit](external-delivery-audit.md)
 
-1. `DatasetsController#publish` marks dataset as published.
-2. `Ingest::PublishDatasetEventJob` is enqueued.
-3. Job creates `ExternalDeliveryAttempt` with integration `ingest`, event `dataset.published`, status `started`.
-4. `Ingest::RabbitmqEventPublisher` publishes event payload to RabbitMQ topic exchange.
-5. Attempt is marked `succeeded`, `failed`, or `skipped` (`integration_disabled` / `already_succeeded`).
-
-Published event payload includes dataset identifiers and correlation context (`correlation_key`, `dataset.id`, `dataset.key`, `dataset.identifier`).
-
-### Inbound Medusa response processing
-
-`Ingest::ProcessResponseQueueJob` consumes response messages via `Ingest::RabbitmqResponseConsumer`.
-
-For each message:
-
-1. Correlation key is extracted.
-2. Matching `ExternalDeliveryAttempt` is located (or treated as unmatched).
-3. Attempt response fields are updated (`response_status`, `response_received_at`, `response_uuid`, `response_target_key`, payload).
-4. `IngestResponseEvent` is recorded with status `matched`, `unmatched`, or `invalid`.
-
-Failure responses set attempt status to `failed` and attach a Medusa response error class/message.
-
-## Operations and Monitoring
-
-Admin UI and replay support:
-
-- `GET /admin/external_delivery_attempts`
-- replay one failed attempt
-- replay selected failed attempts
-
-Ingest replay enqueues `Ingest::PublishDatasetEventJob` with original idempotency key.
-
-Health and alerting:
-
-- Health summary logic checks response freshness/orphans.
-- recurring jobs include response queue processing and health alert dispatch.
-
-Cutover/migration orchestration includes a Medusa ingest import step in `cutover:import_all`.
+Cutover/migration orchestration still includes a Medusa ingest import step in `cutover:import_all`.
 
 ## Troubleshooting
 
 Common checks:
 
 1. Verify storage roots resolve (`draft`, `medusa`, etc.) for current environment.
-2. Confirm `RABBITMQ_URL` and ingest enable flags are set as intended.
-3. Confirm response queue name matches producer integration.
-4. Inspect `ExternalDeliveryAttempt` and `IngestResponseEvent` for correlation and response payload details.
-5. Use replay actions for failed ingest attempts after correcting integration issues.
+2. Confirm ingest event settings and response queue configuration via [Ingest events integration](ingest-events-integration.md).
+3. Inspect `ExternalDeliveryAttempt` and `IngestResponseEvent` for correlation and response payload details.
+4. Use replay actions described in [External delivery audit](external-delivery-audit.md).
 
 Common failure modes:
 
