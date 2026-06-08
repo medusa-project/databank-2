@@ -58,11 +58,38 @@ npm run test:e2e
 npm run test:e2e:a11y
 ```
 
+4. Chrome Lighthouse checks (performance, accessibility, best practices, SEO)
+
+```sh
+npm run lighthouse:local
+```
+
+Optional: clean old Lighthouse reports without running new audits
+
+```sh
+npm run lighthouse:clean
+```
+
+5. Lighthouse CI-style assertions (optional)
+
+```sh
+npm run lighthouse:ci
+```
+
 Run strategy for Playwright checks:
 
 - for thorough local validation, run only `npm run test:e2e`
 - for quick accessibility-focused feedback, run only `npm run test:e2e:a11y`
 - running both is mostly redundant unless you want a separate explicit accessibility pass/reporting step
+
+Run strategy for Lighthouse checks:
+
+- run `npm run lighthouse:local` when Rails is running locally on `http://127.0.0.1:3000`
+- `npm run lighthouse:local` automatically cleans old `*.report.html` and `*.report.json` files first
+- local reports are written to `tmp/lighthouse/` as `home.report.*` and `contact.report.*`
+- in root-based dev containers, the script already applies Chrome `--no-sandbox` for compatibility
+- run `npm run lighthouse:ci` for threshold-based warnings using `lighthouserc.json`
+- Lighthouse checks are complementary to Playwright a11y tests and catch performance + SEO + best-practice issues
 
 ## 3) Situational checks
 

@@ -12,7 +12,7 @@ export default class extends Controller {
 
   syncIdentifier() {
     const identifier = this.identifiersValue[this.nameTarget.value]
-    return if !identifier
+    if (!identifier) return
 
     this.identifierTarget.value = identifier
   }
