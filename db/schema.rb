@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_102000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -58,6 +58,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
     t.datetime "updated_at", null: false
     t.text "value"
     t.index ["key"], name: "index_app_settings_on_key", unique: true
+  end
+
+  create_table "archive_extract_errors", force: :cascade do |t|
+    t.bigint "archive_extract_response_id", null: false
+    t.datetime "created_at", null: false
+    t.text "error_report"
+    t.string "error_type"
+    t.datetime "updated_at", null: false
+    t.index ["archive_extract_response_id"], name: "index_archive_extract_errors_on_archive_extract_response_id"
+    t.index ["error_type"], name: "index_archive_extract_errors_on_error_type"
+  end
+
+  create_table "archive_extract_requests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "datafile_id", null: false
+    t.text "raw_response"
+    t.datetime "response_at"
+    t.datetime "sent_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["datafile_id"], name: "index_archive_extract_requests_on_datafile_id", unique: true
+    t.index ["status"], name: "index_archive_extract_requests_on_status"
+  end
+
+  create_table "archive_extract_responses", force: :cascade do |t|
+    t.bigint "archive_extract_request_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "response", default: {}, null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["archive_extract_request_id"], name: "index_archive_extract_responses_on_archive_extract_request_id", unique: true
+    t.index ["status"], name: "index_archive_extract_responses_on_status"
   end
 
   create_table "contributors", force: :cascade do |t|
@@ -121,12 +153,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
     t.bigint "dataset_id", null: false
     t.text "description"
     t.string "medusa_id"
+    t.text "peek_content"
+    t.string "peek_type"
     t.integer "row_position"
     t.string "storage_key"
     t.string "storage_root"
     t.datetime "updated_at", null: false
     t.string "web_id"
     t.index ["dataset_id"], name: "index_datafiles_on_dataset_id"
+    t.index ["peek_type"], name: "index_datafiles_on_peek_type"
     t.index ["storage_root", "storage_key"], name: "index_datafiles_on_storage_location"
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
   end
@@ -451,6 +486,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "archive_extract_errors", "archive_extract_responses"
+  add_foreign_key "archive_extract_requests", "datafiles"
+  add_foreign_key "archive_extract_responses", "archive_extract_requests"
   add_foreign_key "contributors", "datasets"
   add_foreign_key "creators", "datasets"
   add_foreign_key "datafiles", "datasets"

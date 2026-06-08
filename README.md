@@ -65,6 +65,7 @@ Developer-facing integration configuration and operational details are documente
 - [Ingest events integration](docs/ingest-events-integration.md)
 - [External delivery audit](docs/external-delivery-audit.md)
 - [Globus integration](docs/globus-integration.md)
+- [Archive extractor integration](docs/archive-extractor-integration.md)
 
 ## Migration Pipelines (Initial Implementation)
 
