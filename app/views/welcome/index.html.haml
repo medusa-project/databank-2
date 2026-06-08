@@ -43,9 +43,9 @@
 
         .featured-buttons
           - if @featured_researcher.dataset_url.present?
-            = external_https_link_to label: "dataset", url: @featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{@featured_researcher.name}" }
+            = semantic_action_button(action: :dataset, url: @featured_researcher.dataset_url, style: :legacy, target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{@featured_researcher.name}" })
           - if @featured_researcher.article_url.present?
-            = external_https_link_to label: "article", url: @featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{@featured_researcher.name}" }
+            = semantic_action_button(action: :article, url: @featured_researcher.article_url, style: :legacy, target: "_blank", rel: "noopener", aria: { label: "article provided by #{@featured_researcher.name}" })
 
         - if @featured_researcher.question.present? || @featured_researcher.testimonial.present?
           .featured-comment
@@ -54,13 +54,13 @@
             - if @featured_researcher.testimonial.present?
               .elbow.featured-rich-text= spotlight_rich_text(@featured_researcher.testimonial)
 
-        %hr
+        %div.idb-decorative-divider{ "aria-hidden" => "true" }
         %p
           = link_to "See all researcher spotlights", researcher_spotlights_path, class: "idb-button-default welcome-spotlight-all"
       - else
         %p
           The Illinois Data Bank features researchers who deposit data. Check back soon for our next spotlight.
-        %hr
+        %div.idb-decorative-divider{ "aria-hidden" => "true" }
         %p
           = link_to "See all researcher spotlights", researcher_spotlights_path, class: "idb-button-default welcome-spotlight-all"
 

@@ -172,7 +172,13 @@
 	justify-content: center;
 }
 
+.welcome-spotlight .featured-buttons .legacy-btn {
+	width: 100%;
+	justify-content: center;
+}
+
 .welcome-spotlight-all {
+	display: flex;
 	width: 100%;
 	justify-content: center;
 }
@@ -245,6 +251,20 @@
 }
 
 @media (min-width: 768px) {
+	.welcome-spotlight .featured-buttons .idb-button-primary,
+	.welcome-spotlight .featured-buttons .idb-button-default,
+	.welcome-spotlight .featured-buttons .legacy-btn {
+		width: 50%;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.welcome-spotlight-all {
+		width: 50%;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
 	.welcome-role-switch-controls {
 		flex-direction: row;
 		align-items: center;

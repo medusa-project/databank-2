@@ -1,4 +1,19 @@
 module ApplicationHelper
+  # Provides helper methods for generating semantic buttons with consistent styling and accessibility features.
+  # Example usage:
+  #   <%= semantic_action_button action: :save, url: save_path, label: "Save Changes", icon_only: true, aria_label: "Save changes to the
+  #   dataset" %>
+  #   This would generate a button with the "Save" label, a thumbtack icon, and appropriate classes for styling. The button would link to the specified URL and include an aria-label for accessibility when icon_only is true.
+  #   The IDB_SEMANTIC_BUTTONS constant defines default configurations for common actions, which can be overridden by passing options to the helper method. The helper also includes validation to ensure that only safe URLs are used when generating links.
+  #   The semantic_action_button method supports both link and button elements, depending on whether a URL is provided. It also allows for customization of the button style (legacy or idb), variant (primary, success, etc.), and icon position.
+  #   The semantic_button_icon method generates the appropriate <i> tag for FontAwesome icons based on the specified style and icon name.
+  #   The helper methods are designed to promote consistency across the application while also providing flexibility for different use cases.
+  #   The dataset_persistent_url and dataset_plain_text_citation methods provide convenient ways to generate a DOI URL and a plain text citation for a given dataset, respectively. The dataset_primary_contact_name method retrieves the name of the primary contact creator for a dataset, if available.
+  #   The external_https_link_to method ensures that only valid HTTPS URLs are used when generating external links, returning nil for invalid or unsafe URLs. The internal_link_to method can be used for generating links to internal paths without additional URL validation.
+  #   The helper methods are intended to be used in views to simplify the generation of common UI elements and ensure that best practices for accessibility and security are followed.
+  #   The IDB_SEMANTIC_BUTTONS constant can be easily extended to include additional actions as needed, providing a centralized configuration for button styles and icons throughout the application.
+  #   The helper methods can be further customized or extended to support additional features, such as different icon libraries, more complex button layouts, or additional accessibility attributes as required by the application's design and user needs.
+  #   Overall, the ApplicationHelper module serves as a central place for defining reusable view helper methods that enhance the consistency, accessibility, and maintainability of the application's user interface components.
   IDB_SEMANTIC_BUTTONS = {
     save: {
       label: "Save",
@@ -28,6 +43,18 @@ module ApplicationHelper
       label: "Publish",
       variant: "primary",
       icon: "paper-plane",
+      icon_style: :regular
+    },
+    dataset: {
+      label: "Dataset",
+      variant: "primary",
+      icon: "table-columns",
+      icon_style: :solid
+    },
+    article: {
+      label: "Article",
+      variant: "primary",
+      icon: "newspaper",
       icon_style: :regular
     }
   }.freeze

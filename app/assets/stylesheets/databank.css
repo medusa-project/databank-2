@@ -963,7 +963,8 @@ textarea {
 /* -----------------------------------------------------------------------
  * Miscellaneous
  * ----------------------------------------------------------------------- */
-hr {
+hr,
+.idb-decorative-divider {
 	border: none;
 	border-top: 1px solid var(--il-storm-80);
 	margin: 1.5rem 0;
