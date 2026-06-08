@@ -540,3 +540,26 @@ input.idb-button-default:disabled {
 	border-color: #8c8c8c;
 	color: #333333;
 }
+
+/* Semantic button helper icon support */
+.idb-button-with-icon,
+.legacy-btn-with-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+}
+
+.idb-button-icon {
+	font-size: 0.95em;
+	line-height: 1;
+	flex-shrink: 0;
+	pointer-events: none;
+}
+
+.idb-button-icon-only,
+.legacy-btn-icon-only {
+	padding-left: 0.65rem;
+	padding-right: 0.65rem;
+	min-width: 2.5rem;
+}
