@@ -98,7 +98,7 @@ module Migration
       return if expected.blank?
 
       actual = Digest::SHA256.file(bundle_path).hexdigest
-      return if secure_compare(actual, expected)
+      return if secure_compare(left: actual, right: expected)
 
       raise ArgumentError, "bundle checksum mismatch"
     end
@@ -319,11 +319,11 @@ module Migration
       summary[:report_error] = e.message if summary.respond_to?(:[]=)
     end
 
-    def secure_compare(a, b)
-      return false if a.bytesize != b.bytesize
+    def secure_compare(left:, right:)
+      return false if left.bytesize != right.bytesize
 
-      l = a.unpack("C*")
-      r = b.unpack("C*")
+      l = left.unpack("C*")
+      r = right.unpack("C*")
       result = 0
       l.zip(r) { |x, y| result |= (x ^ y) }
       result.zero?

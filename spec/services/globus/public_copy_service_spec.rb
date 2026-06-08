@@ -39,7 +39,7 @@ RSpec.describe Globus::PublicCopyService, type: :service do
   it "copies public files to the globus download root as <dataset_key>/<binary_name>" do
     allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(false)
 
-    result = described_class.new.call
+    result = described_class.new(dataset_key: dataset.key).call
 
     expect(result[:copied]).to eq(1)
     expect(result[:failed]).to eq(0)
@@ -53,7 +53,7 @@ RSpec.describe Globus::PublicCopyService, type: :service do
   it "is idempotent when the destination key already exists" do
     allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(true)
 
-    result = described_class.new.call
+    result = described_class.new(dataset_key: dataset.key).call
 
     expect(result[:copied]).to eq(0)
     expect(result[:skipped_existing]).to eq(1)
@@ -63,7 +63,7 @@ RSpec.describe Globus::PublicCopyService, type: :service do
   it "skips non-public datasets" do
     dataset.update!(embargo: Dataset::EMBARGO_FILE, release_date: 1.day.from_now.to_date)
 
-    result = described_class.new.call
+    result = described_class.new(dataset_key: dataset.key).call
 
     expect(result[:copied]).to eq(0)
     expect(result[:skipped_non_public]).to eq(1)
@@ -73,7 +73,7 @@ RSpec.describe Globus::PublicCopyService, type: :service do
   it "reports would_copy in dry-run mode" do
     allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(false)
 
-    result = described_class.new(dry_run: true).call
+    result = described_class.new(dataset_key: dataset.key, dry_run: true).call
 
     expect(result[:copied]).to eq(1)
     expect(result[:records].last[:status]).to eq(:would_copy)

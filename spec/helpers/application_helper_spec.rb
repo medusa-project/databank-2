@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe ApplicationHelper, type: :helper do
   describe "#external_https_link_to" do
     it "renders a link for https urls" do
-      html = helper.external_https_link_to("Illinois", "https://www.illinois.edu", class: "external-link")
+      html = helper.external_https_link_to(label: "Illinois", url: "https://www.illinois.edu", class: "external-link")
 
       expect(html).to include('href="https://www.illinois.edu"')
       expect(html).to include("Illinois")
@@ -11,16 +11,16 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
 
     it "renders a link for http urls" do
-      html = helper.external_https_link_to("Example", "http://example.edu")
+      html = helper.external_https_link_to(label: "Example", url: "http://example.edu")
 
       expect(html).to include('href="http://example.edu"')
     end
 
     it "returns nil for blank, invalid, or non-http urls" do
-      expect(helper.external_https_link_to("Blank", nil)).to be_nil
-      expect(helper.external_https_link_to("FTP", "ftp://example.edu/file.txt")).to be_nil
-      expect(helper.external_https_link_to("Relative", "/local/path")).to be_nil
-      expect(helper.external_https_link_to("Broken", "http://exa mple.edu")).to be_nil
+      expect(helper.external_https_link_to(label: "Blank", url: nil)).to be_nil
+      expect(helper.external_https_link_to(label: "FTP", url: "ftp://example.edu/file.txt")).to be_nil
+      expect(helper.external_https_link_to(label: "Relative", url: "/local/path")).to be_nil
+      expect(helper.external_https_link_to(label: "Broken", url: "http://exa mple.edu")).to be_nil
     end
   end
 

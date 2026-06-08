@@ -26,7 +26,7 @@ module Globus
         break if @dataset_limit && summary[:datasets_scanned] >= @dataset_limit
 
         summary[:datasets_scanned] += 1
-        copy_dataset(dataset, summary)
+        copy_dataset(dataset: dataset, summary: summary)
       end
 
       summary
@@ -39,7 +39,7 @@ module Globus
       @dataset_key.present? ? scope.where(key: @dataset_key) : scope
     end
 
-    def copy_dataset(dataset, summary)
+    def copy_dataset(dataset:, summary:)
       unless dataset.files_publicly_readable_now?
         summary[:skipped_non_public] += dataset.datafiles.count
         summary[:records] << {

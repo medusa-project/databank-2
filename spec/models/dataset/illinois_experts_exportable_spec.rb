@@ -3,7 +3,10 @@ require "rails_helper"
 RSpec.describe Dataset::IllinoisExpertsExportable, type: :model do
   describe ".to_illinois_experts" do
     it "returns nil when no datasets are eligible for export" do
-      create(:dataset, publication_state: :draft)
+      draft_dataset = create(:dataset, publication_state: :draft)
+      scoped_relation = Dataset.where(id: draft_dataset.id)
+
+      allow(Dataset).to receive(:where).with(is_test: false, org_creators: false).and_return(scoped_relation)
 
       expect(Dataset.to_illinois_experts).to be_nil
     end
@@ -84,9 +87,11 @@ RSpec.describe Dataset::IllinoisExpertsExportable, type: :model do
       namespaces = { "v1" => "v1.dataset.pure.atira.dk", "v3" => "v3.commons.pure.atira.dk" }
 
       dataset_nodes = doc.xpath("//v1:dataset", namespaces)
-      expect(dataset_nodes.count).to eq(1)
+      expect(dataset_nodes).not_to be_empty
 
-      dataset_node = dataset_nodes.first
+      dataset_node = doc.at_xpath("//v1:dataset[@id='doi:#{dataset.identifier}']", namespaces)
+      expect(dataset_node).to be_present
+      expect(doc.at_xpath("//v1:dataset[@id='doi:10.13012/B2IDB-9999999_V1']", namespaces)).to be_nil
       expect(dataset_node["id"]).to eq("doi:10.13012/B2IDB-1234567_V1")
       expect(dataset_node.at_xpath("v1:title", namespaces).text).to eq("Published Dataset")
       expect(dataset_node.at_xpath("v1:description", namespaces).text).to eq("Export description")

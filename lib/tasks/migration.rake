@@ -7,7 +7,7 @@ def migration_report_path(dir, report_path)
   path.absolute? ? path : dir.join(path)
 end
 
-def record_migration_run(run_type:, label: nil, bundle_path:, checksum_path: nil, manifest_path: nil, report_path: nil, details: {})
+def record_migration_run(run_type:, bundle_path:, label: nil, checksum_path: nil, manifest_path: nil, report_path: nil, details: {})
   recorder = Migration::RunRecorder.new(
     run_type: run_type,
     label: label,

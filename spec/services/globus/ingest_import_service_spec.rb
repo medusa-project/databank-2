@@ -25,7 +25,7 @@ RSpec.describe Globus::IngestImportService, type: :service do
     allow(ingest_root).to receive(:file_keys).with("IDB-1111111").and_return([ "IDB-1111111/notes.csv" ])
     allow(ingest_root).to receive(:size).with("IDB-1111111/notes.csv").and_return(123)
 
-    result = described_class.new.call
+    result = described_class.new(dataset_key: dataset.key).call
 
     expect(result[:created]).to eq(1)
     expect(result[:failed]).to eq(0)
@@ -48,7 +48,7 @@ RSpec.describe Globus::IngestImportService, type: :service do
     allow(ingest_root).to receive(:exist?).with("IDB-1111111/").and_return(true)
     allow(ingest_root).to receive(:file_keys).with("IDB-1111111").and_return([ "IDB-1111111/notes.csv" ])
 
-    result = described_class.new.call
+    result = described_class.new(dataset_key: dataset.key).call
 
     expect(result[:created]).to eq(0)
     expect(result[:skipped_existing]).to eq(1)
@@ -60,7 +60,7 @@ RSpec.describe Globus::IngestImportService, type: :service do
     allow(ingest_root).to receive(:file_keys).with("IDB-1111111").and_return([ "IDB-1111111/new.csv" ])
     allow(ingest_root).to receive(:size).with("IDB-1111111/new.csv").and_return(44)
 
-    result = described_class.new(dry_run: true).call
+    result = described_class.new(dataset_key: dataset.key, dry_run: true).call
 
     expect(result[:created]).to eq(1)
     expect(result[:records].last[:status]).to eq(:would_create)

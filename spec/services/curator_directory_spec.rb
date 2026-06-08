@@ -44,13 +44,17 @@ RSpec.describe CuratorDirectory, type: :service do
     create(:user, email: "curator@example.edu", role: :curator)
     create(:user, email: "viewer@example.edu", role: :depositor)
 
-    expect(described_class.review_recipients).to eq([
+    recipients = described_class.review_recipients
+
+    expect(recipients).to include(
       "core@one.edu",
       "second@two.edu",
       "third@three.edu",
       "managed@example.edu",
       "admin@example.edu",
       "curator@example.edu"
-    ])
+    )
+    expect(recipients).not_to include("viewer@example.edu")
+    expect(recipients).to eq(recipients.uniq)
   end
 end

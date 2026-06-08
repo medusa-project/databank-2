@@ -44,11 +44,11 @@ module Dataset::IllinoisExpertsExportable
 
           person_xml_doc = IllinoisExpertsClient.person_xml_doc(email)
           person_node = if person_xml_doc.present?
-            internal_expert(doc, creator, person_xml_doc, dataset_release_date)
+            internal_expert(doc: doc, creator: creator, person_xml_doc: person_xml_doc, dataset_release_date: dataset_release_date)
           elsif illinois_email?(email)
-            illinois_external_expert(doc, creator, dataset_release_date)
+            illinois_external_expert(doc: doc, creator: creator, dataset_release_date: dataset_release_date)
           else
-            external_expert(doc, creator, dataset_release_date)
+            external_expert(doc: doc, creator: creator, dataset_release_date: dataset_release_date)
           end
           person_node.parent = persons_node
         end
@@ -95,7 +95,7 @@ module Dataset::IllinoisExpertsExportable
       doc.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML)
     end
 
-    def internal_expert(doc, creator, person_xml_doc, dataset_release_date)
+    def internal_expert(doc:, creator:, person_xml_doc:, dataset_release_date:)
       person_node = doc.create_element("v1:person")
       person_node["id"] = creator.email.to_s
       person_node["contactPerson"] = "true" if creator.contact_selected?
@@ -135,7 +135,7 @@ module Dataset::IllinoisExpertsExportable
       person_node
     end
 
-    def external_expert(doc, creator, dataset_release_date)
+    def external_expert(doc:, creator:, dataset_release_date:)
       first_name, last_name = split_creator_name(creator)
 
       person_node = doc.create_element("v1:person")
@@ -173,7 +173,7 @@ module Dataset::IllinoisExpertsExportable
       person_node
     end
 
-    def illinois_external_expert(doc, creator, dataset_release_date)
+    def illinois_external_expert(doc:, creator:, dataset_release_date:)
       first_name, last_name = split_creator_name(creator)
 
       person_node = doc.create_element("v1:person")

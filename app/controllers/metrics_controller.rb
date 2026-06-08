@@ -117,40 +117,40 @@ class MetricsController < ApplicationController
   end
 
   def refresh_dataset_downloads
-    enqueue_metric_refresh(:dataset_downloads_json, "Dataset downloads JSON")
+    enqueue_metric_refresh(metric_key: :dataset_downloads_json, label: "Dataset downloads JSON")
   end
 
   def refresh_datafile_downloads
-    enqueue_metric_refresh(:datafile_downloads_json, "Datafile downloads JSON")
+    enqueue_metric_refresh(metric_key: :datafile_downloads_json, label: "Datafile downloads JSON")
   end
 
   def refresh_datasets_tsv
-    enqueue_metric_refresh(:datasets_tsv, "Datasets TSV")
+    enqueue_metric_refresh(metric_key: :datasets_tsv, label: "Datasets TSV")
   end
 
   def refresh_datafiles_csv
-    enqueue_metric_refresh(:datafiles_csv, "Datafiles CSV")
+    enqueue_metric_refresh(metric_key: :datafiles_csv, label: "Datafiles CSV")
   end
 
   def refresh_container_csv
-    enqueue_metric_refresh(:container_contents_csv, "Container contents CSV")
+    enqueue_metric_refresh(metric_key: :container_contents_csv, label: "Container contents CSV")
   end
 
   def refresh_funders_csv
-    enqueue_metric_refresh(:funders_csv, "Funders CSV")
+    enqueue_metric_refresh(metric_key: :funders_csv, label: "Funders CSV")
   end
 
   def refresh_related_materials_csv
-    enqueue_metric_refresh(:related_materials_csv, "Related materials CSV")
+    enqueue_metric_refresh(metric_key: :related_materials_csv, label: "Related materials CSV")
   end
 
   def refresh_container_contents_csv
-    enqueue_metric_refresh(:container_contents_csv, "Container contents CSV")
+    enqueue_metric_refresh(metric_key: :container_contents_csv, label: "Container contents CSV")
   end
 
   private
 
-  def enqueue_metric_refresh(metric_key, label)
+  def enqueue_metric_refresh(metric_key:, label:)
     if Metric.in_progress?(metric_key)
       redirect_to metrics_path, alert: "#{label} refresh is already in progress. Please refresh the page to check status."
       return

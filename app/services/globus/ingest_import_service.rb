@@ -25,7 +25,7 @@ module Globus
         break if @dataset_limit && summary[:datasets_scanned] >= @dataset_limit
 
         summary[:datasets_scanned] += 1
-        import_dataset(dataset, summary)
+        import_dataset(dataset: dataset, summary: summary)
       end
 
       summary
@@ -38,7 +38,7 @@ module Globus
       @dataset_key.present? ? scope.where(key: @dataset_key) : scope
     end
 
-    def import_dataset(dataset, summary)
+    def import_dataset(dataset:, summary:)
       ingest_root = StorageManager.instance.globus_ingest_root
       unless ingest_root.exist?("#{dataset.key}/")
         summary[:records] << { dataset_key: dataset.key, status: :skipped, message: "ingest directory not found" }

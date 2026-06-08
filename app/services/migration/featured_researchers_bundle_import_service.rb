@@ -42,7 +42,7 @@ module Migration
       if dry_run
         payloads.each_with_index do |payload, idx|
           status = dry_run_status(payload)
-          increment_summary(summary, status)
+          increment_summary(summary: summary, status: status)
           summary[:records] << { line: idx + 1, status: status, id: payload.dig("attributes", "id") }
         end
         summary[:processed_count] = payloads.size
@@ -57,7 +57,7 @@ module Migration
 
         payloads.each_with_index do |payload, idx|
           result = import_payload!(payload)
-          increment_summary(summary, result[:status])
+          increment_summary(summary: summary, status: result[:status])
           summary[:records] << {
             line: idx + 1,
             status: result[:status],
@@ -109,7 +109,7 @@ module Migration
       return if expected.blank?
 
       actual = Digest::SHA256.file(bundle_path).hexdigest
-      return if secure_compare(actual, expected)
+      return if secure_compare(left: actual, right: expected)
 
       raise ArgumentError, "bundle checksum mismatch"
     end
@@ -227,8 +227,8 @@ module Migration
         dataset_url: strip_or_nil(attrs["dataset_url"]),
         article_url: strip_or_nil(attrs["article_url"]),
         is_active: ActiveModel::Type::Boolean.new.cast(attrs["is_active"]),
-        created_at: parse_time!(attrs["created_at"], "created_at", id),
-        updated_at: parse_time!(attrs["updated_at"], "updated_at", id)
+        created_at: parse_time!(value: attrs["created_at"], field: "created_at", id: id),
+        updated_at: parse_time!(value: attrs["updated_at"], field: "updated_at", id: id)
       }
     end
 
@@ -242,7 +242,7 @@ module Migration
       str.present? ? str : nil
     end
 
-    def parse_time!(value, field, id)
+    def parse_time!(value:, field:, id:)
       raise ArgumentError, "missing #{field} for spotlight id=#{id}" if value.blank?
 
       parsed = Time.zone.parse(value.to_s)
@@ -310,17 +310,17 @@ module Migration
       summary[:report_error] = e.message if summary.respond_to?(:[]=)
     end
 
-    def secure_compare(a, b)
-      return false if a.bytesize != b.bytesize
+    def secure_compare(left:, right:)
+      return false if left.bytesize != right.bytesize
 
-      l = a.unpack("C*")
-      r = b.unpack("C*")
+      l = left.unpack("C*")
+      r = right.unpack("C*")
       result = 0
       l.zip(r) { |x, y| result |= (x ^ y) }
       result.zero?
     end
 
-    def increment_summary(summary, status)
+    def increment_summary(summary:, status:)
       case status
       when :created then summary[:created] += 1
       when :updated then summary[:updated] += 1

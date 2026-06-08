@@ -25,7 +25,7 @@ module Migration
         return Result.new(status: :skipped_existing, dataset_key: key, identifier: identifier, message: "dataset already exists")
       end
 
-      return dry_run_result(existing, key, identifier) if dry_run
+      return dry_run_result(existing: existing, key: key, identifier: identifier) if dry_run
 
       dataset = existing || Dataset.new(key: key)
       assign_dataset_attributes(dataset)
@@ -49,7 +49,7 @@ module Migration
       Result.new(status: :failed, dataset_key: dataset_key, identifier: payload["identifier"], message: message)
     end
 
-    def dry_run_result(existing, key, identifier)
+    def dry_run_result(existing:, key:, identifier:)
       status = existing ? :would_update : :would_create
       Result.new(status: status, dataset_key: key, identifier: identifier, message: nil)
     end
@@ -150,7 +150,7 @@ module Migration
         source_created_at = row.delete(:source_created_at)
         source_updated_at = row.delete(:source_updated_at)
 
-        record = find_existing_child(association, row)
+        record = find_existing_child(association: association, attrs: row)
         record ||= association.build
         yield(record, row)
         record.save!
@@ -158,7 +158,7 @@ module Migration
       end
     end
 
-    def find_existing_child(association, attrs)
+    def find_existing_child(association:, attrs:)
       case association.klass.name
       when "Creator", "Contributor", "Funder"
         association.find_by(name: attrs[:name], position: attrs[:position])
@@ -174,7 +174,7 @@ module Migration
 
     def normalized_creators
       Array(payload["creators"]).each_with_index.filter_map do |creator, index|
-        name = combine_name(creator["given_name"], creator["family_name"], creator["name"])
+        name = combine_name(given_name: creator["given_name"], family_name: creator["family_name"], fallback_name: creator["name"])
         next if name.blank?
 
         {
@@ -190,7 +190,7 @@ module Migration
 
     def normalized_contributors
       Array(payload["contributors"]).each_with_index.filter_map do |contributor, index|
-        name = combine_name(contributor["given_name"], contributor["family_name"], contributor["name"])
+        name = combine_name(given_name: contributor["given_name"], family_name: contributor["family_name"], fallback_name: contributor["name"])
         next if name.blank?
 
         {
@@ -233,7 +233,7 @@ module Migration
 
         {
           title: title,
-          relation_type: normalized_relation_type(material, uri),
+          relation_type: normalized_relation_type(material: material, uri: uri),
           uri: uri,
           position: (material["row_position"] || material["position"] || (index + 1)).to_i,
           source_created_at: material["created_at"],
@@ -310,7 +310,7 @@ module Migration
       nil
     end
 
-    def normalized_relation_type(material, uri)
+    def normalized_relation_type(material:, uri:)
       candidate = material["relation_type"].presence || material["material_type"].presence
       return candidate if RelatedMaterial::RELATION_TYPE_OPTIONS.include?(candidate)
 
@@ -333,7 +333,7 @@ module Migration
       nil
     end
 
-    def combine_name(given_name, family_name, fallback_name)
+    def combine_name(given_name:, family_name:, fallback_name:)
       given = given_name.to_s.strip
       family = family_name.to_s.strip
       combined = [ given, family ].reject(&:blank?).join(" ").strip

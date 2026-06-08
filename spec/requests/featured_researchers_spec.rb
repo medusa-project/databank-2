@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe "Featured researchers", type: :request do
+  before do
+    FeaturedResearcher.delete_all
+    ActiveRecord::Base.connection.reset_pk_sequence!(FeaturedResearcher.table_name)
+  end
+
   around do |example|
     OmniAuth.config.test_mode = true
     example.run
