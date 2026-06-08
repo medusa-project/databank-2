@@ -40,7 +40,7 @@ bin/ci
 
 These are not currently required by GitHub Actions, but they are strongly recommended before opening or updating a PR.
 
-1. Full backend test suite (RSpec)
+1. Full backend test suite (RSpec) -- if coverage is reported below 80%, document reason
 
 ```sh
 bundle exec rspec

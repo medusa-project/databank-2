@@ -90,7 +90,7 @@ module Ingest
     private
 
     def orphaned_responses_for_dataset(lookback_minutes:)
-      lower_bound = lookback_minutes.minutes.ago
+      lower_bound = @now - lookback_minutes.minutes
       base = IngestResponseEvent.unresolved_orphaned.where(received_at: lower_bound..@now)
       correlation_pattern = "dataset.published:#{@dataset.id}:%"
 
