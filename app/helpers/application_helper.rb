@@ -33,6 +33,12 @@ module ApplicationHelper
       icon: "magnifying-glass",
       icon_style: :solid
     },
+    preview: {
+      label: "Preview",
+      variant: "secondary",
+      icon: "eye",
+      icon_style: :solid
+    },
     continue: {
       label: "Continue",
       variant: "primary",
@@ -56,6 +62,18 @@ module ApplicationHelper
       variant: "primary",
       icon: "newspaper",
       icon_style: :regular
+    },
+    cancel: {
+      label: "Cancel",
+      variant: "danger",
+      icon: "xmark",
+      icon_style: :solid
+    },
+    submit: {
+      label: "Submit",
+      variant: "primary",
+      icon: "check-to-slot",
+      icon_style: :solid
     }
   }.freeze
 

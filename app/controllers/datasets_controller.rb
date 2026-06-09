@@ -1,5 +1,5 @@
 class DatasetsController < ApplicationController
-  skip_before_action :authenticate_user!, only: %i[index show record_text download_metrics download_link]
+  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link]
 
   before_action :set_dataset, only: %i[show record_text download_metrics download_link confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
@@ -25,7 +25,6 @@ class DatasetsController < ApplicationController
   end
 
   def pre_deposit
-    authorize! :create, Dataset
     @title = "Pre-Deposit Considerations"
   end
 

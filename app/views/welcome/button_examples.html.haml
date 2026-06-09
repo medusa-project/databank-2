@@ -27,6 +27,12 @@
     %p
       %button.legacy-btn.legacy-btn-default{ type: "button" } Default
 
+    %h3 IDB Neutral Variants
+    %p
+      %button.idb-button-secondary{ type: "button" } Secondary
+    %p
+      %button.idb-button-default{ type: "button" } Default
+
     %h3 Legacy Effective Anchor Variants
     %p
       %a.legacy-btn.legacy-btn-primary{ href: "#" } Primary Link
@@ -40,6 +46,23 @@
       %a.legacy-btn.legacy-btn-share{ href: "#" } Share Link
     %p
       %a.legacy-btn.legacy-btn-default{ href: "#" } Default Link
+
+    %h3 Legacy disabled state
+    %p
+      %button.legacy-btn.legacy-btn-primary{ type: "button", disabled: true } Disabled Primary
+    %p
+      %button.legacy-btn.legacy-btn-info{ type: "button", disabled: true } Disabled Info
+    %p
+      %button.legacy-btn.legacy-btn-success{ type: "button", disabled: true } Disabled Success
+    %p
+      %button.legacy-btn.legacy-btn-danger{ type: "button", disabled: true } Disabled Danger
+    %p
+      %button.legacy-btn.legacy-btn-warning{ type: "button", disabled: true } Disabled Warning
+    %p
+      %button.idb-button-secondary{ type: "button", disabled: true } Disabled Secondary
+    %p
+      %button.idb-button-default{ type: "button", disabled: true } Disabled Default
+
 
   %section{ "aria-labelledby" => "button-examples-semantic" }
     %h2#button-examples-semantic Semantic Helper Buttons (Legacy Style + Icons)
@@ -57,6 +80,8 @@
     %p
       = semantic_action_button(action: :search, style: :legacy)
     %p
+      = semantic_action_button(action: :preview, style: :idb)
+    %p
       = semantic_action_button(action: :continue, style: :legacy)
     %p
       = semantic_action_button(action: :publish, style: :legacy)
@@ -69,6 +94,8 @@
     %p
       = semantic_action_button(action: :search, style: :legacy, icon_only: true, aria_label: "Search")
     %p
+      = semantic_action_button(action: :preview, style: :idb, icon_only: true, aria_label: "Preview")
+    %p
       = semantic_action_button(action: :continue, style: :legacy, icon_only: true, aria_label: "Continue to next step")
     %p
       = semantic_action_button(action: :publish, style: :legacy, icon_only: true, aria_label: "Publish dataset")
@@ -80,6 +107,8 @@
       = semantic_action_button(action: :edit, style: :legacy, url: "#")
     %p
       = semantic_action_button(action: :search, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :preview, style: :idb, url: "#")
     %p
       = semantic_action_button(action: :continue, style: :legacy, url: "#")
     %p

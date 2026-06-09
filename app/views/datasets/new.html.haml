@@ -73,5 +73,11 @@
               .deposit-agreement-selection-warning{aria: { live: "assertive" }, data: { agreement_target: "warning" }}
               .idb-workflow-strip.idb-workflow-strip-bottom
                 %nav.idb-workflow-actions-right{aria: { label: "Deposit agreement actions" }}
-                  = f.submit "Submit", class: "idb-button-primary", id: "agree-button", disabled: true, data: { agreement_target: "submitButton" }
-                  = link_to "Cancel", root_path, class: "idb-button-danger"
+                  = semantic_action_button action: :submit,
+                    style: :idb,
+                    icon_position: :left,
+                    type: "submit",
+                    id: "agree-button",
+                    disabled: true,
+                    data: { agreement_target: "submitButton" }
+                  = semantic_action_button(action: :cancel, url: root_path, style: :idb, icon_position: :left)

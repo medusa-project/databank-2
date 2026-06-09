@@ -287,4 +287,45 @@ footer address {
 
 ilw-footer {
   --ilw-margin--side: 1.875rem;
+	display: block;
+	margin-top: 0.5rem;
+}
+
+ilw-footer *[slot="actions"] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+ilw-footer *[slot="actions"] a.footer-action-button,
+ilw-footer *[slot="actions"] a.footer-action-button:link,
+ilw-footer *[slot="actions"] a.footer-action-button:visited {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem 0.875rem;
+	background-color: var(--il-altgeld);
+	border: 1px solid var(--il-altgeld);
+	border-radius: 0.25rem;
+	color: #ffffff;
+	font-weight: 700;
+	line-height: 1.25;
+	text-decoration: none;
+}
+
+ilw-footer *[slot="actions"] a.footer-action-button:hover {
+	background-color: var(--il-altgeld-darker-1);
+	border-color: var(--il-altgeld-darker-1);
+	color: #ffffff;
+	text-decoration: none;
+}
+
+ilw-footer *[slot="actions"] a.footer-action-button:focus,
+ilw-footer *[slot="actions"] a.footer-action-button:focus-visible {
+	outline: 2px solid var(--il-blue);
+	outline-offset: 2px;
+	background-color: var(--il-altgeld-darker-1);
+	border-color: var(--il-altgeld-darker-1);
+	color: #ffffff;
+	text-decoration: none;
 }

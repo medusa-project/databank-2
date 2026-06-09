@@ -4,8 +4,9 @@ class SessionsController < ApplicationController
 
   # Responds to `GET /login`
   def new
+    store_login_return_referer
+
     unless Rails.env.test? || Rails.env.development?
-      session[:login_return_referer] = request.env["HTTP_REFERER"]
       redirect_to(shibboleth_login_path(Databank2::Application.shibboleth_host))
       nil
     end
@@ -74,10 +75,30 @@ class SessionsController < ApplicationController
   protected
 
   def return_url
-    session[:login_return_uri] || session[:login_return_referer] || root_path
+    session.delete(:login_return_uri) || session.delete(:login_return_referer) || root_path
   end
 
   def shibboleth_login_path(host)
     "/Shibboleth.sso/Login?target=https://#{host}/auth/shibboleth/callback"
+  end
+
+  def store_login_return_referer
+    return if session[:login_return_uri].present?
+
+    referer = safe_internal_return_path(request.referer)
+    session[:login_return_referer] = referer if referer.present?
+  end
+
+  def safe_internal_return_path(url)
+    return if url.blank?
+
+    uri = URI.parse(url)
+    return uri.to_s if uri.host.blank? && uri.path.present? && uri.path != login_path
+    return if uri.host.present? && uri.host != request.host
+    return if uri.path.blank? || uri.path == login_path
+
+    [ uri.path, uri.query.presence && "?#{uri.query}" ].compact.join
+  rescue URI::InvalidURIError
+    nil
   end
 end

@@ -89,4 +89,15 @@ RSpec.describe ApplicationHelper, type: :helper do
       expect(helper.dataset_primary_contact_name(dataset)).to be_nil
     end
   end
+
+  describe "#semantic_action_button" do
+    it "renders the secondary semantic action with secondary styling and icon" do
+      html = helper.semantic_action_button(action: :secondary, style: :idb)
+
+      expect(html).to include("Secondary")
+      expect(html).to include("idb-button-secondary")
+      expect(html).to include("fa-minus")
+      expect(html).to include('type="button"')
+    end
+  end
 end

@@ -6,5 +6,5 @@
     = render "individual", featured_researcher: @featured_researcher
 
     .idb-row-actions
-      = link_to "List Researcher Spotlights", featured_researchers_path, class: "idb-button-info"
-      = link_to "Edit Researcher Spotlight", edit_featured_researcher_path(@featured_researcher), class: "idb-button-success"
+      = semantic_action_button(action: :preview, url: featured_researchers_path, style: :idb, label: "List Researcher Spotlights")
+      

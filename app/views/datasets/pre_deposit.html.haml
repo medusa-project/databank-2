@@ -73,9 +73,9 @@
           = render partial: "datasets/help/embargo_infographic"
 
     %section#predeposit-help.idb-section-card
-      %details.idb-section-disclosure
+      %details.idb-section-disclosure{open: true}
         %summary
-          %h2.pre-deposit-accordion-title Help Options (click to expand)
+          %h2.pre-deposit-accordion-title Help Options
         .idb-section-body
           %p The Research Data Service has data publishing experts and we are here to help.
 
@@ -97,5 +97,6 @@
 
     .idb-workflow-strip.idb-workflow-strip-bottom
       %nav.idb-workflow-actions-right{aria: { label: "Pre-deposit actions" }}
-        = link_to "Continue", new_dataset_path, class: "idb-button-primary"
-        = link_to "Cancel", root_path, class: "idb-button-danger"
+        = semantic_action_button(action: :continue, url: new_dataset_path, style: :idb, icon_position: :right)
+
+
