@@ -6,4 +6,5 @@
     = render "form"
 
     .idb-row-actions
-      = link_to "Delete", featured_researcher_path(@featured_researcher), method: :delete, data: { confirm: "Are you sure?" }, class: "idb-button-danger"
+      = semantic_action_button(action: :preview, url: preview_featured_researcher_path(@featured_researcher), style: :idb)
+      = semantic_action_button(action: :delete, url: featured_researcher_path(@featured_researcher), style: :idb, method: :delete, data: { confirm: "Are you sure?" })  

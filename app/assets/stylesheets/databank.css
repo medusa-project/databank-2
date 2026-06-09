@@ -521,6 +521,24 @@
 	margin-bottom: 0.3rem;
 }
 
+.dataset-form-page .idb-citation-preview-label {
+	display: inline;
+	margin: 0 0.35rem 0 0;
+}
+
+.dataset-form-page .idb-citation-preview-value {
+	display: inline;
+}
+
+.dataset-form-page .idb-creators-subheading {
+	font-family: var(--il-font-sans);
+	font-size: 0.95rem;
+	font-weight: 600;
+	line-height: 1.3;
+	margin: 0;
+	color: var(--il-blue);
+}
+
 .dataset-form-page input[type="text"],
 .dataset-form-page input[type="email"],
 .dataset-form-page input[type="password"],

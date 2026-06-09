@@ -13,4 +13,5 @@
 
     - if can?(:manage, FeaturedResearcher)
       .idb-row-actions
-        = link_to "New Researcher Spotlight", new_featured_researcher_path, class: "idb-button-primary"
+        = semantic_action_button(action: :new, url: new_featured_researcher_path, style: :idb, label: "New Researcher Spotlight")
+

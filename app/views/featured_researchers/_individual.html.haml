@@ -26,9 +26,9 @@
 
   .featured-researcher-links
     - if featured_researcher.dataset_url.present?
-      = link_to "dataset", featured_researcher.dataset_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{featured_researcher.name}" }
+      = semantic_action_button(action: :dataset, url: featured_researcher.dataset_url, style: :idb, target: "_blank", rel: "noopener", aria: { label: "dataset provided by #{featured_researcher.name}" })
     - if featured_researcher.article_url.present?
-      = link_to "article", featured_researcher.article_url, class: "idb-button-primary", target: "_blank", rel: "noopener", aria: { label: "article provided by #{featured_researcher.name}" }
+      = semantic_action_button(action: :article, url: featured_researcher.article_url, style: :idb, target: "_blank", rel: "noopener", aria: { label: "article provided by #{featured_researcher.name}" })
 
   - if can?(:manage, featured_researcher)
     .featured-researcher-admin.curator-only
@@ -47,6 +47,6 @@
         = f.hidden_field :is_active, value: !featured_researcher.is_active?
         = f.submit(featured_researcher.is_active? ? "Unpublish" : "Publish", class: "idb-button-warning")
 
-      = link_to "Preview", preview_featured_researcher_path(featured_researcher), class: "idb-button-primary"
-      = link_to "Edit", edit_featured_researcher_path(featured_researcher), class: "idb-button-success"
-      = link_to "Delete", featured_researcher_path(featured_researcher), method: :delete, data: { confirm: "Are you sure?" }, class: "idb-button-danger"
+      = semantic_action_button(action: :preview, url: preview_featured_researcher_path(featured_researcher), style: :idb)
+      = semantic_action_button(action: :edit, url: edit_featured_researcher_path(featured_researcher), style: :idb)
+      = semantic_action_button(action: :delete, url: featured_researcher_path(featured_researcher), style: :idb, method: :delete, data: { confirm: "Are you sure?" })

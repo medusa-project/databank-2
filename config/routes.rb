@@ -126,6 +126,8 @@ Rails.application.routes.draw do
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides
   get "/contact",  to: "pages#contact",  as: :contact
+  get "/contact",  to: "pages#contact",  as: :contact_us
+  get "/help",     to: "pages#guides",   as: :help
 
   # Errors
   post "/", to: "errors#error404"

@@ -60,7 +60,7 @@ module ApplicationHelper
     dataset: {
       label: "Dataset",
       variant: "primary",
-      icon: "table-columns",
+      icon: "table-cells",
       icon_style: :solid
     },
     article: {
@@ -68,6 +68,12 @@ module ApplicationHelper
       variant: "primary",
       icon: "newspaper",
       icon_style: :regular
+    },
+    new: {
+      label: "New",
+      variant: "primary",
+      icon: "plus",
+      icon_style: :solid
     },
     cancel: {
       label: "Cancel",
@@ -80,6 +86,18 @@ module ApplicationHelper
       variant: "primary",
       icon: "check-to-slot",
       icon_style: :solid
+    },
+    help: {
+      label: "Get Help",
+      variant: "secondary",
+      icon: "question-circle",
+      icon_style: :regular
+    },
+    delete: {
+      label: "Delete",
+      variant: "danger",
+      icon: "trash",
+      icon_style: :regular
     }
   }.freeze
 
