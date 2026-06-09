@@ -1,0 +1,47 @@
+.idb-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.15rem 0.5rem;
+	border-radius: 999px;
+	border: 1px solid transparent;
+	font-size: 0.8125rem;
+	font-weight: 700;
+	line-height: 1.2;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.idb-badge .idb-button-icon {
+	font-size: 0.85em;
+}
+
+.idb-badge--neutral {
+	background-color: #f5f5f5;
+	border-color: #bdbdbd;
+	color: #222222;
+}
+
+.idb-badge--info {
+	background-color: #d9e8fb;
+	border-color: #5a7fb4;
+	color: #16345a;
+}
+
+.idb-badge--success {
+	background-color: #dcefd4;
+	border-color: #4f7f33;
+	color: #17350f;
+}
+
+.idb-badge--warning {
+	background-color: #fde6c8;
+	border-color: #a5641a;
+	color: #513106;
+}
+
+.idb-badge--danger {
+	background-color: #f9d9d9;
+	border-color: #9b2c2c;
+	color: #5a1010;
+}

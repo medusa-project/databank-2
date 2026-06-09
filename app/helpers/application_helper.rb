@@ -33,6 +33,12 @@ module ApplicationHelper
       icon: "magnifying-glass",
       icon_style: :solid
     },
+    secondary: {
+      label: "Secondary",
+      variant: "secondary",
+      icon: "minus",
+      icon_style: :solid
+    },
     preview: {
       label: "Preview",
       variant: "secondary",
@@ -73,6 +79,45 @@ module ApplicationHelper
       label: "Submit",
       variant: "primary",
       icon: "check-to-slot",
+      icon_style: :solid
+    }
+  }.freeze
+
+  IDB_SEMANTIC_BADGES = {
+    count: {
+      label: nil,
+      tone: "info",
+      icon: "hashtag",
+      icon_style: :solid
+    },
+    status_ok: {
+      label: "OK",
+      tone: "success",
+      icon: "circle-check",
+      icon_style: :solid
+    },
+    status_warning: {
+      label: "Warning",
+      tone: "warning",
+      icon: "triangle-exclamation",
+      icon_style: :solid
+    },
+    status_alert: {
+      label: "Alert",
+      tone: "danger",
+      icon: "circle-xmark",
+      icon_style: :solid
+    },
+    status_info: {
+      label: "Info",
+      tone: "info",
+      icon: "circle-info",
+      icon_style: :solid
+    },
+    neutral: {
+      label: "Note",
+      tone: "neutral",
+      icon: nil,
       icon_style: :solid
     }
   }.freeze
@@ -167,6 +212,65 @@ module ApplicationHelper
     }.fetch(style.to_sym)
 
     tag.i(nil, class: [ "idb-button-icon", style_class, "fa-#{icon_name}" ].join(" "), "aria-hidden": "true")
+  end
+
+  def semantic_badge(kind:, label: nil, value: nil, tone: nil, icon: nil, icon_style: nil, sr_label: nil, **html_options)
+    badge_key = kind.to_sym
+    defaults = IDB_SEMANTIC_BADGES.fetch(badge_key)
+
+    resolved_tone = (tone.presence || defaults[:tone]).to_s
+    resolved_icon = icon.presence || defaults[:icon]
+    resolved_icon_style = icon_style.presence || defaults[:icon_style] || :solid
+    resolved_label = label.presence || defaults[:label]
+
+    classes = [
+      "idb-badge",
+      "idb-badge--#{resolved_tone}",
+      html_options.delete(:class)
+    ]
+    html_options[:class] = classes.compact.join(" ")
+
+    visible_text = [ resolved_label, value ].compact.join(" ").strip
+    content_segments = []
+    content_segments << semantic_button_icon(resolved_icon, style: resolved_icon_style) if resolved_icon.present?
+    content_segments << tag.span(visible_text, class: "idb-badge-label") if visible_text.present?
+
+    if sr_label.present?
+      content_segments << tag.span(sr_label, class: "sr-only")
+      html_options["aria-label"] = sr_label
+    end
+
+    tag.span(safe_join(content_segments, " "), **html_options)
+  end
+
+  def semantic_count_badge(count:, label: nil, tone: "info", sr_label: nil, **html_options)
+    semantic_badge(
+      kind: :count,
+      label: label,
+      value: count,
+      tone: tone,
+      sr_label: sr_label,
+      **html_options
+    )
+  end
+
+  def semantic_status_badge(status:, label: nil, sr_label: nil, **html_options)
+    normalized_status = status.to_s.strip.downcase
+    kind = case normalized_status
+    when "ok", "success", "succeeded", "approved", "published", "active", "available", "complete", "completed"
+      :status_ok
+    when "pending", "queued", "requested", "in_progress", "processing", "retrying", "started", "running", "generating"
+      :status_warning
+    when "failed", "error", "rejected", "invalid", "timeout", "orphaned"
+      :status_alert
+    when "skipped", "not_published", "unpublished", "inactive", "draft"
+      :neutral
+    else
+      :status_info
+    end
+
+    resolved_label = label.presence || normalized_status.tr("_", " ")
+    semantic_badge(kind: kind, label: resolved_label, sr_label: sr_label, **html_options)
   end
 
   private

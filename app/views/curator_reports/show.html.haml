@@ -8,7 +8,7 @@
       %dt Report Type
       %dd= @curator_report.report_type
       %dt Status
-      %dd= @curator_report.status
+      %dd= semantic_status_badge(status: @curator_report.status, sr_label: "Curator report status #{@curator_report.status}")
       %dt Requestor
       %dd= "#{@curator_report.requestor_name} <#{@curator_report.requestor_email}>"
       %dt Storage

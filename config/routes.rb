@@ -117,6 +117,7 @@ Rails.application.routes.draw do
 
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples
+  get "/badge_examples", to: "welcome#badge_examples", as: :badge_examples
   get "/curator_guide", to: "welcome#curator_guide", as: :curator_guide
   get "/illinois_experts", to: "illinois_experts#index", defaults: { format: :xml }, as: :illinois_experts
   get "/illinois_experts/persons", to: "illinois_experts#persons", defaults: { format: :xml }, as: :illinois_experts_persons

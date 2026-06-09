@@ -26,7 +26,9 @@
           %span.dataset-show-list-tertiary= row[:description]
 
           - if refresh_status[row[:key]]
-            %p.idb-workflow-note Refresh in progress. Refresh this page manually to check status.
+            %p.idb-workflow-note
+              = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
+              Refresh this page manually to check status.
 
           - if current_user&.admin?
             .idb-workflow-strip

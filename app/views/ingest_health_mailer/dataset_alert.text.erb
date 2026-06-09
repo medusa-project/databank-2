@@ -1,7 +1,7 @@
 Ingest health alert for <%= @dataset.key %>
 
 Dataset: <%= @dataset.title %> (<%= @dataset.key %>)
-Status: <%= @summary[:state] %>
+Status: <%= @summary[:state].to_s.tr("_", " ").titleize %>
 
 <%= @summary[:freshness_message] %>
 Orphaned responses in last <%= @summary[:orphan_lookback_minutes] %> minute(s): <%= @summary[:orphan_count] %>

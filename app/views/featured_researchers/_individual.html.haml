@@ -34,7 +34,7 @@
     .featured-researcher-admin.curator-only
       %p.featured-status
         %strong Status:
-        = featured_researcher.is_active? ? "Published" : "Not Published"
+        = semantic_status_badge(status: (featured_researcher.is_active? ? "published" : "not_published"), label: (featured_researcher.is_active? ? "Published" : "Not Published"), sr_label: "Featured researcher status #{featured_researcher.is_active? ? 'published' : 'not published'}")
 
       = form_with model: featured_researcher, method: :patch, class: "featured-admin-form" do |f|
         = f.hidden_field :name, value: featured_researcher.name

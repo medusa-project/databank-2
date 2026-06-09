@@ -120,7 +120,7 @@
                   %summary
                     %span.dataset-show-nested-summary-label
                       %span.dataset-show-nested-title Related Materials
-                      %span.dataset-show-badge= related_materials.count
+                      = semantic_count_badge(count: related_materials.count, label: nil, sr_label: "Related materials count")
                   .idb-section-body
                     %ul.dataset-show-list
                       - related_materials.each do |material|
@@ -139,7 +139,7 @@
                   %summary
                     %span.dataset-show-nested-summary-label
                       %span.dataset-show-nested-title Cited By
-                      %span.dataset-show-badge= cited_by_materials.count
+                      = semantic_count_badge(count: cited_by_materials.count, label: nil, sr_label: "Cited by count")
                   .idb-section-body
                     %ul.dataset-show-list
                       - cited_by_materials.each do |material|
@@ -174,7 +174,7 @@
                           = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
                         - else
                           not yet set
-                      %td= entry[:publication_state].to_s
+                      %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")
 
     - if @dataset.datafiles.any?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Files" }}
@@ -237,6 +237,7 @@
               - @version_request_history.each do |request|
                 %li
                   %span.dataset-show-list-primary= "#{request.status.titleize} request from #{request.requester_name}"
+                  = semantic_status_badge(status: request.status, sr_label: "Version request status #{request.status}")
                   %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
                   - if request.comment.present?
                     %span.dataset-show-list-tertiary= request.comment
@@ -274,7 +275,9 @@
           - if @ingest_health_summary.present?
             %h3 Ingest Response Health
             %p
-              %strong= "Status: #{@ingest_health_summary[:state].titleize}"
+              %strong Status:
+              = semantic_status_badge(status: @ingest_health_summary[:state], label: @ingest_health_summary[:state].to_s.titleize, sr_label: "Ingest health status #{@ingest_health_summary[:state]}")
+              %span.sr-only= "Status: #{@ingest_health_summary[:state].to_s.titleize}"
             %p= @ingest_health_summary[:freshness_message]
             %p= "Orphaned responses in last #{@ingest_health_summary[:orphan_lookback_minutes]} minute(s): #{@ingest_health_summary[:orphan_count]}"
             - if @ingest_health_summary[:alerts].any?
@@ -287,7 +290,10 @@
             %ul.dataset-show-list
               - @latest_delivery_attempts.each do |integration, attempt|
                 %li
-                  %span.dataset-show-list-primary= "#{integration}: #{attempt.status}"
+                  %span.dataset-show-list-primary
+                    = "#{integration}: "
+                    = semantic_status_badge(status: attempt.status, sr_label: "#{integration} status #{attempt.status}")
+                    %span.sr-only= "#{integration}: #{attempt.status}"
                   %span.dataset-show-list-secondary= "Attempt #{attempt.attempt} at #{attempt.created_at.utc.iso8601}"
                   - if attempt.error_message.present?
                     %span.dataset-show-list-tertiary= attempt.error_message
@@ -299,13 +305,14 @@
           - if total_failed.positive?
             %p
               Failed attempts:
-              = total_failed
+              = semantic_count_badge(count: total_failed, label: nil, tone: "danger", sr_label: "Total failed delivery attempts")
             %p
               = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all"), method: :post, class: "idb-button-primary"
               = button_to "Force Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(@dataset, integration: "all", force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures for all integrations?" } }
             - @failed_delivery_counts.each do |integration, count|
               %p
-                = "#{integration} failures: #{count}"
+                = "#{integration} failures:"
+                = semantic_count_badge(count: count, label: nil, tone: "danger", sr_label: "#{integration} failed attempts")
                 = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration), method: :post, class: "idb-button-primary"
                 - if integration.to_s == "ingest"
                   = button_to "Force Replay #{integration} Failures", replay_failed_deliveries_dataset_path(@dataset, integration: integration, force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures?" } }

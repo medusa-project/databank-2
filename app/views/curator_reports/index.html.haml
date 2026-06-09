@@ -14,7 +14,10 @@
           %li
             %span.dataset-show-list-primary= "#{report.report_type.titleize} (##{report.id})"
             %span.dataset-show-list-secondary= "Requested by #{report.requestor_name} <#{report.requestor_email}>"
-            %span.dataset-show-list-tertiary= "Status: #{report.status.titleize} | Created #{report.created_at.utc.iso8601}"
+            %span.dataset-show-list-tertiary
+              Status:
+              = semantic_status_badge(status: report.status, sr_label: "Curator report status #{report.status}")
+              = "| Created #{report.created_at.utc.iso8601}"
             - if report.notes.present?
               %p= report.notes
 

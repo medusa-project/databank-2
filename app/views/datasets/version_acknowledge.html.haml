@@ -16,7 +16,7 @@
   - if @version_request.present?
     %p
       %strong Current status:
-      = @version_request.status.titleize
+      = semantic_status_badge(status: @version_request.status, label: @version_request.status.to_s.titleize, sr_label: "Version request status #{@version_request.status}")
     %p
       %strong Requested at:
       = @version_request.requested_at.utc.iso8601

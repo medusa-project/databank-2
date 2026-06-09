@@ -10,10 +10,10 @@
       = select_tag :integration, options_for_select([["All", ""]] + @integrations.map { |value| [value, value] }, @integration)
     %p
       = label_tag :status, "Status"
-      = select_tag :status, options_for_select([["All", ""]] + @statuses.map { |value| [value, value] }, @status)
+      = select_tag :status, options_for_select([["All", ""]] + @statuses.map { |value| [value.to_s.tr("_", " ").titleize, value] }, @status)
     %p
       = label_tag :response_status, "Response Status"
-      = select_tag :response_status, options_for_select([["All", ""]] + @response_statuses.map { |value| [value, value] }, @response_status)
+      = select_tag :response_status, options_for_select([["All", ""]] + @response_statuses.map { |value| [value.to_s.tr("_", " ").titleize, value] }, @response_status)
     %p
       = label_tag :event_name, "Event Name"
       = text_field_tag :event_name, @event_name
@@ -57,8 +57,12 @@
             %td= link_to(attempt.dataset.key, dataset_path(attempt.dataset))
             %td= attempt.integration
             %td= attempt.event_name
-            %td= attempt.status
-            %td= attempt.response_status.presence || "-"
+            %td= semantic_status_badge(status: attempt.status, sr_label: "Delivery status #{attempt.status}")
+            %td
+              - if attempt.response_status.present?
+                = semantic_status_badge(status: attempt.response_status, sr_label: "Response status #{attempt.response_status}")
+              - else
+                = semantic_badge(kind: :neutral, label: "-", icon: nil)
             %td= attempt.response_received_at&.utc&.iso8601 || "-"
             %td= attempt.attempt
             %td= attempt.error_message.presence || "-"
@@ -110,7 +114,7 @@
         - @orphaned_ingest_responses.each do |event|
           %tr
             %td= event.received_at.utc.iso8601
-            %td= event.status
+            %td= semantic_status_badge(status: event.status, sr_label: "Ingest response status #{event.status}")
             %td= event.correlation_key.presence || "-"
             %td= event.error_message.presence || "-"
             %td

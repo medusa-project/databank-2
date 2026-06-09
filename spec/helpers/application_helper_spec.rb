@@ -100,4 +100,71 @@ RSpec.describe ApplicationHelper, type: :helper do
       expect(html).to include('type="button"')
     end
   end
+
+  describe "#semantic_badge" do
+    it "renders a semantic status badge with tone and icon" do
+      html = helper.semantic_badge(kind: :status_warning)
+
+      expect(html).to include("idb-badge")
+      expect(html).to include("idb-badge--warning")
+      expect(html).to include("Warning")
+      expect(html).to include("fa-triangle-exclamation")
+    end
+
+    it "supports custom labels and accessibility label text" do
+      html = helper.semantic_badge(kind: :status_info, label: "Queued", sr_label: "Queued status")
+
+      expect(html).to include("Queued")
+      expect(html).to include('aria-label="Queued status"')
+      expect(html).to include("sr-only")
+    end
+  end
+
+  describe "#semantic_count_badge" do
+    it "renders a count badge using the count semantic defaults" do
+      html = helper.semantic_count_badge(count: 7, sr_label: "Seven items")
+
+      expect(html).to include("idb-badge--info")
+      expect(html).to include("7")
+      expect(html).to include("fa-hashtag")
+      expect(html).to include('aria-label="Seven items"')
+    end
+  end
+
+  describe "#semantic_status_badge" do
+    it "maps failed status values to alert tone" do
+      html = helper.semantic_status_badge(status: "failed")
+
+      expect(html).to include("idb-badge--danger")
+      expect(html).to include("failed")
+    end
+
+    it "maps pending status values to warning tone" do
+      html = helper.semantic_status_badge(status: "pending")
+
+      expect(html).to include("idb-badge--warning")
+      expect(html).to include("pending")
+    end
+
+    it "maps orphaned status values to alert tone" do
+      html = helper.semantic_status_badge(status: "orphaned")
+
+      expect(html).to include("idb-badge--danger")
+      expect(html).to include("orphaned")
+    end
+
+    it "maps available status values to success tone" do
+      html = helper.semantic_status_badge(status: "available")
+
+      expect(html).to include("idb-badge--success")
+      expect(html).to include("available")
+    end
+
+    it "maps not_published status values to neutral tone" do
+      html = helper.semantic_status_badge(status: "not_published")
+
+      expect(html).to include("idb-badge--neutral")
+      expect(html).to include("not published")
+    end
+  end
 end

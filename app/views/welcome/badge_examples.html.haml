@@ -1,0 +1,34 @@
+- content_for :title, "Badge Examples"
+
+%ilw-content.badge-examples-page
+	%section{ "aria-labelledby" => "badge-examples-heading" }
+		%h1#badge-examples-heading Badge Examples
+		%p
+			Semantic badges provide compact, consistent status and count indicators.
+
+	%section{ "aria-labelledby" => "badge-examples-semantic" }
+		%h2#badge-examples-semantic Semantic Badges
+
+		%h3 Status Tones
+		%p
+			= semantic_badge(kind: :status_ok)
+		%p
+			= semantic_badge(kind: :status_info)
+		%p
+			= semantic_badge(kind: :status_warning)
+		%p
+			= semantic_badge(kind: :status_alert)
+		%p
+			= semantic_badge(kind: :neutral)
+
+		%h3 Count Badges
+		%p
+			= semantic_count_badge(count: 3, sr_label: "Three related materials")
+		%p
+			= semantic_count_badge(count: 12, tone: "neutral", sr_label: "Twelve notes")
+
+		%h3 Custom Labels
+		%p
+			= semantic_badge(kind: :status_info, label: "Queued")
+		%p
+			= semantic_badge(kind: :status_ok, label: "Published")
