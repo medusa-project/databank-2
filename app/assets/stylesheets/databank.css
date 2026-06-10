@@ -219,6 +219,26 @@
 	padding-top: 0.35rem;
 }
 
+.idb-core-subsection {
+	margin-top: 0.7rem;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--il-storm-90);
+	border-left: 2px solid var(--il-storm-80);
+	border-radius: 0.4rem;
+	background-color: var(--il-storm-95);
+}
+
+.idb-core-subsection > .idb-creators-subheading {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.35;
+	color: var(--il-blue);
+}
+
+.idb-core-subsection > .idb-section-body {
+	padding-top: 0.45rem;
+}
+
 .idb-metadata-grid {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -395,6 +415,12 @@
 	padding: 0.15rem 0.35rem;
 	font-size: 0.74rem;
 	line-height: 1;
+}
+
+.idb-creator-add-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 0.4rem;
 }
 
 .idb-row-actions-inline {

@@ -98,6 +98,30 @@ module ApplicationHelper
       variant: "danger",
       icon: "trash",
       icon_style: :regular
+    },
+    up: {
+      label: "Up",
+      variant: "secondary",
+      icon: "arrow-up",
+      icon_style: :solid
+    },
+    down: {
+      label: "Down",
+      variant: "secondary",
+      icon: "arrow-down",
+      icon_style: :solid
+    },
+    add: {
+      label: "Add",
+      variant: "primary",
+      icon: "plus",
+      icon_style: :solid
+    },
+    remove: {
+      label: "Remove",
+      variant: "danger",
+      icon: "minus",
+      icon_style: :solid
     }
   }.freeze
 
