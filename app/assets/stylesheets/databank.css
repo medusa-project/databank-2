@@ -239,6 +239,26 @@
 	padding-top: 0.45rem;
 }
 
+.idb-required-indicator {
+	color: #d50000;
+	font-size: 0.8em;
+	line-height: 1;
+	margin-left: 0.12rem;
+}
+
+.idb-orcid-header-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.15rem;
+	white-space: nowrap;
+}
+
+.idb-orcid-header-label img {
+	display: inline-block;
+	height: 1em;
+	width: auto;
+}
+
 .idb-metadata-grid {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));

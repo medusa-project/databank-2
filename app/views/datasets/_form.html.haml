@@ -23,7 +23,7 @@
   %section#dataset-core-metadata.idb-section-card
     %h2.idb-section-title Description
     %p
-      %label.idb-citation-preview-label{for: "citation-preview"} Citation Preview
+      %label.idb-citation-preview-label{for: "citation-preview"} Citation Preview:
       %span#citation-preview.idb-citation-preview-value
         = dataset.creators.map(&:display_name).reject(&:blank?).join("; ").presence || "[Creator List]"
         = " "
@@ -33,8 +33,18 @@
         University of Illinois Urbana-Champaign.
     .idb-metadata-grid
       .idb-grid-col-6
-        = f.label :title, "Dataset Title"
+        = f.label :title do
+          Dataset Title
+          %sup.idb-required-indicator{aria: { hidden: true }} *
+          %span.sr-only required
         = f.text_field :title, required: true
+
+      .idb-grid-col-6
+        = f.label :license do
+          License
+          %sup.idb-required-indicator{aria: { hidden: true }} *
+          %span.sr-only required
+        = f.select :license, options_for_select([["CC0", "CC0"], ["CC BY 4.0", "CC-BY-4.0"], ["Other", "other"]], dataset.license), { include_blank: "Select..." }, { required: true }
 
     #dataset-creators.idb-core-subsection{data: { deposit_form_target: "creatorDisclosure" }}
       %h3.idb-creators-subheading Author List
@@ -63,9 +73,18 @@
               %tr
                 %th
                   %span.sr-only Reorder
-                %th Organization Name(s)
-                %th Email
-                %th Primary Contact
+                %th
+                  Organization Name(s)
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
+                %th
+                  Email
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
+                %th
+                  Primary Contact
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
                 %th
                   %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
@@ -81,11 +100,11 @@
                       = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
                       = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
                       = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
-                      = cf.text_field :institution_name, value: (cf.object.institution_name.presence || cf.object.name), placeholder: "[Organization Name]"
+                      = cf.text_field :institution_name, value: (cf.object.institution_name.presence || cf.object.name), placeholder: "[Organization Name]", required: true
                     %td
-                      = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]"
+                      = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
                     %td.idb-contact-cell
-                      %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                      %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
                     %td.idb-row-actions.idb-creator-row-actions
                       = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
                       = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -100,13 +119,29 @@
               %tr
                 %th
                   %span.sr-only Reorder
-                %th Family Name(s)
-                %th Given Name(s)
-                %th ORCID
+                %th
+                  Family Name(s)
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
+                %th
+                  Given Name(s)
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
+                %th
+                  %span.idb-orcid-header-label
+                    ORCID
+                    %sup &trade;
+                    = image_tag 'iD_icon.png', alt: "", aria: { hidden: true }
                 %th
                   %span.sr-only ORCID Lookup
-                %th Email
-                %th Primary Contact
+                %th
+                  Email
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
+                %th
+                  Primary Contact
+                  %sup.idb-required-indicator{aria: { hidden: true }} *
+                  %span.sr-only required
                 %th
                   %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
@@ -122,18 +157,18 @@
                       = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
                       = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
                       = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
-                      = cf.text_field :family_name, placeholder: "[e.g.: Smith]"
+                      = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
                     %td
-                      = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]"
+                      = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
                     %td
                       = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
                       = cf.hidden_field :identifier_scheme, value: "ORCID"
                     %td
                       %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
                     %td
-                      = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]"
+                      = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
                     %td.idb-contact-cell
-                      %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                      %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
                     %td.idb-row-actions.idb-creator-row-actions
                       = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
                       = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -142,10 +177,6 @@
             = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", title: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
 
     .idb-metadata-grid
-
-    .idb-grid-col-6
-      = f.label :license
-      = f.select :license, options_for_select([["CC0", "CC0"], ["CC BY 4.0", "CC-BY-4.0"], ["Other", "other"]], dataset.license), { include_blank: "Select..." }
 
     .idb-grid-col-12
       = f.label :description, "Dataset Description"
@@ -305,11 +336,11 @@
             = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
             = cf.hidden_field :contact, value: false, data: { contactField: true }
             = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
-            = cf.text_field :institution_name, placeholder: "[Organization Name]"
+            = cf.text_field :institution_name, placeholder: "[Organization Name]", required: true
           %td
-            = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]"
+            = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
           %td.idb-contact-cell
-            %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+            %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
           %td.idb-row-actions.idb-creator-row-actions
             = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
             = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -325,18 +356,18 @@
             = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
             = cf.hidden_field :contact, value: false, data: { contactField: true }
             = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
-            = cf.text_field :family_name, placeholder: "[e.g.: Smith]"
+            = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
           %td
-            = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]"
+            = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
           %td
             = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
             = cf.hidden_field :identifier_scheme, value: "ORCID"
           %td
             %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
           %td
-            = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]"
+            = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
           %td.idb-contact-cell
-            %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+            %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
           %td.idb-row-actions.idb-creator-row-actions
             = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
             = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
