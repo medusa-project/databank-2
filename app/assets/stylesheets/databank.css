@@ -259,6 +259,48 @@
 	width: auto;
 }
 
+.idb-label-with-help {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.35rem;
+	margin-bottom: 0.5rem;
+}
+
+.idb-label-with-help label {
+	display: inline;
+	margin-bottom: 0;
+}
+
+.idb-inline-help-row {
+	display: inline-block;
+	margin-top: 0;
+	margin-left: 0.2rem;
+	font-size: 0.8rem;
+	line-height: 1.25;
+}
+
+.idb-inline-help {
+	color: var(--il-blue);
+	text-decoration: underline;
+	text-underline-offset: 0.12rem;
+}
+
+.idb-inline-help:hover,
+.idb-inline-help:focus-visible {
+	color: var(--il-altgeld);
+}
+
+.idb-inline-help .idb-button-icon {
+	font-size: 0.9em;
+	margin-right: 0.2rem;
+}
+
+.idb-inline-help[target="_blank"]::after {
+	content: none !important;
+	display: none !important;
+}
+
 .idb-metadata-grid {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -323,6 +365,12 @@
 .dataset-form-page .idb-compact-table th {
 	font-size: 0.9rem;
 	line-height: 1.2;
+}
+
+.dataset-form-page .idb-compact-table th.idb-actions-header-cell {
+	background-color: transparent;
+	border-color: transparent;
+	padding: 0;
 }
 
 .dataset-form-page .idb-compact-table input,
@@ -428,6 +476,7 @@
 	gap: 0.2rem;
 	white-space: nowrap;
 	margin: 0;
+	border: none;
 }
 
 .dataset-form-page .idb-creator-row-actions .idb-compact-action {

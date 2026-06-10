@@ -202,6 +202,31 @@ module ApplicationHelper
     dataset.creators.find(&:contact?)&.name
   end
 
+  def contextual_help_link(prompt:, url:, new_tab: true, icon: "question-circle", icon_style: :regular, **html_options)
+    classes = [ "idb-inline-help", html_options.delete(:class) ]
+    html_options[:class] = classes.compact.join(" ")
+
+    if new_tab
+      html_options[:target] ||= "_blank"
+      rel_values = html_options[:rel].to_s.split
+      rel_values << "noopener"
+      html_options[:rel] = rel_values.uniq.join(" ")
+      html_options["aria-label"] ||= "#{prompt} Opens in a new tab."
+    else
+      html_options["aria-label"] ||= prompt
+    end
+
+    content = safe_join(
+      [
+        semantic_button_icon(icon, style: icon_style),
+        tag.span(prompt, class: "idb-inline-help__label")
+      ],
+      " "
+    )
+
+    link_to(content, url, html_options)
+  end
+
   def semantic_action_button(action:, url: nil, label: nil, icon: nil, icon_style: nil, icon_position: :left, icon_only: false, aria_label: nil, style: :legacy, type: "button", **html_options)
     action_key = action.to_sym
     defaults = IDB_SEMANTIC_BUTTONS.fetch(action_key)

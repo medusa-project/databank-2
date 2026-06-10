@@ -40,14 +40,20 @@
         = f.text_field :title, required: true
 
       .idb-grid-col-6
-        = f.label :license do
-          License
-          %sup.idb-required-indicator{aria: { hidden: true }} *
-          %span.sr-only required
+        .idb-label-with-help
+          = f.label :license do
+            License
+            %sup.idb-required-indicator{aria: { hidden: true }} *
+            %span.sr-only required
+          .idb-inline-help-row
+            = contextual_help_link prompt: "What's a license?", url: guides_path(anchor: "license")
         = f.select :license, options_for_select([["CC0", "CC0"], ["CC BY 4.0", "CC-BY-4.0"], ["Other", "other"]], dataset.license), { include_blank: "Select..." }, { required: true }
 
     #dataset-creators.idb-core-subsection{data: { deposit_form_target: "creatorDisclosure" }}
-      %h3.idb-creators-subheading Author List
+      %h3.idb-creators-subheading
+        Author List
+        %span.idb-inline-help-row
+          = contextual_help_link prompt: "what's an author?", url: policies_path(anchor: "creator-definition")
       .idb-section-body
         - if can?(:manage, dataset)
           %p
@@ -56,6 +62,11 @@
             = " "
             %button.idb-button-secondary{type: "button", data: { action: "deposit-form#switchCreatorMode", mode: "institution" }}
               Use Organization Creators
+            = " "
+            - if creator_mode_org
+              = contextual_help_link prompt: "citing individual(s) as author(s)?", url: policies_path(anchor: "creator-definition")
+            - else
+              = contextual_help_link prompt: "citing organization as author?", url: policies_path(anchor: "creator-definition")
           %p
             %strong Curator note:
             Switching creator type deletes creator records of the other type and saves the form.
@@ -85,7 +96,9 @@
                   Primary Contact
                   %sup.idb-required-indicator{aria: { hidden: true }} *
                   %span.sr-only required
-                %th
+                  .idb-inline-help-row
+                    = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
+                %th.idb-actions-header-cell
                   %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
               - creators_for_mode.each_with_index do |creator, index|
@@ -132,6 +145,8 @@
                     ORCID
                     %sup &trade;
                     = image_tag 'iD_icon.png', alt: "", aria: { hidden: true }
+                  .idb-inline-help-row
+                    = contextual_help_link prompt: "what's an ORCID?", url: "https://orcid.org/"
                 %th
                   %span.sr-only ORCID Lookup
                 %th
@@ -142,7 +157,9 @@
                   Primary Contact
                   %sup.idb-required-indicator{aria: { hidden: true }} *
                   %span.sr-only required
-                %th
+                  .idb-inline-help-row
+                    = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
+                %th.idb-actions-header-cell
                   %span.sr-only Actions
             %tbody.idb-nested-rows{id: "creator-rows"}
               - creators_for_mode.each_with_index do |creator, index|
@@ -188,6 +205,8 @@
 
     .idb-grid-col-4
       = f.label :embargo, "Publication Delay (embargo)"
+      .idb-inline-help-row
+        = contextual_help_link prompt: "what's an embargo?", url: guides_path(anchor: "embargo")
       = f.select :embargo, options_for_select([["No Publication Delay", "none"], ["File Only Publication Delay", "file"], ["Metadata and File Publication Delay", "metadata"]], dataset.embargo.presence || "none")
 
     .idb-grid-col-2
