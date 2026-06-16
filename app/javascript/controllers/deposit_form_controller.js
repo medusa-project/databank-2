@@ -279,14 +279,7 @@ this.orcidResultsTarget.innerHTML = `<p class="idb-orcid-results-count">${countL
   }
 
   refreshCreatorAddButtons() {
-    const creatorContainer = this.element.querySelector("#creator-rows")
-    if (!creatorContainer) return
-
-    const rows = Array.from(creatorContainer.querySelectorAll(":scope > .idb-nested-row")).filter((row) => !row.hidden)
-    rows.forEach((row, idx) => {
-      const addButton = row.querySelector(".idb-add-creator-row")
-      if (addButton) addButton.hidden = idx !== rows.length - 1
-    })
+    // Add button is now outside the rows container, no hiding logic needed
   }
 
   refreshRowPositions(containerId) {
