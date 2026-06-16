@@ -30,8 +30,8 @@
                   %button.idb-button-secondary{type: "button", aria: { label: "Move related material row down" }, data: { action: "deposit-form#moveRowDown" }} Down
 
               - if can?(:manage, dataset)
-                %fieldset.idb-grid-fieldset
-                  %legend DataCite Relationships (Curator)
+                %fieldset.idb-grid-fieldset.idb-curator-only-section.idb-curator-only-section--compact
+                  %legend DataCite Relationships (Curator and admin)
                   .idb-nested-grid
                     .idb-grid-col-5
                       - ["IsSupplementTo", "IsSupplementedBy", "IsCitedBy", "IsPreviousVersionOf", "IsNewVersionOf"].each do |relationship|

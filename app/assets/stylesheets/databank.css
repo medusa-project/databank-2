@@ -301,6 +301,27 @@
 	display: none !important;
 }
 
+.idb-curator-only-section {
+	margin-top: 0.55rem;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--il-altgeld);
+	border-radius: 0.4rem;
+	background-color: var(--il-storm-95);
+}
+
+.idb-curator-only-section--compact {
+	margin-top: 0.5rem;
+}
+
+.idb-curator-only-kicker {
+	margin: 0 0 0.45rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: var(--il-altgeld);
+}
+
 .idb-metadata-grid {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));
