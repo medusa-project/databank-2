@@ -13,6 +13,8 @@ class ApiDatasetController < ApplicationController
     end
 
     render json: "file has been successfully uploaded to draft server"
+  rescue TusUploadStore::UploadNotFound, TusUploadStore::InvalidUploadId, ArgumentError
+    render json: "Invalid TUS upload reference", status: :bad_request
   rescue StandardError
     render json: "Encountered error while storing file on draft server", status: :internal_server_error
   end

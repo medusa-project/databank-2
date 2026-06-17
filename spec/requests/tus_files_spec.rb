@@ -95,4 +95,14 @@ RSpec.describe "TUS files endpoint", type: :request do
 
     expect(response).to have_http_status(:conflict)
   end
+
+  it "returns not found for invalid upload identifiers" do
+    head "/files/not-a-uuid",
+      headers: {
+        "Authorization" => "Token token=#{token.identifier}",
+        "Tus-Resumable" => "1.0.0"
+      }
+
+    expect(response).to have_http_status(:not_found)
+  end
 end

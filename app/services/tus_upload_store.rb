@@ -5,6 +5,9 @@ require "securerandom"
 class TusUploadStore
   class UploadNotFound < StandardError; end
   class OffsetMismatch < StandardError; end
+  class InvalidUploadId < StandardError; end
+
+  UPLOAD_ID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/.freeze
 
   def self.create(upload_length:, metadata: {})
     upload_id = SecureRandom.uuid
@@ -19,7 +22,7 @@ class TusUploadStore
   end
 
   def initialize(upload_id)
-    @upload_id = upload_id.to_s
+    @upload_id = normalize_upload_id(upload_id)
   end
 
   def upload_id
@@ -71,6 +74,13 @@ class TusUploadStore
   end
 
   private
+
+  def normalize_upload_id(upload_id)
+    value = upload_id.to_s.downcase
+    raise InvalidUploadId unless value.match?(UPLOAD_ID_PATTERN)
+
+    value
+  end
 
   def base_dir
     File.join(StorageManager.instance.tmpdir, "tus_uploads")

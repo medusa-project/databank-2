@@ -29,6 +29,24 @@ RSpec.describe "Sessions", type: :request do
     expect(response).to redirect_to(new_dataset_path)
   end
 
+  it "does not redirect to an external host from login referer" do
+    OmniAuth.config.mock_auth[:developer] = developer_auth(role: "depositor")
+
+    get login_path, headers: { "HTTP_REFERER" => "https://attacker.example/phish" }
+    get "/auth/developer/callback"
+
+    expect(response).to redirect_to(root_path)
+  end
+
+  it "does not redirect to non-http schemes from login referer" do
+    OmniAuth.config.mock_auth[:developer] = developer_auth(role: "depositor")
+
+    get login_path, headers: { "HTTP_REFERER" => "javascript:alert(1)" }
+    get "/auth/developer/callback"
+
+    expect(response).to redirect_to(root_path)
+  end
+
   it "rotates the session on login so attacker-controlled session data does not survive" do
     OmniAuth.config.mock_auth[:developer] = developer_auth(role: "depositor")
 

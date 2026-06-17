@@ -78,7 +78,8 @@ class SessionsController < ApplicationController
   protected
 
   def return_url
-    session.delete(:login_return_uri) || session.delete(:login_return_referer) || root_path
+    raw = session.delete(:login_return_uri) || session.delete(:login_return_referer)
+    safe_internal_return_path(raw) || root_path
   end
 
   def shibboleth_login_path(host)
@@ -96,11 +97,13 @@ class SessionsController < ApplicationController
     return if url.blank?
 
     uri = URI.parse(url)
-    return uri.to_s if uri.host.blank? && uri.path.present? && uri.path != login_path
+    return if uri.scheme.present? && !%w[http https].include?(uri.scheme)
     return if uri.host.present? && uri.host != request.host
-    return if uri.path.blank? || uri.path == login_path
 
-    [ uri.path, uri.query.presence && "?#{uri.query}" ].compact.join
+    path = uri.path.to_s
+    return if !path.start_with?("/") || path == login_path
+
+    [ path, uri.query.presence && "?#{uri.query}" ].compact.join
   rescue URI::InvalidURIError
     nil
   end

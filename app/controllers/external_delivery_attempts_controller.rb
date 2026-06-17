@@ -50,21 +50,21 @@ class ExternalDeliveryAttemptsController < ApplicationController
     attempt = ExternalDeliveryAttempt.includes(:dataset).find(params[:id])
 
     unless attempt.status == "failed"
-      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Only failed attempts can be replayed."
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "Only failed attempts can be replayed."
       return
     end
 
     unless replay_allowed?(attempt, force_replay: force_replay?)
-      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: replay_block_message(attempt)
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: replay_block_message(attempt)
       return
     end
 
     enqueued = enqueue_replay(attempt)
 
     if enqueued
-      redirect_back fallback_location: admin_external_delivery_attempts_path, notice: "Replay enqueued for #{attempt.integration} (#{attempt.dataset.key})."
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, notice: "Replay enqueued for #{attempt.integration} (#{attempt.dataset.key})."
     else
-      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Replay is not supported for integration #{attempt.integration}."
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "Replay is not supported for integration #{attempt.integration}."
     end
   end
 
@@ -73,7 +73,7 @@ class ExternalDeliveryAttemptsController < ApplicationController
 
     ids = selected_attempt_ids
     if ids.empty?
-      redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No attempts were selected for replay."
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "No attempts were selected for replay."
       return
     end
 
@@ -105,12 +105,12 @@ class ExternalDeliveryAttemptsController < ApplicationController
       message = "Replayed #{replayed} selected failed attempt(s)."
       message += " Skipped #{skipped}." if skipped.positive?
       message += " Blocked #{blocked} by ingest response guardrails." if blocked.positive?
-      redirect_back fallback_location: admin_external_delivery_attempts_path, notice: message
+      redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, notice: message
     else
       if blocked.positive? && skipped.zero?
-        redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed because ingest response guardrails blocked #{blocked}."
+        redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "No selected attempts were replayed because ingest response guardrails blocked #{blocked}."
       else
-        redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "No selected attempts were replayed."
+        redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "No selected attempts were replayed."
       end
     end
   end
@@ -121,9 +121,9 @@ class ExternalDeliveryAttemptsController < ApplicationController
     event = IngestResponseEvent.unresolved_orphaned.find(params[:id])
     event.acknowledge!(by_email: current_user&.email, note: params[:acknowledged_note])
 
-    redirect_back fallback_location: admin_external_delivery_attempts_path, notice: "Orphaned ingest response acknowledged."
+    redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, notice: "Orphaned ingest response acknowledged."
   rescue ActiveRecord::RecordNotFound
-    redirect_back fallback_location: admin_external_delivery_attempts_path, alert: "Orphaned ingest response could not be found."
+    redirect_back fallback_location: admin_external_delivery_attempts_path, allow_other_host: false, alert: "Orphaned ingest response could not be found."
   end
 
   private
