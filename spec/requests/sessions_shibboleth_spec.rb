@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Sessions Shibboleth", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
   around do |example|
     OmniAuth.config.test_mode = true
     OmniAuth.config.mock_auth[:developer] = nil
@@ -8,6 +10,7 @@ RSpec.describe "Sessions Shibboleth", type: :request do
   ensure
     OmniAuth.config.test_mode = false
     OmniAuth.config.mock_auth[:developer] = nil
+    travel_back
   end
 
   it "renders the local developer login form in test" do
@@ -99,6 +102,29 @@ RSpec.describe "Sessions Shibboleth", type: :request do
 
     get admin_path
     expect(response).to redirect_to(login_path)
+  end
+
+  it "expires an authenticated session after 8.5 hours of inactivity" do
+    sign_in_as(email: "idle-expire@example.edu", name: "Idle Expire", role: "admin")
+
+    travel 8.hours + 31.minutes
+
+    get admin_path
+
+    expect(response).to redirect_to(login_path)
+    expect(flash[:alert]).to eq("Your session has expired. Please sign in again.")
+  end
+
+  it "renews the idle timer when the user stays active" do
+    sign_in_as(email: "idle-refresh@example.edu", name: "Idle Refresh", role: "admin")
+
+    travel 8.hours
+    get admin_path
+    expect(response).to have_http_status(:ok)
+
+    travel 31.minutes
+    get admin_path
+    expect(response).to have_http_status(:ok)
   end
 
   it "switches role to guest" do
