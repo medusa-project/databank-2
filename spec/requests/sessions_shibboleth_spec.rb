@@ -104,6 +104,12 @@ RSpec.describe "Sessions Shibboleth", type: :request do
     expect(response).to redirect_to(login_path)
   end
 
+  it "does not allow logout via get" do
+    get logout_path
+
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "expires an authenticated session after 8.5 hours of inactivity" do
     sign_in_as(email: "idle-expire@example.edu", name: "Idle Expire", role: "admin")
 

@@ -22,11 +22,11 @@ RSpec.describe "Dataset token endpoints", type: :request do
   it "returns the current token and creates one when missing" do
     sign_in_as(email: dataset.depositor_email, name: "Owner User", role: "depositor")
 
-    get get_current_token_dataset_path(dataset), as: :json
+    post get_current_token_dataset_path(dataset), as: :json
     expect(response).to have_http_status(:ok)
     first_token = JSON.parse(response.body).fetch("token")
 
-    get get_current_token_dataset_path(dataset), as: :json
+    post get_current_token_dataset_path(dataset), as: :json
     expect(response).to have_http_status(:ok)
     second_token = JSON.parse(response.body).fetch("token")
 
@@ -36,10 +36,10 @@ RSpec.describe "Dataset token endpoints", type: :request do
   it "replaces the existing token when requesting a new one" do
     sign_in_as(email: dataset.depositor_email, name: "Owner User", role: "depositor")
 
-    get get_current_token_dataset_path(dataset), as: :json
+    post get_current_token_dataset_path(dataset), as: :json
     old_identifier = JSON.parse(response.body).fetch("token")
 
-    get get_new_token_dataset_path(dataset), as: :json
+    post get_new_token_dataset_path(dataset), as: :json
     expect(response).to have_http_status(:ok)
     new_identifier = JSON.parse(response.body).fetch("token")
 
@@ -51,7 +51,7 @@ RSpec.describe "Dataset token endpoints", type: :request do
   it "blocks users who cannot edit the dataset" do
     sign_in_as(email: "other@example.edu", name: "Other User", role: "depositor")
 
-    get get_current_token_dataset_path(dataset), as: :json
+    post get_current_token_dataset_path(dataset), as: :json
 
     expect(response).to redirect_to(root_path)
   end

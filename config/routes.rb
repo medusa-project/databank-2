@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   match "/auth/failure", to: "sessions#unauthorized", as: :unauthorized, via: %i[get post]
   match "/auth/:provider/callback", to: "sessions#create", via: %i[get post]
   match "/login", to: "sessions#new", as: :login, via: %i[get post]
-  match "/logout", to: "sessions#destroy", as: :logout, via: %i[get post delete]
+  delete "/logout", to: "sessions#destroy", as: :logout
   match "/auth/:provider", to: "sessions#new", via: %i[get post]
   post  "role_switch", to: "sessions#role_switch"
 
@@ -28,8 +28,8 @@ Rails.application.routes.draw do
       get :download_metrics, defaults: { format: :json }
       get :record_text
       get :confirm_review
-      get :get_current_token, defaults: { format: :json }
-      get :get_new_token, defaults: { format: :json }
+      post :get_current_token, defaults: { format: :json }
+      post :get_new_token, defaults: { format: :json }
       post :request_review
       post :submit_version_request
       get :version_acknowledge
@@ -103,15 +103,15 @@ Rails.application.routes.draw do
       get :dataset_downloads, defaults: { format: :json }
       get :file_downloads, defaults: { format: :json }
       get :funders_csv
-      get :refresh_dataset_downloads
-      get :refresh_datafile_downloads
-      get :refresh_datafiles_csv
-      get :refresh_container_csv
+      post :refresh_dataset_downloads
+      post :refresh_datafile_downloads
+      post :refresh_datafiles_csv
+      post :refresh_container_csv
       get :related_materials_csv
-      get :refresh_datasets_tsv
-      get :refresh_funders_csv
-      get :refresh_related_materials_csv
-      get :refresh_container_contents_csv
+      post :refresh_datasets_tsv
+      post :refresh_funders_csv
+      post :refresh_related_materials_csv
+      post :refresh_container_contents_csv
     end
   end
 

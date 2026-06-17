@@ -36,7 +36,7 @@
                 - if refresh_status[row[:key]]
                   %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
                 - else
-                  = link_to "Regenerate #{row[:title]}", row[:refresh_path], class: "idb-button-success"
+                  = button_to "Regenerate #{row[:title]}", row[:refresh_path], method: :post, class: "idb-button-success"
 
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing

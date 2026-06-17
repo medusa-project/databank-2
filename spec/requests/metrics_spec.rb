@@ -74,7 +74,7 @@ RSpec.describe "Metrics", type: :request do
   it "blocks refresh actions for non-admin users" do
     sign_in_as(email: "depositor@example.edu", name: "Depositor", role: "depositor")
 
-    get refresh_dataset_downloads_metrics_path
+    post refresh_dataset_downloads_metrics_path
 
     expect(response).to redirect_to(metrics_path)
     expect(flash[:alert]).to include("not authorized")
@@ -84,7 +84,7 @@ RSpec.describe "Metrics", type: :request do
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
 
     expect do
-      get refresh_dataset_downloads_metrics_path
+      post refresh_dataset_downloads_metrics_path
     end.to have_enqueued_job(MetricRefreshJob).with(:dataset_downloads_json)
 
     expect(response).to redirect_to(metrics_path)
@@ -94,7 +94,7 @@ RSpec.describe "Metrics", type: :request do
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     expect do
-      get refresh_dataset_downloads_metrics_path
+      post refresh_dataset_downloads_metrics_path
     end.to have_enqueued_job(MetricRefreshJob).with(:dataset_downloads_json)
 
     expect(response).to redirect_to(metrics_path)
@@ -185,7 +185,7 @@ RSpec.describe "Metrics", type: :request do
     allow(Metric).to receive(:in_progress?).with(:dataset_downloads_json).and_return(true)
 
     expect do
-      get refresh_dataset_downloads_metrics_path
+      post refresh_dataset_downloads_metrics_path
     end.not_to have_enqueued_job(MetricRefreshJob)
 
     expect(response).to redirect_to(metrics_path)
@@ -200,7 +200,7 @@ RSpec.describe "Metrics", type: :request do
     allow(MetricRefreshJob).to receive(:perform_later).with(:funders_csv).and_raise(StandardError.new("queue unavailable"))
     allow(Rails.logger).to receive(:error)
 
-    get refresh_funders_csv_metrics_path
+    post refresh_funders_csv_metrics_path
 
     expect(Metric).to have_received(:clear_in_progress).with(:funders_csv)
     expect(Rails.logger).to have_received(:error).with(/Unable to enqueue metric refresh for funders_csv: queue unavailable/)
@@ -212,12 +212,12 @@ RSpec.describe "Metrics", type: :request do
     sign_in_as(email: "admin2@example.edu", name: "Admin User Two", role: "admin")
 
     expect do
-      get refresh_datafile_downloads_metrics_path
-      get refresh_datasets_tsv_metrics_path
-      get refresh_datafiles_csv_metrics_path
-      get refresh_container_csv_metrics_path
-      get refresh_related_materials_csv_metrics_path
-      get refresh_container_contents_csv_metrics_path
+      post refresh_datafile_downloads_metrics_path
+      post refresh_datasets_tsv_metrics_path
+      post refresh_datafiles_csv_metrics_path
+      post refresh_container_csv_metrics_path
+      post refresh_related_materials_csv_metrics_path
+      post refresh_container_contents_csv_metrics_path
     end.to have_enqueued_job(MetricRefreshJob).exactly(5).times
 
     enqueued_metric_keys = enqueued_jobs.map { |job| job[:args].first.fetch("value") }
