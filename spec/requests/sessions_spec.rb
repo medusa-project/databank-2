@@ -29,6 +29,104 @@ RSpec.describe "Sessions", type: :request do
     expect(response).to redirect_to(new_dataset_path)
   end
 
+  it "rotates the session on login so attacker-controlled session data does not survive" do
+    OmniAuth.config.mock_auth[:developer] = developer_auth(role: "depositor")
+
+    stub_const("SessionProbeController", Class.new(ActionController::Base) do
+      def index
+        head :ok
+      end
+
+      def create
+        session[:attacker_controlled] = params[:value]
+        head :ok
+      end
+
+      def show
+        render json: {
+          attacker_controlled: session[:attacker_controlled],
+          user_id: session[:user_id]
+        }
+      end
+    end)
+
+    payload = nil
+
+    with_routing do |set|
+      set.draw do
+        root to: "session_probe#index"
+        get "/auth/:provider/callback", to: "sessions#create"
+        post "/auth/:provider/callback", to: "sessions#create"
+        post "/session_probe", to: "session_probe#create"
+        get "/session_probe", to: "session_probe#show"
+      end
+
+      post "/session_probe", params: { value: "seeded-by-attacker" }
+      get "/auth/developer/callback"
+
+      expect(response).to have_http_status(:redirect)
+
+      get "/session_probe"
+      payload = JSON.parse(response.body)
+    end
+
+    expect(payload["attacker_controlled"]).to be_nil
+    expect(payload["user_id"]).to eq(User.find_by(email: "person@example.edu")&.id)
+  ensure
+    Rails.application.reload_routes!
+  end
+
+  it "clears attacker-controlled session data and authentication state on logout" do
+    OmniAuth.config.mock_auth[:developer] = developer_auth(role: "depositor")
+
+    stub_const("SessionProbeController", Class.new(ActionController::Base) do
+      def index
+        head :ok
+      end
+
+      def create
+        session[:attacker_controlled] = params[:value]
+        head :ok
+      end
+
+      def show
+        render json: {
+          attacker_controlled: session[:attacker_controlled],
+          user_id: session[:user_id]
+        }
+      end
+    end)
+
+    payload = nil
+
+    with_routing do |set|
+      set.draw do
+        root to: "session_probe#index"
+        get "/auth/:provider/callback", to: "sessions#create"
+        post "/auth/:provider/callback", to: "sessions#create"
+        delete "/logout", to: "sessions#destroy"
+        post "/session_probe", to: "session_probe#create"
+        get "/session_probe", to: "session_probe#show"
+      end
+
+      get "/auth/developer/callback"
+      expect(response).to have_http_status(:redirect)
+
+      post "/session_probe", params: { value: "seeded-before-logout" }
+      delete "/logout"
+
+      expect(response).to have_http_status(:redirect)
+
+      get "/session_probe"
+      payload = JSON.parse(response.body)
+    end
+
+    expect(payload["attacker_controlled"]).to be_nil
+    expect(payload["user_id"]).to be_nil
+  ensure
+    Rails.application.reload_routes!
+  end
+
   def developer_auth(role:)
     OmniAuth::AuthHash.new(
       provider: "developer",
