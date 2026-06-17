@@ -96,9 +96,7 @@
               - state_id = "publication_state_#{state_value.parameterize}"
               .facet-row
                 = check_box_tag "publication_states[]", state_value, checked, id: state_id, class: "facet-checkbox"
-                = label_tag state_id, class: "facet-label" do
-                  = semantic_status_badge(status: state_value, label: state_value.humanize, sr_label: "Publication state #{state_value.humanize}")
-                  = semantic_count_badge(count: row[:count], label: nil, tone: "info", sr_label: "#{row[:count]} datasets")
+                = label_tag state_id, "#{state_value.humanize} (#{row[:count]})", class: "facet-label"
 
         - if @available_facets.include?(:depositors)
           %fieldset.search-facet
