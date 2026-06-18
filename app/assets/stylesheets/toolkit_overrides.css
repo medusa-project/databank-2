@@ -60,6 +60,12 @@ il-header *[slot="links"] a:focus {
 	cursor: pointer;
 }
 
+il-header *[slot="links"] a.utility-link-welcome,
+il-header *[slot="links"] a.utility-link-login {
+	font-size: 1.25rem;
+	line-height: 1.6;
+}
+
 il-header *[slot="links"] a:focus {
 	outline: 2px dotted;
 }
