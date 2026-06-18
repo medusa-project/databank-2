@@ -4,6 +4,7 @@ require "json"
 # ls /tmp/databank_exports/
 # dataset_20260605T212924Z                dataset_access_grants_20260605T213858Z  guide_20260605T213946Z           permissions_20260605T213042Z
 # dataset_access_grants_20260605T213119Z  download_metrics_20260605T214133Z       medusa_ingests_20260605T214056Z  spotlight_20260605T214012Z
+# users_20260618T220000Z                  audit_20260618T221000Z
 # the command to import all datasets and related data would be:
 # BUNDLE_ROOT=/tmp/databank_exports bundle exec rails cutover:import_all
 
@@ -13,6 +14,13 @@ namespace :cutover do
   #   migration:legacy:export_bundle           → dataset_<timestamp>/
   #   migration:legacy:export_permissions_bundle → permissions_<timestamp>/
   CUTOVER_IMPORT_STEPS = [
+    {
+      key: "users",
+      task: "migration:users:import_from_dir",
+      default_bundle_file: "legacy_users.ndjson",
+      dir_env: "USERS_DIR",
+      dir_prefix: "users_"
+    },
     {
       key: "datasets",
       task: "migration:bundle:import_from_dir",
@@ -61,10 +69,18 @@ namespace :cutover do
       default_bundle_file: "legacy_download_metrics.ndjson",
       dir_env: "DOWNLOAD_METRICS_DIR",
       dir_prefix: "download_metrics_"
+    },
+    {
+      key: "audits",
+      task: "migration:audits:import_from_dir",
+      default_bundle_file: "legacy_audits.ndjson",
+      dir_env: "AUDITS_DIR",
+      dir_prefix: "audit_"
     }
   ].freeze
 
   CUTOVER_REQUIRED_RUN_TYPES = %w[
+    users_bundle_import
     bundle_import
     permissions_bundle_import
     dataset_access_grants_bundle_import
@@ -72,6 +88,7 @@ namespace :cutover do
     featured_researchers_bundle_import
     medusa_ingests_bundle_import
     download_metrics_bundle_import
+    audits_bundle_import
   ].freeze
 
   def cutover_report_path(prefix)

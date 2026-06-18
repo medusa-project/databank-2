@@ -194,19 +194,19 @@ RSpec.describe "Datasets search", type: :request do
     top_dataset = Dataset.create!(
       title: "Top Funder Dataset",
       description: "Top funder result",
-      keywords: "funding",
+      keywords: "facet-known-other-smoke",
       subject: "Data Science",
       owner_uid: "owner-top-funder",
       depositor_name: "Owner Top",
       depositor_email: "owner-top-funder@example.edu",
       publication_state: :published
     )
-    top_dataset.funders.create!(name: "U.S. Department of Energy (DOE)")
+    top_dataset.funders.create!(code: "DOE", name: "U.S. Department of Energy (DOE)")
 
     other_dataset = Dataset.create!(
       title: "Other Funder Dataset",
       description: "Other funder result",
-      keywords: "funding",
+      keywords: "facet-known-other-smoke",
       subject: "Data Science",
       owner_uid: "owner-other-funder",
       depositor_name: "Owner Other",
@@ -215,11 +215,12 @@ RSpec.describe "Datasets search", type: :request do
     )
     other_dataset.funders.create!(name: "Alfred P. Sloan Foundation")
 
-    get datasets_path, params: { q: "funder" }
+    get datasets_path, params: { q: "facet-known-other-smoke" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Other (1)")
     expect(response.body).to include("U.S. Department of Energy (DOE) (1)")
+    expect(response.body).to include('id="funder_doe" value="DOE"')
     expect(response.body).not_to include("Alfred P. Sloan Foundation (1)")
   end
 
@@ -227,19 +228,19 @@ RSpec.describe "Datasets search", type: :request do
     top_dataset = Dataset.create!(
       title: "Top Bucket Dataset",
       description: "Top bucket result",
-      keywords: "bucket",
+      keywords: "facet-other-filter-smoke",
       subject: "Engineering",
       owner_uid: "owner-top-bucket",
       depositor_name: "Owner Top Bucket",
       depositor_email: "owner-top-bucket@example.edu",
       publication_state: :published
     )
-    top_dataset.funders.create!(name: "U.S. Department of Energy (DOE)")
+    top_dataset.funders.create!(code: "DOE", name: "U.S. Department of Energy (DOE)")
 
     other_dataset = Dataset.create!(
       title: "Other Bucket Dataset",
       description: "Other bucket result",
-      keywords: "bucket",
+      keywords: "facet-other-filter-smoke",
       subject: "Engineering",
       owner_uid: "owner-other-bucket",
       depositor_name: "Owner Other Bucket",
@@ -248,10 +249,125 @@ RSpec.describe "Datasets search", type: :request do
     )
     other_dataset.funders.create!(name: "Alfred P. Sloan Foundation")
 
-    get datasets_path, params: { q: "bucket", funders: [ Search::DatasetSearch::OTHER_FUNDER_VALUE ] }
+    get datasets_path, params: { q: "facet-other-filter-smoke", funders: [ Search::DatasetSearch::OTHER_FUNDER_VALUE ] }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Other Bucket Dataset")
     expect(response.body).not_to include("Top Bucket Dataset")
+  end
+
+  it "filters by top funder code" do
+    top_dataset = Dataset.create!(
+      title: "Code Filter Top Dataset",
+      description: "Top code filter result",
+      keywords: "code-filter",
+      subject: "Engineering",
+      owner_uid: "owner-code-top",
+      depositor_name: "Owner Code Top",
+      depositor_email: "owner-code-top@example.edu",
+      publication_state: :published
+    )
+    top_dataset.funders.create!(code: "DOE", name: "U.S. Department of Energy (DOE)")
+
+    other_dataset = Dataset.create!(
+      title: "Code Filter Other Dataset",
+      description: "Other code filter result",
+      keywords: "code-filter",
+      subject: "Engineering",
+      owner_uid: "owner-code-other",
+      depositor_name: "Owner Code Other",
+      depositor_email: "owner-code-other@example.edu",
+      publication_state: :published
+    )
+    other_dataset.funders.create!(name: "Alfred P. Sloan Foundation")
+
+    get datasets_path, params: { q: "code-filter", funders: [ "DOE" ] }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Code Filter Top Dataset")
+    expect(response.body).not_to include("Code Filter Other Dataset")
+  end
+
+  it "accepts legacy name-based funder filter values" do
+    top_dataset = Dataset.create!(
+      title: "Legacy Name Filter Top Dataset",
+      description: "Top legacy filter result",
+      keywords: "legacy-name-filter",
+      subject: "Engineering",
+      owner_uid: "owner-legacy-top",
+      depositor_name: "Owner Legacy Top",
+      depositor_email: "owner-legacy-top@example.edu",
+      publication_state: :published
+    )
+    top_dataset.funders.create!(code: "DOE", name: "U.S. Department of Energy (DOE)")
+
+    other_dataset = Dataset.create!(
+      title: "Legacy Name Filter Other Dataset",
+      description: "Other legacy filter result",
+      keywords: "legacy-name-filter",
+      subject: "Engineering",
+      owner_uid: "owner-legacy-other",
+      depositor_name: "Owner Legacy Other",
+      depositor_email: "owner-legacy-other@example.edu",
+      publication_state: :published
+    )
+    other_dataset.funders.create!(name: "Alfred P. Sloan Foundation")
+
+    get datasets_path, params: { q: "legacy-name-filter", funders: [ "U.S. Department of Energy (DOE)" ] }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Legacy Name Filter Top Dataset")
+    expect(response.body).not_to include("Legacy Name Filter Other Dataset")
+  end
+
+  it "keeps top facet assignment stable when funder name differs but code stays known" do
+    dataset = Dataset.create!(
+      title: "Renamed Funder Dataset",
+      description: "Renamed funder result",
+      keywords: "renamed-funder",
+      subject: "Data Science",
+      owner_uid: "owner-renamed-funder",
+      depositor_name: "Owner Renamed",
+      depositor_email: "owner-renamed-funder@example.edu",
+      publication_state: :published
+    )
+    dataset.funders.create!(code: "DOE", name: "Department of Energy (Renamed)")
+
+    get datasets_path, params: { q: "renamed-funder" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("U.S. Department of Energy (DOE) (1)")
+    expect(response.body).not_to include("Other (1)")
+  end
+
+  it "matches text query by funder name" do
+    matching_dataset = Dataset.create!(
+      title: "Dataset With NIH Funder",
+      description: "query by funder name",
+      keywords: "nih-query",
+      subject: "Data Science",
+      owner_uid: "owner-nih-query",
+      depositor_name: "Owner NIH",
+      depositor_email: "owner-nih-query@example.edu",
+      publication_state: :published
+    )
+    matching_dataset.funders.create!(code: "NIH", name: "U.S. National Institutes of Health (NIH)")
+
+    Dataset.create!(
+      title: "Dataset Without NIH Funder",
+      description: "does not match by funder",
+      keywords: "nih-query",
+      subject: "Data Science",
+      owner_uid: "owner-no-nih-query",
+      depositor_name: "Owner No NIH",
+      depositor_email: "owner-no-nih-query@example.edu",
+      publication_state: :published
+    )
+
+    get datasets_path, params: { q: "National Institutes of Health" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Dataset With NIH Funder")
+    expect(response.body).not_to include("Dataset Without NIH Funder")
   end
 end

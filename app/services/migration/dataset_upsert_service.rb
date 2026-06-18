@@ -72,6 +72,7 @@ module Migration
       dataset.subject = payload["subject"]
       dataset.publication_state = publication_state_value(payload["publication_state"])
       dataset.published_at = parse_time(payload["release_date"]) || parse_time(payload["updated_at"])
+      dataset.nested_updated_at = parse_time(payload["nested_updated_at"])
 
       owner_uid, depositor_name, depositor_email = depositor_fields
       dataset.owner_uid = owner_uid
@@ -174,12 +175,22 @@ module Migration
 
     def normalized_creators
       Array(payload["creators"]).each_with_index.filter_map do |creator, index|
-        name = combine_name(given_name: creator["given_name"], family_name: creator["family_name"], fallback_name: creator["name"])
-        next if name.blank?
+        name_fields = normalized_name_fields(
+          given_name: creator["given_name"],
+          family_name: creator["family_name"],
+          institution_name: creator["institution_name"],
+          legacy_name: creator["name"]
+        )
+        next if name_fields[:name].blank?
 
         {
-          name: name,
+          name: name_fields[:name],
+          institution_name: name_fields[:institution_name],
+          given_name: name_fields[:given_name],
+          family_name: name_fields[:family_name],
           email: creator["email"],
+          identifier: creator["identifier"],
+          identifier_scheme: creator["identifier_scheme"],
           contact: !!creator["is_contact"],
           position: (creator["row_position"] || (index + 1)).to_i,
           source_created_at: creator["created_at"],
@@ -190,12 +201,22 @@ module Migration
 
     def normalized_contributors
       Array(payload["contributors"]).each_with_index.filter_map do |contributor, index|
-        name = combine_name(given_name: contributor["given_name"], family_name: contributor["family_name"], fallback_name: contributor["name"])
-        next if name.blank?
+        name_fields = normalized_name_fields(
+          given_name: contributor["given_name"],
+          family_name: contributor["family_name"],
+          institution_name: contributor["institution_name"],
+          legacy_name: contributor["name"]
+        )
+        next if name_fields[:name].blank?
 
         {
-          name: name,
+          name: name_fields[:name],
+          institution_name: name_fields[:institution_name],
+          given_name: name_fields[:given_name],
+          family_name: name_fields[:family_name],
           email: contributor["email"],
+          identifier: contributor["identifier"],
+          identifier_scheme: contributor["identifier_scheme"],
           role: contributor["role"],
           position: (contributor["row_position"] || contributor["position"] || (index + 1)).to_i,
           source_created_at: contributor["created_at"],
@@ -230,10 +251,19 @@ module Migration
         next if title.blank?
 
         uri = normalized_material_uri(material)
+        relation_types = normalized_relation_types(material: material, uri: uri)
 
         {
           title: title,
-          relation_type: normalized_relation_type(material: material, uri: uri),
+          material_type: material["material_type"],
+          selected_type: material["selected_type"],
+          availability: material["availability"],
+          link: material["link"],
+          uri_type: material["uri_type"],
+          citation: material["citation"],
+          note: material["note"],
+          relation_type: relation_types.first,
+          datacite_list: relation_types.join(","),
           uri: uri,
           position: (material["row_position"] || material["position"] || (index + 1)).to_i,
           source_created_at: material["created_at"],
@@ -310,15 +340,23 @@ module Migration
       nil
     end
 
-    def normalized_relation_type(material:, uri:)
-      candidate = material["relation_type"].presence || material["material_type"].presence
-      return candidate if RelatedMaterial::RELATION_TYPE_OPTIONS.include?(candidate)
+    def normalized_relation_types(material:, uri:)
+      candidates = []
+      candidates.concat(Array(material["relation_types"]))
+      candidates.concat(material["datacite_list"].to_s.split(","))
+      candidates << material["relation_type"]
+      candidates << material["material_type"]
 
-      # Legacy sample payloads often use material_type values like "Article".
-      # For URI-linked entries, default to a supported relationship type.
-      return "IsSupplementTo" if uri.present?
+      normalized = candidates
+        .map { |value| value.to_s.strip }
+        .reject(&:blank?)
+        .select { |value| RelatedMaterial::RELATION_TYPE_OPTIONS.include?(value) }
+        .uniq
 
-      nil
+      # Legacy payloads may include URI without explicit relationship metadata.
+      return [ "IsSupplementTo" ] if normalized.empty? && uri.present?
+
+      normalized
     end
 
     def normalize_http_uri(value)
@@ -340,6 +378,29 @@ module Migration
       return combined if combined.present?
 
       fallback_name.to_s.strip
+    end
+
+    def normalized_name_fields(given_name:, family_name:, institution_name:, legacy_name:)
+      normalized_given_name = given_name.to_s.strip.presence
+      normalized_family_name = family_name.to_s.strip.presence
+
+      normalized_institution_name = institution_name.to_s.strip.presence
+      if normalized_institution_name.blank? && normalized_given_name.blank? && normalized_family_name.blank?
+        normalized_institution_name = legacy_name.to_s.strip.presence
+      end
+
+      canonical_name = combine_name(
+        given_name: normalized_given_name,
+        family_name: normalized_family_name,
+        fallback_name: normalized_institution_name
+      )
+
+      {
+        name: canonical_name,
+        institution_name: normalized_institution_name,
+        given_name: normalized_given_name,
+        family_name: normalized_family_name
+      }
     end
 
     def parse_time(value)

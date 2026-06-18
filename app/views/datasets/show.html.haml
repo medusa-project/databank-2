@@ -5,8 +5,8 @@
 - primary_contact_name = dataset_primary_contact_name(@dataset)
 - version_related_materials = @dataset.version_related_materials
 - nonversion_related_materials = @dataset.nonversion_related_materials
-- related_materials = nonversion_related_materials.reject { |material| material.relation_type == "IsCitedBy" }
-- cited_by_materials = nonversion_related_materials.select { |material| material.relation_type == "IsCitedBy" }
+- related_materials = nonversion_related_materials.reject { |material| material.relation_types.include?("IsCitedBy") }
+- cited_by_materials = nonversion_related_materials.select { |material| material.relation_types.include?("IsCitedBy") }
 - additional_contacts = @dataset.contributors.map(&:name).reject(&:blank?)
 - download_count = @dataset.respond_to?(:total_downloads) ? @dataset.total_downloads.to_i : 0
 - previous_version = @dataset.previous_version_dataset
@@ -129,8 +129,12 @@
                             %span.dataset-show-list-primary= link_to material.title, material.uri
                           - else
                             %span.dataset-show-list-primary= material.title
-                          - if material.relation_type.present?
-                            %span.dataset-show-list-secondary= material.relation_type
+                          - if material.selected_type.present?
+                            %span.dataset-show-list-secondary= "Type: #{material.selected_type}"
+                          - if material.relation_types.any?
+                            %span.dataset-show-list-secondary= "Relations: #{material.relation_types.join(', ')}"
+                          - if material.note.present?
+                            %span.dataset-show-list-tertiary= "Note: #{material.note}"
 
             - if cited_by_materials.any?
               %dt.sr-only Cited By
@@ -148,8 +152,12 @@
                             %span.dataset-show-list-primary= link_to material.title, material.uri
                           - else
                             %span.dataset-show-list-primary= material.title
-                          - if material.relation_type.present?
-                            %span.dataset-show-list-secondary= material.relation_type
+                          - if material.selected_type.present?
+                            %span.dataset-show-list-secondary= "Type: #{material.selected_type}"
+                          - if material.relation_types.any?
+                            %span.dataset-show-list-secondary= "Relations: #{material.relation_types.join(', ')}"
+                          - if material.note.present?
+                            %span.dataset-show-list-tertiary= "Note: #{material.note}"
 
     - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:review_versions, @dataset) }
     - if visible_version_entries.any?

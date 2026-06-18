@@ -4,7 +4,9 @@ module Search
     MAX_PER_PAGE = 100
     PER_PAGE_OPTIONS = [ 25, 50, 100 ].freeze
     OTHER_FUNDER_VALUE = "__other__".freeze
-    TOP_FUNDER_NAMES = FunderCatalog.known_names.freeze
+    TOP_FUNDER_CODES = FunderCatalog.known_codes.freeze
+    FUNDER_CODE_TO_NAME_MAP = FunderCatalog.code_to_name_map.freeze
+    FUNDER_NAME_TO_CODE_MAP = FunderCatalog.name_to_code_map.freeze
 
     AVAILABLE_FACETS = {
       "guest" => %i[subjects licenses funders publication_years],
@@ -88,10 +90,13 @@ module Search
       return relation if @query.blank?
 
       q = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
-      relation.where(
-        "title ILIKE :q OR description ILIKE :q OR keywords ILIKE :q OR subject ILIKE :q",
-        q: q
-      )
+      relation
+        .left_joins(:funders)
+        .where(
+          "datasets.title ILIKE :q OR datasets.description ILIKE :q OR datasets.keywords ILIKE :q OR datasets.subject ILIKE :q OR funders.name ILIKE :q",
+          q: q
+        )
+        .distinct
     end
 
     def filter_by_subjects(relation)
@@ -117,22 +122,16 @@ module Search
 
       selected_funders = @filters[:funders].dup
       include_other = selected_funders.delete(OTHER_FUNDER_VALUE)
+      selected_codes = normalize_selected_funder_codes(values: selected_funders)
       funder_relation = relation.left_joins(:funders)
 
-      if include_other && selected_funders.any?
-        top_scope = funder_relation.where(funders: { name: selected_funders })
-        other_scope = funder_relation
-          .where.not(funders: { name: [ nil, "" ] })
-          .where.not(funders: { name: TOP_FUNDER_NAMES })
-
-        top_scope.or(other_scope).distinct
+      if include_other && selected_codes.any?
+        top_scope = top_funder_scope(relation: funder_relation, selected_codes: selected_codes)
+        top_scope.or(other_funder_scope(relation: funder_relation)).distinct
       elsif include_other
-        funder_relation
-          .where.not(funders: { name: [ nil, "" ] })
-          .where.not(funders: { name: TOP_FUNDER_NAMES })
-          .distinct
+        other_funder_scope(relation: funder_relation).distinct
       else
-        funder_relation.where(funders: { name: selected_funders }).distinct
+        top_funder_scope(relation: funder_relation, selected_codes: selected_codes).distinct
       end
     end
 
@@ -178,30 +177,80 @@ module Search
     end
 
     def funder_options(relation)
-      counts_by_name = relation
+      funder_rows = relation
         .left_joins(:funders)
         .where.not(funders: { name: [ nil, "" ] })
-        .group("funders.name")
-        .order(Arel.sql("COUNT(DISTINCT datasets.id) DESC"), Arel.sql("funders.name"))
-        .count("DISTINCT datasets.id")
+        .select("datasets.id AS dataset_id", "funders.code AS funder_code", "funders.name AS funder_name")
 
-      top_options = TOP_FUNDER_NAMES.filter_map do |name|
-        count = counts_by_name[name]
-        next if count.blank?
+      grouped_dataset_ids = Hash.new { |hash, key| hash[key] = {} }
+      other_dataset_ids = {}
 
-        { value: name, label: name, count: count }
+      funder_rows.each do |row|
+        canonical_code = canonical_top_funder_code(code: row.funder_code, name: row.funder_name)
+
+        if canonical_code.present?
+          grouped_dataset_ids[canonical_code][row.dataset_id] = true
+        else
+          other_dataset_ids[row.dataset_id] = true
+        end
       end
 
-      other_names = counts_by_name.keys - TOP_FUNDER_NAMES
-      return top_options if other_names.empty?
+      top_options = TOP_FUNDER_CODES.filter_map do |code|
+        count = grouped_dataset_ids[code].length
+        next if count.zero?
 
-      other_count = relation
-        .left_joins(:funders)
-        .where(funders: { name: other_names })
-        .distinct
-        .count
+        { value: code, label: FUNDER_CODE_TO_NAME_MAP.fetch(code, code), count: count }
+      end
 
-      [ { value: OTHER_FUNDER_VALUE, label: "Other", count: other_count } ] + top_options
+      return top_options if other_dataset_ids.empty?
+
+      [ { value: OTHER_FUNDER_VALUE, label: "Other", count: other_dataset_ids.length } ] + top_options
+    end
+
+    def top_funder_scope(relation:, selected_codes:)
+      codes = Array(selected_codes).map(&:to_s).reject(&:blank?).uniq
+      return relation.none if codes.empty?
+
+      mapped_names = FUNDER_NAME_TO_CODE_MAP.filter_map do |name, code|
+        name if codes.include?(code)
+      end
+
+      by_code = relation.where(funders: { code: codes })
+      return by_code if mapped_names.empty?
+
+      by_name = relation.where(funders: { code: [ nil, "" ], name: mapped_names })
+      by_code.or(by_name)
+    end
+
+    def other_funder_scope(relation:)
+      top_names = FUNDER_NAME_TO_CODE_MAP.keys
+      relation
+        .where.not(funders: { name: [ nil, "" ] })
+        .where(
+          "NOT ((COALESCE(funders.code, '') IN (:top_codes)) OR ((COALESCE(funders.code, '') = '') AND funders.name IN (:top_names)))",
+          top_codes: TOP_FUNDER_CODES,
+          top_names: top_names
+        )
+    end
+
+    def canonical_top_funder_code(code:, name:)
+      normalized_code = code.to_s.strip
+      return normalized_code if TOP_FUNDER_CODES.include?(normalized_code)
+
+      FUNDER_NAME_TO_CODE_MAP[name.to_s.strip]
+    end
+
+    def normalize_selected_funder_codes(values:)
+      Array(values).filter_map do |value|
+        normalized_value = value.to_s.strip
+        next if normalized_value.blank?
+
+        if TOP_FUNDER_CODES.include?(normalized_value)
+          normalized_value
+        else
+          FUNDER_NAME_TO_CODE_MAP[normalized_value]
+        end
+      end.uniq
     end
 
     def publication_state_options(relation)

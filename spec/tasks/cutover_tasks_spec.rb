@@ -30,13 +30,15 @@ RSpec.describe "cutover tasks" do
     end
 
     expected_order = [
+      "migration:users:import_from_dir",
       "migration:bundle:import_from_dir",
       "migration:permissions:import_from_dir",
       "migration:dataset_access_grants:import_from_dir",
       "migration:guides:import_from_dir",
       "migration:spotlights:import_from_dir",
       "migration:medusa_ingests:import_from_dir",
-      "migration:download_metrics:import_from_dir"
+      "migration:download_metrics:import_from_dir",
+      "migration:audits:import_from_dir"
     ]
 
     invocations = []
@@ -79,6 +81,7 @@ RSpec.describe "cutover tasks" do
 
   it "writes reconciliation report when required runs are present" do
     required_run_types = %w[
+      users_bundle_import
       bundle_import
       permissions_bundle_import
       dataset_access_grants_bundle_import
@@ -86,6 +89,7 @@ RSpec.describe "cutover tasks" do
       featured_researchers_bundle_import
       medusa_ingests_bundle_import
       download_metrics_bundle_import
+      audits_bundle_import
     ]
 
     required_run_types.each_with_index do |run_type, index|

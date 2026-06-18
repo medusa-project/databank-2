@@ -47,6 +47,69 @@ rescue StandardError => e
 end
 
 namespace :migration do
+  namespace :users do
+    desc "Import legacy users bundle into databank-2 users"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_users.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "users_bundle_import",
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run
+        }
+      ) do
+        Migration::UsersBundleImportService.new(
+          bundle_path: bundle_path.to_s,
+          dry_run: dry_run,
+          checksum_path: checksum_path,
+          manifest_path: manifest_path,
+          report_path: resolved_report_path.to_s
+        ).call
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Updated: #{summary[:updated]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      if dry_run
+        puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
+      end
+      puts "Skipped unsupported role: #{summary[:skipped_unsupported_role]}"
+      puts "Skipped invalid identity: #{summary[:skipped_invalid_identity]}"
+      puts "Reconciled by email: #{summary[:reconciled_by_email]}"
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+  end
+
   namespace :dataset_access_grants do
     desc "Import legacy dataset access grants bundle into typed records"
     task import_from_dir: :environment do
@@ -1167,6 +1230,13 @@ namespace :migration do
       if dry_run
         puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
       end
+      if summary[:relationship_reconciliation].is_a?(Hash)
+        metrics = summary[:relationship_reconciliation]
+        puts "Relationship assertions exported: #{metrics[:exported_total_assertions]}"
+        puts "Relationship assertions imported: #{metrics[:imported_total_assertions]}" if metrics[:enabled]
+        puts "Relationship assertion strict match: #{metrics[:strict_match]}" if metrics[:enabled]
+        puts "Relationship assertion mismatched datasets: #{metrics[:mismatched_dataset_count]}" if metrics[:enabled]
+      end
     end
 
     desc "Import copied legacy export artifacts from a directory"
@@ -1227,6 +1297,106 @@ namespace :migration do
       if dry_run
         puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
       end
+      if summary[:relationship_reconciliation].is_a?(Hash)
+        metrics = summary[:relationship_reconciliation]
+        puts "Relationship assertions exported: #{metrics[:exported_total_assertions]}"
+        puts "Relationship assertions imported: #{metrics[:imported_total_assertions]}" if metrics[:enabled]
+        puts "Relationship assertion strict match: #{metrics[:strict_match]}" if metrics[:enabled]
+        puts "Relationship assertion mismatched datasets: #{metrics[:mismatched_dataset_count]}" if metrics[:enabled]
+      end
+    end
+  end
+
+  namespace :audits do
+    desc "Import a secure NDJSON audit bundle exported from legacy databank"
+    task import: :environment do
+      bundle_path = ENV.fetch("BUNDLE")
+      checksum_path = ENV["CHECKSUM"]
+      manifest_path = ENV["MANIFEST"]
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(Pathname(bundle_path).dirname, report_path)
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "audits_bundle_import",
+        bundle_path: bundle_path,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run
+        }
+      ) do
+        Migration::AuditsBundleImportService.new(
+          bundle_path: bundle_path,
+          dry_run: dry_run,
+          checksum_path: checksum_path,
+          manifest_path: manifest_path,
+          report_path: resolved_report_path.to_s
+        ).call
+      end
+
+      puts "Bundle: #{summary[:bundle_path]}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+      puts "Dry run only - Would create: #{summary[:would_create]}" if dry_run
+    end
+
+    desc "Import copied legacy audit export artifacts from a directory"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_audits.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "audits_bundle_import",
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run
+        }
+      ) do
+        Migration::AuditsBundleImportService.new(
+          bundle_path: bundle_path.to_s,
+          dry_run: dry_run,
+          checksum_path: checksum_path,
+          manifest_path: manifest_path,
+          report_path: resolved_report_path.to_s
+        ).call
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+      puts "Dry run only - Would create: #{summary[:would_create]}" if dry_run
     end
   end
 end

@@ -1,6 +1,14 @@
 class Contributor < ApplicationRecord
   belongs_to :dataset
 
+  audited except: %i[
+    row_order
+    type_of
+    identifier_scheme
+    dataset_id
+    institution_name
+  ], associated_with: :dataset
+
   before_validation :sync_name_fields
 
   validate :name_present

@@ -12,7 +12,7 @@ class FunderCatalog
     Entry.new(code: "USDA", name: "U.S. Department of Agriculture (USDA)", identifier: "10.13039/100000199", display_position: 60, identifier_scheme: "DOI"),
     Entry.new(code: "DOE", name: "U.S. Department of Energy (DOE)", identifier: "10.13039/100000015", display_position: 70, identifier_scheme: "DOI"),
     Entry.new(code: "USGS", name: "U.S. Geological Survey (USGS)", identifier: "10.13039/100000203", display_position: 80, identifier_scheme: "DOI"),
-    Entry.new(code: "NASA", name: "U.S. National Aeronautics and Space Administration (NASA)", identifier: "10.13039/100000104", display_position: 90, identifier_scheme: "DOI"),
+    Entry.new(code: "NASA", name: "U.S. National Aeronautics & Space Administration (NASA)", identifier: "10.13039/100000104", display_position: 90, identifier_scheme: "DOI"),
     Entry.new(code: "NIH", name: "U.S. National Institutes of Health (NIH)", identifier: "10.13039/100000002", display_position: 100, identifier_scheme: "DOI"),
     Entry.new(code: "NSF", name: "U.S. National Science Foundation (NSF)", identifier: "10.13039/100000001", display_position: 110, identifier_scheme: "DOI"),
     Entry.new(code: OTHER_CODE, name: "Other -- Please provide name:", identifier: "", display_position: 1000, identifier_scheme: "")
@@ -28,6 +28,22 @@ class FunderCatalog
 
   def self.known_names
     known_entries.map(&:name)
+  end
+
+  def self.known_codes
+    known_entries.map(&:code)
+  end
+
+  def self.code_to_name_map
+    known_entries.each_with_object({}) do |entry, map|
+      map[entry.code] = entry.name
+    end
+  end
+
+  def self.name_to_code_map
+    known_entries.each_with_object({}) do |entry, map|
+      map[entry.name] = entry.code
+    end
   end
 
   def self.identifier_map

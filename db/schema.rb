@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_07_102000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_18_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -90,6 +90,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_102000) do
     t.datetime "updated_at", null: false
     t.index ["archive_extract_request_id"], name: "index_archive_extract_responses_on_archive_extract_request_id", unique: true
     t.index ["status"], name: "index_archive_extract_responses_on_status"
+  end
+
+  create_table "audits", force: :cascade do |t|
+    t.string "action"
+    t.integer "associated_id"
+    t.string "associated_type"
+    t.integer "auditable_id"
+    t.string "auditable_type"
+    t.jsonb "audited_changes"
+    t.string "comment"
+    t.datetime "created_at"
+    t.string "remote_address"
+    t.string "request_uuid"
+    t.integer "user_id"
+    t.string "user_type"
+    t.string "username"
+    t.integer "version", default: 0
+    t.index ["associated_id", "associated_type"], name: "associated_index"
+    t.index ["auditable_id", "auditable_type"], name: "auditable_index"
+    t.index ["created_at"], name: "index_audits_on_created_at"
+    t.index ["request_uuid"], name: "index_audits_on_request_uuid"
+    t.index ["user_id", "user_type"], name: "user_index"
   end
 
   create_table "contributors", force: :cascade do |t|
@@ -421,6 +443,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_102000) do
     t.index ["dataset_id"], name: "index_notes_on_dataset_id"
   end
 
+  create_table "related_material_relationships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position", default: 1, null: false
+    t.bigint "related_material_id", null: false
+    t.string "relation_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["related_material_id", "relation_type"], name: "idx_related_material_relationships_unique_relation", unique: true
+    t.index ["related_material_id"], name: "index_related_material_relationships_on_related_material_id"
+  end
+
   create_table "related_materials", force: :cascade do |t|
     t.string "availability"
     t.text "citation"
@@ -499,6 +531,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_102000) do
   add_foreign_key "guide_subitems", "guide_items", column: "item_id"
   add_foreign_key "ingest_response_events", "external_delivery_attempts"
   add_foreign_key "notes", "datasets"
+  add_foreign_key "related_material_relationships", "related_materials"
   add_foreign_key "related_materials", "datasets"
   add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"

@@ -11,9 +11,9 @@
           = button_to "Log out", logout_path, method: :delete
       - else
         %li
-          %a{href: "/"} Welcome
+          %a.utility-link-welcome{href: "/"} Welcome
         %li
-          %a{href: "/login"} Log in
+          %a.utility-link-login{href: "/login"} Log in
   %il-header-nav{slot: "navigation"}
     %ul
       %li

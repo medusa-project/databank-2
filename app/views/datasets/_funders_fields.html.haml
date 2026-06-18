@@ -32,4 +32,4 @@
 
       %datalist#known-funders
         - FunderCatalog.known_entries.each do |entry|
-          %option{value: entry.name}= entry.identifier
+          %option{value: entry.code}= entry.name

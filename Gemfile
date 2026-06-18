@@ -25,6 +25,8 @@ gem "stimulus-rails"
 gem "tailwindcss-rails"
 # HAML templates
 gem "haml-rails", "~> 2.1"
+# Auditing for dataset and nested record history
+gem "audited", "~> 5.8"
 # Authorization
 gem "cancancan", "~> 3.6"
 # OmniAuth authentication

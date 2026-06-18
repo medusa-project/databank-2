@@ -11,6 +11,13 @@ RSpec.describe Doi::DataciteClient, type: :service do
   end
 
   it "registers a DOI with the expected request payload" do
+    dataset.related_materials.create!(
+      title: "Related article",
+      uri: "https://doi.org/10.1000/example",
+      uri_type: "DOI",
+      datacite_list: "IsSupplementTo,IsCitedBy"
+    )
+
     response = Net::HTTPSuccess.new("1.1", "201", "Created")
     http = instance_double(Net::HTTP)
     captured_request = nil
@@ -37,6 +44,18 @@ RSpec.describe Doi::DataciteClient, type: :service do
     )
     expect(attributes.fetch("titles")).to eq([ { "title" => "Published dataset" } ])
     expect(attributes.fetch("types")).to eq({ "resourceTypeGeneral" => "Dataset" })
+    expect(attributes.fetch("relatedIdentifiers")).to eq([
+      {
+        "relatedIdentifier" => "https://doi.org/10.1000/example",
+        "relatedIdentifierType" => "DOI",
+        "relationType" => "IsSupplementTo"
+      },
+      {
+        "relatedIdentifier" => "https://doi.org/10.1000/example",
+        "relatedIdentifierType" => "DOI",
+        "relationType" => "IsCitedBy"
+      }
+    ])
   end
 
   it "raises when DataCite responds with a non-success status" do
