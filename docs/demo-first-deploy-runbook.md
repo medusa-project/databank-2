@@ -2,12 +2,30 @@
 
 Use this flow to deploy one environment at a time, starting with demo.
 
+## Prerequisites: Deploy Bundle Setup
+
+The project uses a minimal deploy-only bundle to avoid installing the full app dependencies locally.
+
+**Deploy commands run from macOS only** (SSH key is not available in the container).
+
+Setup the deploy bundle once on macOS:
+```sh
+bin/cap-deploy install
+```
+
+All subsequent deploy commands use:
+```sh
+bin/cap-deploy [stage] [task]
+```
+
+This uses `Gemfile.deploy` and keeps gems in `vendor/bundle-deploy`.
+
 ## 1) Verify local deploy prerequisites
 
-1. Confirm Capistrano tasks are available:
+1. Confirm Capistrano tasks are available (macOS):
 
 ```sh
-bundle exec cap -T
+bin/cap-deploy -T
 ```
 
 2. Confirm the target host is reachable via SSH key:
@@ -27,16 +45,16 @@ Create `~/shared/config/credentials/demo.key` on the demo host with the correct 
 
 ## 3) Run deploy checks before first deploy
 
-1. Capistrano checks:
+1. Capistrano checks (macOS):
 
 ```sh
-bundle exec cap demo deploy:check
+bin/cap-deploy demo deploy:check
 ```
 
 2. Preflight host checks (svc hooks + shared dirs):
 
 ```sh
-bundle exec cap demo deploy:preflight
+bin/cap-deploy demo deploy:preflight
 ```
 
 3. Runtime config contract checks (local):
@@ -60,7 +78,7 @@ See [Deploy config contract](deploy-config-contract.md) for the full deploy conf
 ## 4) Deploy demo
 
 ```sh
-bundle exec cap demo deploy
+bin/cap-deploy demo deploy
 ```
 
 ## 5) Post-deploy validation on demo
