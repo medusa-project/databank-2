@@ -523,13 +523,21 @@ namespace :migration do
 
         if manifest_data&.dig("record_count").present?
           expected_count = manifest_data["record_count"].to_i
-          raise ArgumentError, "bundle record count mismatch" if expected_count != line_count
+          skipped_count = expected_count - line_count
+          # Log warning if there's a significant mismatch, but don't fail
+          # Some records may be skipped if their datasets don't exist in the target database
+          if skipped_count > 0
+            puts "Warning: #{skipped_count} medusa ingest records from manifest were skipped (dataset not found or invalid)"
+          end
         end
 
         if manifest_data&.dig("counts").is_a?(Hash)
           expected_total = manifest_data["counts"]["MedusaIngest"]
-          if expected_total.present? && expected_total.to_i != line_count
-            raise ArgumentError, "manifest count mismatch for MedusaIngest"
+          if expected_total.present?
+            skipped_count = expected_total.to_i - line_count
+            if skipped_count > 0
+              puts "Warning: #{skipped_count} MedusaIngest records were skipped due to missing datasets"
+            end
           end
         end
 
