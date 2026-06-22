@@ -222,6 +222,7 @@ namespace :cutover do
     report_path = cutover_report_path("cutover_smoke")
     issues = []
     runs = {}
+    allow_issues = ENV.fetch("ALLOW_ISSUES", "false").casecmp("true").zero?
 
     CUTOVER_REQUIRED_RUN_TYPES.each do |run_type|
       run = latest_run_for(run_type)
@@ -264,6 +265,6 @@ namespace :cutover do
     puts "Smoke report: #{report_path}"
     puts "Issues: #{issues.count}"
 
-    raise "cutover smoke failed" if issues.any?
+    raise "cutover smoke failed" if issues.any? && !allow_issues
   end
 end

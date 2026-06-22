@@ -23,6 +23,8 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Tailwind CSS via CLI
 gem "tailwindcss-rails"
+# FontAwesome icons
+gem "font-awesome-rails"
 # HAML templates
 gem "haml-rails", "~> 2.1"
 # Auditing for dataset and nested record history
