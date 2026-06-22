@@ -161,6 +161,7 @@ module Migration
       associated_id = resolve_reference_id(dataset: dataset, reference: associated_reference)
 
       user_id = resolve_user_id(attributes: attributes)
+      user_type = normalize_legacy_user_type(attributes["user_type"])
 
       audit_attributes = {
         auditable_type: auditable_type,
@@ -168,7 +169,7 @@ module Migration
         associated_type: associated_type,
         associated_id: associated_id,
         user_id: user_id,
-        user_type: attributes["user_type"].to_s.presence,
+        user_type: user_type,
         username: attributes["username"].to_s.presence,
         action: attributes["action"].to_s,
         audited_changes: normalized_audited_changes(attributes["audited_changes"]),
@@ -212,6 +213,19 @@ module Migration
       user = User.find_by(provider: provider, uid: uid) if provider && uid
       user ||= User.find_by(email: email) if email
       user&.id
+    end
+
+    def normalize_legacy_user_type(user_type)
+      # Map legacy class names to current ones
+      # e.g., "User::User" -> "User"
+      return nil unless user_type.present?
+
+      case user_type.to_s.strip
+      when "User::User"
+        "User"
+      else
+        user_type.to_s.presence
+      end
     end
 
     def normalized_audited_changes(value)
