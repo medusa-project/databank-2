@@ -34,7 +34,7 @@ gem "omniauth", "~> 2.1"
 gem "omniauth-rails_csrf_protection", "~> 2.0"
 gem "omniauth-shibboleth"
 # AWS S3 for production file storage
-gem "aws-sdk-s3", "~> 1.225", require: false
+gem "aws-sdk-s3", "~> 1.226", require: false
 gem "aws-sdk-ecs", "~> 1.221", require: false
 gem "aws-sdk-sqs", "~> 1.105", require: false
 # Required by Active Storage variant generation
