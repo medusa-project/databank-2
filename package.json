@@ -13,7 +13,7 @@
   "devDependencies": {
     "@lhci/cli": "^0.14.0",
     "@axe-core/playwright": "^4.11.3",
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "^1.61.1",
     "lighthouse": "^12.8.1"
   },
   "dependencies": {
