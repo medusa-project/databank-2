@@ -490,7 +490,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("known-funders")
     expect(response.body).to include("U.S. Department of Energy (DOE)")
-    expect(response.body).to include("10.13039/100000015")
+    expect(response.body).to include("value=\"DOE\"")
     expect(response.body).not_to include("<h2 class='idb-section-title'>Contributors</h2>")
   end
 
