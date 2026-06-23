@@ -38,7 +38,7 @@ gem "aws-sdk-s3", "~> 1.225", require: false
 gem "aws-sdk-ecs", "~> 1.221", require: false
 gem "aws-sdk-sqs", "~> 1.105", require: false
 # Required by Active Storage variant generation
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
 gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", ref: "2523839f6f75b9fc5500c226dd9c4212d7f54691"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
