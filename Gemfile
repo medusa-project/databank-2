@@ -46,6 +46,8 @@ gem "jbuilder"
 gem "csv", "~> 3.3"
 # Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
 gem "net-imap", ">= 0.6.4.1"
+# Fix CVE in concurrent-ruby reported by CI security scan
+gem "concurrent-ruby", ">= 1.3.7"
 # HTTP client with digest auth support
 gem "curb", "~> 1.0"
 # Use Passenger standalone on deployed Rocky hosts
