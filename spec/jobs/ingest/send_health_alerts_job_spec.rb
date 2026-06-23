@@ -23,7 +23,7 @@ RSpec.describe Ingest::SendHealthAlertsJob, type: :job do
   end
 
   it "sends alert emails for datasets with threshold violations" do
-    ExternalDeliveryAttempt.create!(
+    attempt = ExternalDeliveryAttempt.create!(
       dataset: dataset,
       integration: :ingest,
       event_name: "dataset.published",
@@ -51,6 +51,10 @@ RSpec.describe Ingest::SendHealthAlertsJob, type: :job do
       health_response_stale_minutes: "60",
       health_orphan_lookback_minutes: "120",
       health_orphan_alert_threshold: "1"
+    )
+
+    allow_any_instance_of(described_class).to receive(:latest_attempts_by_dataset).and_return(
+      { dataset.id => attempt }
     )
 
     expect do
