@@ -44,6 +44,8 @@ gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
 gem "csv", "~> 3.3"
+# Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
+gem "net-imap", ">= 0.6.4.1"
 # HTTP client with digest auth support
 gem "curb", "~> 1.0"
 # Use Passenger standalone on deployed Rocky hosts
