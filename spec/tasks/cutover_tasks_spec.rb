@@ -123,6 +123,8 @@ RSpec.describe "cutover tasks" do
   end
 
   it "fails smoke when a required migration run is missing" do
+    MigrationRun.delete_all
+
     run_type = "bundle_import"
     MigrationRun.create!(
       run_type: run_type,
