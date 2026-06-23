@@ -85,6 +85,8 @@ RSpec.describe Metric, type: :model do
   end
 
   it "writes dataset downloads json and aggregate totals" do
+    DatasetDownloadTally.delete_all
+
     DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 1), tally: 2)
     DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 2), tally: 3)
     DatasetDownloadTally.create!(dataset_key: "IDB-2", doi: nil, download_date: Date.new(2026, 6, 3), tally: 7)
