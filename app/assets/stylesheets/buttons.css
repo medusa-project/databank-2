@@ -43,10 +43,11 @@ button:disabled,
 input[type="button"]:disabled,
 input[type="submit"]:disabled,
 input[type="reset"]:disabled {
-	background-color: var(--il-storm-70);
-	border-color: var(--il-storm-70);
+	background-color: #e6e6e6;
+	border-color: #adadad;
+	color: #333333;
 	cursor: not-allowed;
-	opacity: 0.6;
+	opacity: 1;
 }
 
 .idb-button-primary,
@@ -128,16 +129,17 @@ a.idb-button-primary:active {
 
 /* Default — legacy effective neutral */
 .idb-button-default {
-	background-color: #e6e6e6;
-	border-color: #adadad;
-	color: #333333;
+	background-color: #f8f8f8;
+	border-color: #767676;
+	color: #1f1f1f;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 /* Secondary maps to legacy neutral action style */
 .idb-button-secondary {
-	background-color: #e6e6e6;
-	border-color: #adadad;
-	color: #333333;
+	background-color: #d9e3f2;
+	border-color: #5c78a6;
+	color: #183153;
 }
 
 .idb-button-danger:hover,
@@ -175,17 +177,17 @@ a.idb-button-primary:active {
 .idb-button-default:hover,
 .idb-button-default:focus,
 .idb-button-default:focus-visible {
-	background-color: #d4d4d4;
-	border-color: #8c8c8c;
-	color: #333333;
+	background-color: #efefef;
+	border-color: #5f5f5f;
+	color: #1f1f1f;
 }
 
 .idb-button-secondary:hover,
 .idb-button-secondary:focus,
 .idb-button-secondary:focus-visible {
-	background-color: #d4d4d4;
-	border-color: #8c8c8c;
-	color: #333333;
+	background-color: #c7d6ec;
+	border-color: #466490;
+	color: #102746;
 }
 
 a.idb-button-danger,
@@ -242,7 +244,7 @@ a.idb-button-default:hover,
 a.idb-button-default:focus,
 a.idb-button-default:focus-visible,
 a.idb-button-default:active {
-	color: #333333;
+	color: #1f1f1f;
 	text-decoration: none;
 }
 
@@ -311,15 +313,75 @@ button.idb-button-success:disabled,
 button.idb-button-info:disabled,
 button.idb-button-warning:disabled,
 button.idb-button-default:disabled,
+button.legacy-btn:disabled,
 input.idb-button-primary:disabled,
 input.idb-button-secondary:disabled,
 input.idb-button-danger:disabled,
 input.idb-button-success:disabled,
 input.idb-button-info:disabled,
 input.idb-button-warning:disabled,
-input.idb-button-default:disabled {
-	opacity: 0.6;
+input.idb-button-default:disabled,
+input.legacy-btn:disabled {
+	background-color: #e6e6e6;
+	border-color: #adadad;
+	color: #333333;
 	cursor: not-allowed;
+	opacity: 1;
+	box-shadow: none;
+}
+
+button.idb-button-primary:disabled:hover,
+button.idb-button-primary:disabled:focus,
+button.idb-button-primary:disabled:focus-visible,
+button.idb-button-secondary:disabled:hover,
+button.idb-button-secondary:disabled:focus,
+button.idb-button-secondary:disabled:focus-visible,
+button.idb-button-danger:disabled:hover,
+button.idb-button-danger:disabled:focus,
+button.idb-button-danger:disabled:focus-visible,
+button.idb-button-success:disabled:hover,
+button.idb-button-success:disabled:focus,
+button.idb-button-success:disabled:focus-visible,
+button.idb-button-info:disabled:hover,
+button.idb-button-info:disabled:focus,
+button.idb-button-info:disabled:focus-visible,
+button.idb-button-warning:disabled:hover,
+button.idb-button-warning:disabled:focus,
+button.idb-button-warning:disabled:focus-visible,
+button.idb-button-default:disabled:hover,
+button.idb-button-default:disabled:focus,
+button.idb-button-default:disabled:focus-visible,
+button.legacy-btn:disabled:hover,
+button.legacy-btn:disabled:focus,
+button.legacy-btn:disabled:focus-visible,
+input.idb-button-primary:disabled:hover,
+input.idb-button-primary:disabled:focus,
+input.idb-button-primary:disabled:focus-visible,
+input.idb-button-secondary:disabled:hover,
+input.idb-button-secondary:disabled:focus,
+input.idb-button-secondary:disabled:focus-visible,
+input.idb-button-danger:disabled:hover,
+input.idb-button-danger:disabled:focus,
+input.idb-button-danger:disabled:focus-visible,
+input.idb-button-success:disabled:hover,
+input.idb-button-success:disabled:focus,
+input.idb-button-success:disabled:focus-visible,
+input.idb-button-info:disabled:hover,
+input.idb-button-info:disabled:focus,
+input.idb-button-info:disabled:focus-visible,
+input.idb-button-warning:disabled:hover,
+input.idb-button-warning:disabled:focus,
+input.idb-button-warning:disabled:focus-visible,
+input.idb-button-default:disabled:hover,
+input.idb-button-default:disabled:focus,
+input.idb-button-default:disabled:focus-visible,
+input.legacy-btn:disabled:hover,
+input.legacy-btn:disabled:focus,
+input.legacy-btn:disabled:focus-visible {
+	background-color: #e6e6e6;
+	border-color: #adadad;
+	color: #333333;
+	outline: none;
 }
 
 /* Temporary demo-only variants for button_examples page */
@@ -539,4 +601,27 @@ input.idb-button-default:disabled {
 	background-color: #d4d4d4;
 	border-color: #8c8c8c;
 	color: #333333;
+}
+
+/* Semantic button helper icon support */
+.idb-button-with-icon,
+.legacy-btn-with-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+}
+
+.idb-button-icon {
+	font-size: 0.95em;
+	line-height: 1;
+	flex-shrink: 0;
+	pointer-events: none;
+}
+
+.idb-button-icon-only,
+.legacy-btn-icon-only {
+	padding-left: 0.65rem;
+	padding-right: 0.65rem;
+	min-width: 2.5rem;
 }

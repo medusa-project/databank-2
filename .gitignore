@@ -50,6 +50,19 @@
 !/migration_bundles/guides/.keep
 !/migration_bundles/featured_researchers/.keep
 
+# Local workstation / editor artifacts
+.DS_Store
+/.vscode/
+
+# Local-only Lighthouse setup
+/lighthouserc.json
+
+# Local placeholder files used to prevent cookie-banner 404 noise in local audits
+/public/css/ila-cookie-uiuc-colors.css
+/public/css/ila-slideover.css
+/public/css/ila-cookie-banner.css
+/public/partials/ila-cookie-banner-content.part.html
+
 # Generated metrics export artifacts
 /public/archive_file_contents.csv
 /public/datafile_downloads.json

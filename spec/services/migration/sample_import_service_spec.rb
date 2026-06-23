@@ -21,14 +21,26 @@ RSpec.describe Migration::SampleImportService do
       "url" => "https://databank.illinois.edu/datasets/IDB-9099901.json",
       "description" => "desc",
       "publication_state" => "released",
+      "nested_updated_at" => "2020-01-03T00:00:00Z",
       "created_at" => "2020-01-01T00:00:00Z",
       "updated_at" => "2020-01-02T00:00:00Z",
       "creators" => [
         {
           "given_name" => "Ada",
           "family_name" => "Lovelace",
+          "identifier" => "0000-0001-2345-6789",
+          "identifier_scheme" => "ORCID",
           "is_contact" => true,
           "row_position" => 1
+        }
+      ],
+      "contributors" => [
+        {
+          "given_name" => "Grace",
+          "family_name" => "Hopper",
+          "identifier" => "https://ror.org/03yrm5c26",
+          "identifier_scheme" => "ROR",
+          "position" => 1
         }
       ],
       "funders" => [
@@ -40,9 +52,14 @@ RSpec.describe Migration::SampleImportService do
       ],
       "related_materials" => [
         {
+          "selected_type" => "Article",
           "material_type" => "Article",
           "citation" => "Citation text",
-          "link" => "https://doi.org/10.1000/xyz"
+          "note" => "Curator-only migration note",
+          "link" => "https://doi.org/10.1000/xyz",
+          "uri" => "https://doi.org/10.1000/xyz",
+          "uri_type" => "DOI",
+          "datacite_list" => "IsSupplementTo,IsCitedBy"
         }
       ],
       "datafiles" => [
@@ -73,7 +90,11 @@ RSpec.describe Migration::SampleImportService do
     dataset = Dataset.find_by!(identifier: "10.13012/B2IDB-9099901_V1")
     expect(dataset.key).to eq("IDB-9099901")
     expect(dataset.publication_state).to eq("published")
+    expect(dataset.nested_updated_at).to eq(Time.zone.parse("2020-01-03T00:00:00Z"))
     expect(dataset.creators.count).to eq(1)
+    expect(dataset.contributors.count).to eq(1)
+    expect(dataset.creators.first.identifier_scheme).to eq("ORCID")
+    expect(dataset.contributors.first.identifier_scheme).to eq("ROR")
     expect(dataset.funders.count).to eq(1)
     expect(dataset.related_materials.count).to eq(1)
     expect(dataset.datafiles.count).to eq(1)
@@ -83,6 +104,11 @@ RSpec.describe Migration::SampleImportService do
     expect(datafile.storage_root).to eq("medusa")
     expect(datafile.storage_key).to eq("DOI-10-13012-b2idb-9099901_v1/dataset_files/file.csv")
     expect(datafile.medusa_id).to eq("medusa-abc12")
+    material = dataset.related_materials.first
+    expect(material.relation_types).to eq([ "IsSupplementTo", "IsCitedBy" ])
+    expect(material.related_material_relationships.count).to eq(2)
+    expect(material.selected_type).to eq("Article")
+    expect(material.note).to eq("Curator-only migration note")
   end
 
   it "skips existing by default and updates in overwrite mode" do
@@ -110,5 +136,42 @@ RSpec.describe Migration::SampleImportService do
     summary_overwrite = described_class.new(input_dir: run_dir.to_s, overwrite: true).call
     expect(summary_overwrite[:updated]).to eq(1)
     expect(Dataset.find_by!(identifier: payload["identifier"]).title).to eq("Updated Title")
+  end
+
+  it "maps legacy organization names into institution_name for creators and contributors" do
+    payload = {
+      "title" => "Institution Name Mapping",
+      "identifier" => "10.13012/B2IDB-9099902_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-9099902.json",
+      "publication_state" => "released",
+      "creators" => [
+        {
+          "name" => "University Library",
+          "row_position" => 1
+        }
+      ],
+      "contributors" => [
+        {
+          "name" => "Research Data Service",
+          "position" => 1
+        }
+      ]
+    }
+
+    File.write(datasets_dir.join("dataset.json"), JSON.pretty_generate(payload))
+
+    summary = described_class.new(input_dir: run_dir.to_s).call
+
+    expect(summary[:created]).to eq(1)
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(identifier: "10.13012/B2IDB-9099902_V1")
+    creator = dataset.creators.first
+    contributor = dataset.contributors.first
+
+    expect(creator.institution_name).to eq("University Library")
+    expect(creator.name).to eq("University Library")
+    expect(contributor.institution_name).to eq("Research Data Service")
+    expect(contributor.name).to eq("Research Data Service")
   end
 end

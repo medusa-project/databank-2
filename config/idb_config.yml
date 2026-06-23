@@ -37,6 +37,19 @@ default: &default
     health_alerts_enabled: <%= ENV.fetch("ENABLE_INGEST_HEALTH_ALERTS", "false") %>
     health_alert_emails: <%= ENV.fetch("INGEST_HEALTH_ALERT_EMAILS", "") %>
     health_alert_cooldown_minutes: <%= ENV.fetch("INGEST_HEALTH_ALERT_COOLDOWN_MINUTES", "60") %>
+  extractor:
+    enabled: <%= ENV.fetch("ENABLE_ARCHIVE_EXTRACTOR", "false") %>
+    use_mocks: <%= ENV.fetch("ARCHIVE_EXTRACTOR_USE_MOCKS", "false") %>
+    aws_region: <%= ENV.fetch("ARCHIVE_EXTRACTOR_AWS_REGION", "us-east-2") %>
+    aws_sqs_queue_url: <%= ENV.fetch("ARCHIVE_EXTRACTOR_AWS_SQS_QUEUE_URL", "") %>
+    ecs_cluster: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CLUSTER", "") %>
+    ecs_task_definition: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_TASK_DEFINITION", "") %>
+    ecs_container_name: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CONTAINER_NAME", "archive-extractor") %>
+    ecs_subnets: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SUBNETS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_security_groups: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SECURITY_GROUPS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_platform_version: <%= ENV.fetch("ARCHIVE_EXTRACTOR_ECS_PLATFORM_VERSION", "1.4.0") %>
+    max_task_capacity: <%= ENV.fetch("ARCHIVE_EXTRACTOR_MAX_TASK_CAPACITY", "49") %>
+    max_batch_size: <%= ENV.fetch("ARCHIVE_EXTRACTOR_MAX_BATCH_SIZE", "9") %>
   downloader:
     endpoint: <%= ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= ENV.fetch("DOWNLOADER_USER", "") %>
@@ -47,6 +60,12 @@ default: &default
     sample_owner_uid: <%= ENV.fetch("MIGRATION_SAMPLE_OWNER_UID", "legacy-import") %>
     sample_depositor_name: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_NAME", "Legacy Import") %>
     sample_depositor_email: <%= ENV.fetch("MIGRATION_SAMPLE_DEPOSITOR_EMAIL", "legacy-import@example.edu") %>
+  illinois_experts:
+    key: <%= Rails.application.credentials.dig(:illinois_experts, :key) || ENV.fetch("ILLINOIS_EXPERTS_KEY", "") %>
+    endpoint: <%= Rails.application.credentials.dig(:illinois_experts, :endpoint) || ENV.fetch("ILLINOIS_EXPERTS_ENDPOINT", "") %>
+    org_id: <%= Rails.application.credentials.dig(:illinois_experts, :org_id) || ENV.fetch("ILLINOIS_EXPERTS_ORG_ID", "") %>
+    publisher_id: <%= Rails.application.credentials.dig(:illinois_experts, :publisher_id) || ENV.fetch("ILLINOIS_EXPERTS_PUBLISHER_ID", "") %>
+    illinois_external_org_id: <%= Rails.application.credentials.dig(:illinois_experts, :illinois_external_org_id) || ENV.fetch("ILLINOIS_EXPERTS_EXTERNAL_ORG_ID", "") %>
 
 development:
   <<: *default
@@ -83,6 +102,19 @@ demo:
     rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
     events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
     events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+  extractor:
+    enabled: <%= Rails.application.credentials.dig(:extractor, :enabled) || ENV.fetch("ENABLE_ARCHIVE_EXTRACTOR", "false") %>
+    use_mocks: <%= Rails.application.credentials.dig(:extractor, :use_mocks) || ENV.fetch("ARCHIVE_EXTRACTOR_USE_MOCKS", "false") %>
+    aws_region: <%= Rails.application.credentials.dig(:extractor, :aws_region) || ENV.fetch("ARCHIVE_EXTRACTOR_AWS_REGION", "us-east-2") %>
+    aws_sqs_queue_url: <%= Rails.application.credentials.dig(:extractor, :aws_sqs_queue_url) || ENV.fetch("ARCHIVE_EXTRACTOR_AWS_SQS_QUEUE_URL", "") %>
+    ecs_cluster: <%= Rails.application.credentials.dig(:extractor, :ecs_cluster) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CLUSTER", "") %>
+    ecs_task_definition: <%= Rails.application.credentials.dig(:extractor, :ecs_task_definition) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_TASK_DEFINITION", "") %>
+    ecs_container_name: <%= Rails.application.credentials.dig(:extractor, :ecs_container_name) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CONTAINER_NAME", "archive-extractor") %>
+    ecs_subnets: <%= Rails.application.credentials.dig(:extractor, :ecs_subnets) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SUBNETS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_security_groups: <%= Rails.application.credentials.dig(:extractor, :ecs_security_groups) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SECURITY_GROUPS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_platform_version: <%= Rails.application.credentials.dig(:extractor, :ecs_platform_version) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_PLATFORM_VERSION", "1.4.0") %>
+    max_task_capacity: <%= Rails.application.credentials.dig(:extractor, :max_task_capacity) || ENV.fetch("ARCHIVE_EXTRACTOR_MAX_TASK_CAPACITY", "49") %>
+    max_batch_size: <%= Rails.application.credentials.dig(:extractor, :max_batch_size) || ENV.fetch("ARCHIVE_EXTRACTOR_MAX_BATCH_SIZE", "9") %>
   downloader:
     endpoint: <%= Rails.application.credentials.dig(:downloader, :endpoint) || ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= Rails.application.credentials.dig(:downloader, :user) || ENV.fetch("DOWNLOADER_USER", "") %>
@@ -117,6 +149,19 @@ production:
     rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
     events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
     events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+  extractor:
+    enabled: <%= Rails.application.credentials.dig(:extractor, :enabled) || ENV.fetch("ENABLE_ARCHIVE_EXTRACTOR", "false") %>
+    use_mocks: <%= Rails.application.credentials.dig(:extractor, :use_mocks) || ENV.fetch("ARCHIVE_EXTRACTOR_USE_MOCKS", "false") %>
+    aws_region: <%= Rails.application.credentials.dig(:extractor, :aws_region) || ENV.fetch("ARCHIVE_EXTRACTOR_AWS_REGION", "us-east-2") %>
+    aws_sqs_queue_url: <%= Rails.application.credentials.dig(:extractor, :aws_sqs_queue_url) || ENV.fetch("ARCHIVE_EXTRACTOR_AWS_SQS_QUEUE_URL", "") %>
+    ecs_cluster: <%= Rails.application.credentials.dig(:extractor, :ecs_cluster) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CLUSTER", "") %>
+    ecs_task_definition: <%= Rails.application.credentials.dig(:extractor, :ecs_task_definition) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_TASK_DEFINITION", "") %>
+    ecs_container_name: <%= Rails.application.credentials.dig(:extractor, :ecs_container_name) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_CONTAINER_NAME", "archive-extractor") %>
+    ecs_subnets: <%= Rails.application.credentials.dig(:extractor, :ecs_subnets) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SUBNETS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_security_groups: <%= Rails.application.credentials.dig(:extractor, :ecs_security_groups) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_SECURITY_GROUPS", "").split(",").map(&:strip).reject(&:blank?) %>
+    ecs_platform_version: <%= Rails.application.credentials.dig(:extractor, :ecs_platform_version) || ENV.fetch("ARCHIVE_EXTRACTOR_ECS_PLATFORM_VERSION", "1.4.0") %>
+    max_task_capacity: <%= Rails.application.credentials.dig(:extractor, :max_task_capacity) || ENV.fetch("ARCHIVE_EXTRACTOR_MAX_TASK_CAPACITY", "49") %>
+    max_batch_size: <%= Rails.application.credentials.dig(:extractor, :max_batch_size) || ENV.fetch("ARCHIVE_EXTRACTOR_MAX_BATCH_SIZE", "9") %>
   downloader:
     endpoint: <%= Rails.application.credentials.dig(:downloader, :endpoint) || ENV.fetch("DOWNLOADER_ENDPOINT", "") %>
     user: <%= Rails.application.credentials.dig(:downloader, :user) || ENV.fetch("DOWNLOADER_USER", "") %>

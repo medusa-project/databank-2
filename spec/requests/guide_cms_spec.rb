@@ -1,6 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "Guide CMS", type: :request do
+  before do
+    ActionText::RichText.where(record_type: [ "Guide::Section", "Guide::Item", "Guide::Subitem" ], name: "body").delete_all
+    Guide::Subitem.delete_all
+    Guide::Item.delete_all
+    Guide::Section.delete_all
+
+    connection = ActiveRecord::Base.connection
+    connection.reset_pk_sequence!(Guide::Section.table_name)
+    connection.reset_pk_sequence!(Guide::Item.table_name)
+    connection.reset_pk_sequence!(Guide::Subitem.table_name)
+  end
+
   around do |example|
     OmniAuth.config.test_mode = true
     example.run

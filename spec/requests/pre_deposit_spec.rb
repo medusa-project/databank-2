@@ -9,8 +9,15 @@ RSpec.describe "Pre-deposit considerations", type: :request do
     OmniAuth.config.mock_auth[:developer] = nil
   end
 
-  it "requires sign-in" do
+  it "allows anonymous users to view pre-deposit considerations" do
     get pre_deposit_datasets_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Pre-Deposit Considerations")
+  end
+
+  it "requires sign-in when continuing from pre-deposit to new dataset" do
+    get new_dataset_path
 
     expect(response).to redirect_to(login_path)
     follow_redirect!

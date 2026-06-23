@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   match "/auth/failure", to: "sessions#unauthorized", as: :unauthorized, via: %i[get post]
   match "/auth/:provider/callback", to: "sessions#create", via: %i[get post]
   match "/login", to: "sessions#new", as: :login, via: %i[get post]
-  match "/logout", to: "sessions#destroy", as: :logout, via: %i[get post delete]
+  delete "/logout", to: "sessions#destroy", as: :logout
   match "/auth/:provider", to: "sessions#new", via: %i[get post]
   post  "role_switch", to: "sessions#role_switch"
 
@@ -28,8 +28,8 @@ Rails.application.routes.draw do
       get :download_metrics, defaults: { format: :json }
       get :record_text
       get :confirm_review
-      get :get_current_token, defaults: { format: :json }
-      get :get_new_token, defaults: { format: :json }
+      post :get_current_token, defaults: { format: :json }
+      post :get_new_token, defaults: { format: :json }
       post :request_review
       post :submit_version_request
       get :version_acknowledge
@@ -103,25 +103,31 @@ Rails.application.routes.draw do
       get :dataset_downloads, defaults: { format: :json }
       get :file_downloads, defaults: { format: :json }
       get :funders_csv
-      get :refresh_dataset_downloads
-      get :refresh_datafile_downloads
-      get :refresh_datafiles_csv
-      get :refresh_container_csv
+      post :refresh_dataset_downloads
+      post :refresh_datafile_downloads
+      post :refresh_datafiles_csv
+      post :refresh_container_csv
       get :related_materials_csv
-      get :refresh_datasets_tsv
-      get :refresh_funders_csv
-      get :refresh_related_materials_csv
-      get :refresh_container_contents_csv
+      post :refresh_datasets_tsv
+      post :refresh_funders_csv
+      post :refresh_related_materials_csv
+      post :refresh_container_contents_csv
     end
   end
 
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples
+  get "/badge_examples", to: "welcome#badge_examples", as: :badge_examples
   get "/curator_guide", to: "welcome#curator_guide", as: :curator_guide
+  get "/illinois_experts", to: "illinois_experts#index", defaults: { format: :xml }, as: :illinois_experts
+  get "/illinois_experts/persons", to: "illinois_experts#persons", defaults: { format: :xml }, as: :illinois_experts_persons
+  get "/illinois_experts/example", to: "illinois_experts#example", defaults: { format: :xml }, as: :illinois_experts_example
   get "/deposit",  to: redirect("/datasets/pre_deposit"), as: :deposit
   get "/policies", to: "pages#policies", as: :policies
   get "/guides",   to: "pages#guides",   as: :guides
   get "/contact",  to: "pages#contact",  as: :contact
+  get "/contact",  to: "pages#contact",  as: :contact_us
+  get "/help",     to: "pages#guides",   as: :help
 
   # Errors
   post "/", to: "errors#error404"

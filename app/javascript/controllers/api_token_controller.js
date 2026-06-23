@@ -42,8 +42,13 @@ export default class extends Controller {
     this.updateToken("Loading...")
 
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+      const headers = { Accept: "application/json" }
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken
+
       const response = await fetch(url, {
-        headers: { Accept: "application/json" },
+        method: "POST",
+        headers,
         credentials: "same-origin"
       })
 

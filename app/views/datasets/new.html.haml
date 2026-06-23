@@ -2,76 +2,76 @@
 - content_for :include_orcid_css, true
 
 %ilw-content.dataset-form-page.idb-page-sections
-  .idb-sections-layout
-    %nav.idb-sections-toc{aria: { label: "Deposit workflow" }}
-      %h2.idb-sections-toc-title Deposit Workflow
-      %ul
-        %li= link_to "Pre-Deposit Considerations", pre_deposit_datasets_path
-        %li= link_to "Deposit Agreement", "#deposit-agreement"
+  .idb-sections-content
+    %section#deposit-agreement.idb-section-card
+      %h1.idb-section-title Deposit Agreement
+      %p
+        To start your data deposit, review the agreement and answer all required questions.
 
-    .idb-sections-content
-      %section#deposit-agreement.idb-section-card
-        %h1.idb-section-title Deposit Agreement
-        %p
-          To start your data deposit, review the agreement and answer all required questions.
+      %details.idb-section-disclosure
+        %summary
+          %h2.idb-section-title Illinois Data Bank Deposit Agreement (click to expand)
+        .idb-section-body
+          %p
+            By submitting a dataset, you affirm that you have authority to deposit it, that protected information has been handled appropriately,
+            and that you accept the Illinois Data Bank deposit terms.
+          %p
+            Full policy text is available on the
+            = link_to "Policies page", policies_path(anchor: "deposit_agreement")
+            and can be reviewed before submission.
 
-        %details.idb-section-disclosure
-          %summary
-            %h2.idb-section-title Illinois Data Bank Deposit Agreement (click to expand)
-          .idb-section-body
-            %p
-              By submitting a dataset, you affirm that you have authority to deposit it, that protected information has been handled appropriately,
-              and that you accept the Illinois Data Bank deposit terms.
-            %p
-              Full policy text is available on the
-              = link_to "Policies page", policies_path(anchor: "deposit_agreement")
-              and can be reviewed before submission.
+      - if @dataset.errors.any?
+        .ilw-notice.ilw-notice--error
+          %p Please fix the following errors before continuing:
+          %ul
+            - @dataset.errors.full_messages.each do |message|
+              %li= message
 
-        - if @dataset.errors.any?
-          .ilw-notice.ilw-notice--error
-            %p Please fix the following errors before continuing:
-            %ul
-              - @dataset.errors.full_messages.each do |message|
-                %li= message
+      %h2 Required Responses
 
-        %h2 Required Responses
+      = form_with model: @dataset, local: true, html: { data: { controller: "agreement" } } do |f|
+        = hidden_field_tag :agreement_submission, "true"
+        .idb-agreement-grid
+          %fieldset.idb-grid-col-12
+            %legend Are you a creator of this dataset or have you been granted permission by the creator to deposit this dataset?
+            %label
+              = f.radio_button :have_permission, "yes", required: true, id: "owner-yes", data: { action: "change->agreement#handleOwnerYes" }
+              Yes
+            %label
+              = f.radio_button :have_permission, "no", id: "owner-no", data: { action: "change->agreement#handleOwnerNo" }
+              No
 
-        = form_with model: @dataset, local: true, html: { data: { controller: "agreement" } } do |f|
-          = hidden_field_tag :agreement_submission, "true"
-          .idb-agreement-grid
-            %fieldset.idb-grid-col-12
-              %legend Are you a creator of this dataset or have you been granted permission by the creator to deposit this dataset?
-              %label
-                = f.radio_button :have_permission, "yes", required: true, id: "owner-yes", data: { action: "change->agreement#handleOwnerYes" }
-                Yes
-              %label
-                = f.radio_button :have_permission, "no", id: "owner-no", data: { action: "change->agreement#handleOwnerNo" }
-                No
+          %fieldset.idb-grid-col-12
+            %legend Have you removed any private, confidential, or other legally protected information from the dataset?
+            %label
+              = f.radio_button :removed_private, "yes", required: true, id: "private-yes", data: { action: "change->agreement#handlePrivateYes" }
+              Yes
+            %label
+              = f.radio_button :removed_private, "no", id: "private-no", data: { action: "change->agreement#handlePrivateNo" }
+              No
+            %label
+              = f.radio_button :removed_private, "na", id: "private-na", data: { action: "change->agreement#handlePrivateNA" }
+              Not applicable
 
-            %fieldset.idb-grid-col-12
-              %legend Have you removed any private, confidential, or other legally protected information from the dataset?
-              %label
-                = f.radio_button :removed_private, "yes", required: true, id: "private-yes", data: { action: "change->agreement#handlePrivateYes" }
-                Yes
-              %label
-                = f.radio_button :removed_private, "no", id: "private-no", data: { action: "change->agreement#handlePrivateNo" }
-                No
-              %label
-                = f.radio_button :removed_private, "na", id: "private-na", data: { action: "change->agreement#handlePrivateNA" }
-                Not applicable
+          %fieldset.idb-grid-col-12
+            %legend Do you agree to the Illinois Data Bank Deposit Agreement in its entirety?
+            %label
+              = f.radio_button :agree, "yes", required: true, id: "agree-yes", data: { action: "change->agreement#handleAgreeYes" }
+              Yes
+            %label
+              = f.radio_button :agree, "no", id: "agree-no", data: { action: "change->agreement#handleAgreeNo" }
+              No
 
-            %fieldset.idb-grid-col-12
-              %legend Do you agree to the Illinois Data Bank Deposit Agreement in its entirety?
-              %label
-                = f.radio_button :agree, "yes", required: true, id: "agree-yes", data: { action: "change->agreement#handleAgreeYes" }
-                Yes
-              %label
-                = f.radio_button :agree, "no", id: "agree-no", data: { action: "change->agreement#handleAgreeNo" }
-                No
-
-            .idb-grid-col-12
-              .deposit-agreement-selection-warning{aria: { live: "assertive" }, data: { agreement_target: "warning" }}
-              .idb-workflow-strip.idb-workflow-strip-bottom
-                %nav.idb-workflow-actions-right{aria: { label: "Deposit agreement actions" }}
-                  = f.submit "Submit", class: "idb-button-primary", id: "agree-button", disabled: true, data: { agreement_target: "submitButton" }
-                  = link_to "Cancel", root_path, class: "idb-button-danger"
+          .idb-grid-col-12
+            .deposit-agreement-selection-warning{aria: { live: "assertive" }, data: { agreement_target: "warning" }}
+            .idb-workflow-strip.idb-workflow-strip-bottom
+              %nav.idb-workflow-actions-right{aria: { label: "Deposit agreement actions" }}
+                = semantic_action_button action: :submit,
+                  style: :idb,
+                  icon_position: :left,
+                  type: "submit",
+                  id: "agree-button",
+                  disabled: true,
+                  data: { agreement_target: "submitButton" }
+                = semantic_action_button action: :help, url: contact_us_path, style: :idb, icon_position: :left, target: "_blank", rel: "noopener"
+                = semantic_action_button action: :cancel, url: root_path, style: :idb, icon_position: :left

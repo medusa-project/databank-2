@@ -16,18 +16,29 @@ RSpec.describe "cutover tasks" do
     smoke_task.reenable
   end
 
-  it "runs migration imports in required order" do
+  it "runs migration imports in required order using latest timestamped subdirs" do
     bundle_root = Rails.root.join("tmp", "cutover_orchestration")
     FileUtils.mkdir_p(bundle_root)
 
+    # Create one timestamped subdir per step matching each dir_prefix.
+    # CUTOVER_IMPORT_STEPS is a top-level constant defined inside the Rake namespace block.
+    step_dirs = {}
+    CUTOVER_IMPORT_STEPS.each do |step|
+      subdir = bundle_root.join("#{step[:dir_prefix]}20260605T120000Z")
+      FileUtils.mkdir_p(subdir)
+      step_dirs[step[:key]] = subdir.to_s
+    end
+
     expected_order = [
+      "migration:users:import_from_dir",
       "migration:bundle:import_from_dir",
       "migration:permissions:import_from_dir",
       "migration:dataset_access_grants:import_from_dir",
       "migration:guides:import_from_dir",
       "migration:spotlights:import_from_dir",
       "migration:medusa_ingests:import_from_dir",
-      "migration:download_metrics:import_from_dir"
+      "migration:download_metrics:import_from_dir",
+      "migration:audits:import_from_dir"
     ]
 
     invocations = []
@@ -41,7 +52,6 @@ RSpec.describe "cutover tasks" do
           task: task_name,
           dir: ENV["DIR"],
           bundle_file: ENV["BUNDLE_FILE"],
-          report_file: ENV["REPORT_FILE"],
           dry_run: ENV["DRY_RUN"]
         }
       end
@@ -58,7 +68,11 @@ RSpec.describe "cutover tasks" do
     import_all_task.invoke
 
     expect(invocations.map { |call| call[:task] }).to eq(expected_order)
-    expect(invocations).to all(include(dir: bundle_root.to_s, dry_run: "true"))
+    # Each step's DIR should point into the correct timestamped subdir, not the root
+    CUTOVER_IMPORT_STEPS.each_with_index do |step, index|
+      expect(invocations[index][:dir]).to eq(step_dirs[step[:key]])
+    end
+    expect(invocations).to all(include(dry_run: "true"))
   ensure
     ENV.delete("BUNDLE_ROOT")
     ENV.delete("DRY_RUN")
@@ -67,6 +81,7 @@ RSpec.describe "cutover tasks" do
 
   it "writes reconciliation report when required runs are present" do
     required_run_types = %w[
+      users_bundle_import
       bundle_import
       permissions_bundle_import
       dataset_access_grants_bundle_import
@@ -74,6 +89,7 @@ RSpec.describe "cutover tasks" do
       featured_researchers_bundle_import
       medusa_ingests_bundle_import
       download_metrics_bundle_import
+      audits_bundle_import
     ]
 
     required_run_types.each_with_index do |run_type, index|
@@ -107,6 +123,8 @@ RSpec.describe "cutover tasks" do
   end
 
   it "fails smoke when a required migration run is missing" do
+    MigrationRun.delete_all
+
     run_type = "bundle_import"
     MigrationRun.create!(
       run_type: run_type,

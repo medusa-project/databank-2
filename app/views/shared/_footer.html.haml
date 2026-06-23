@@ -1,10 +1,7 @@
 %ilw-footer{slot: "footer"}
   %a{slot: "primary-unit", href: "https://www.library.illinois.edu/rds/"} Research Data Service
   %a{slot: "site-name", href: root_path} Illinois Data Bank
-  %address{slot: "address"}
-    %div University of Illinois Urbana-Champaign
-    %div Urbana, IL 61801
   %div{slot: "actions"}
-    %a{href: policies_path} Access and Use Policies
-    %a{href: "https://www.vpaa.uillinois.edu/resources/web_privacy", target: "_blank", rel: "noopener"} Web Privacy Notice
-    %a{href: contact_path} Contact Us
+    %a.footer-action-button{href: policies_path} Access and Use Policies
+    %a.footer-action-button{href: "https://www.vpaa.uillinois.edu/resources/web_privacy", target: "_blank", rel: "noopener"} Web Privacy Notice
+    %a.footer-action-button{href: contact_path} Contact Us

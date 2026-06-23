@@ -219,6 +219,109 @@
 	padding-top: 0.35rem;
 }
 
+.idb-core-subsection {
+	margin-top: 0.7rem;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--il-storm-90);
+	border-left: 2px solid var(--il-storm-80);
+	border-radius: 0.4rem;
+	background-color: var(--il-storm-95);
+}
+
+.idb-core-subsection > .idb-creators-subheading {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.35;
+	color: var(--il-blue);
+}
+
+.idb-core-subsection > .idb-section-body {
+	padding-top: 0.45rem;
+}
+
+.idb-required-indicator {
+	color: #d50000;
+	font-size: 0.8em;
+	line-height: 1;
+	margin-left: 0.12rem;
+}
+
+.idb-orcid-header-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.15rem;
+	white-space: nowrap;
+}
+
+.idb-orcid-header-label img {
+	display: inline-block;
+	height: 1em;
+	width: auto;
+}
+
+.idb-label-with-help {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.35rem;
+	margin-bottom: 0.5rem;
+}
+
+.idb-label-with-help label {
+	display: inline;
+	margin-bottom: 0;
+}
+
+.idb-inline-help-row {
+	display: inline-block;
+	margin-top: 0;
+	margin-left: 0.2rem;
+	font-size: 0.8rem;
+	line-height: 1.25;
+}
+
+.idb-inline-help {
+	color: var(--il-blue);
+	text-decoration: underline;
+	text-underline-offset: 0.12rem;
+}
+
+.idb-inline-help:hover,
+.idb-inline-help:focus-visible {
+	color: var(--il-altgeld);
+}
+
+.idb-inline-help .idb-button-icon {
+	font-size: 0.9em;
+	margin-right: 0.2rem;
+}
+
+.idb-inline-help[target="_blank"]::after {
+	content: none !important;
+	display: none !important;
+}
+
+.idb-curator-only-section {
+	margin-top: 0.55rem;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--il-altgeld);
+	border-radius: 0.4rem;
+	background-color: var(--il-storm-95);
+}
+
+.idb-curator-only-section--compact {
+	margin-top: 0.5rem;
+}
+
+.idb-curator-only-kicker {
+	margin: 0 0 0.45rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: var(--il-altgeld);
+}
+
 .idb-metadata-grid {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -283,6 +386,12 @@
 .dataset-form-page .idb-compact-table th {
 	font-size: 0.9rem;
 	line-height: 1.2;
+}
+
+.dataset-form-page .idb-compact-table th.idb-actions-header-cell {
+	background-color: transparent;
+	border-color: transparent;
+	padding: 0;
 }
 
 .dataset-form-page .idb-compact-table input,
@@ -388,6 +497,7 @@
 	gap: 0.2rem;
 	white-space: nowrap;
 	margin: 0;
+	border: none;
 }
 
 .dataset-form-page .idb-creator-row-actions .idb-compact-action {
@@ -395,6 +505,12 @@
 	padding: 0.15rem 0.35rem;
 	font-size: 0.74rem;
 	line-height: 1;
+}
+
+.idb-creator-add-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 0.4rem;
 }
 
 .idb-row-actions-inline {
@@ -519,6 +635,24 @@
 .dataset-form-page label {
 	font-size: 0.95rem;
 	margin-bottom: 0.3rem;
+}
+
+.dataset-form-page .idb-citation-preview-label {
+	display: inline;
+	margin: 0 0.35rem 0 0;
+}
+
+.dataset-form-page .idb-citation-preview-value {
+	display: inline;
+}
+
+.dataset-form-page .idb-creators-subheading {
+	font-family: var(--il-font-sans);
+	font-size: 0.95rem;
+	font-weight: 600;
+	line-height: 1.3;
+	margin: 0;
+	color: var(--il-blue);
 }
 
 .dataset-form-page input[type="text"],
@@ -963,7 +1097,8 @@ textarea {
 /* -----------------------------------------------------------------------
  * Miscellaneous
  * ----------------------------------------------------------------------- */
-hr {
+hr,
+.idb-decorative-divider {
 	border: none;
 	border-top: 1px solid var(--il-storm-80);
 	margin: 1.5rem 0;

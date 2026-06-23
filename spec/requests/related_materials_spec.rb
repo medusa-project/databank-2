@@ -94,6 +94,7 @@ RSpec.describe "Related materials", type: :request do
         title: "Updated Title",
         uri: "https://example.org/new",
         relation_type: "IsSupplementedBy",
+        datacite_list: "IsSupplementedBy",
         position: 2,
         row_position: 2
       }

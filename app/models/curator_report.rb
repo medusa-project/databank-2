@@ -58,7 +58,7 @@ class CuratorReport < ApplicationRecord
               file.storage_root,
               file.binary_size,
               file_status,
-              file_download_url(dataset, file),
+              file_download_url(dataset: dataset, datafile: file),
               dataset.title,
               dataset_url(dataset),
               dataset.publication_state
@@ -88,7 +88,7 @@ class CuratorReport < ApplicationRecord
       url_helpers.dataset_url(dataset, host: root_url)
     end
 
-    def file_download_url(dataset, datafile)
+    def file_download_url(dataset:, datafile:)
       url_helpers.download_dataset_datafile_url(dataset, datafile, host: root_url)
     end
   end

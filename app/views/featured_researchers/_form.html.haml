@@ -42,5 +42,5 @@
           Publish this spotlight
 
   .idb-row-actions
-    = f.submit "Save and Preview", class: "idb-button-primary"
-    = link_to "Cancel", featured_researchers_path, class: "idb-button-default"
+    = semantic_action_button(action: :submit, label: "Save and Preview", style: :idb, type: "submit")
+    = semantic_action_button(action: :secondary, label: "Cancel", url: featured_researchers_path, style: :idb)

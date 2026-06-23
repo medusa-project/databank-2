@@ -5,6 +5,7 @@ class Datafile < ApplicationRecord
 
   belongs_to :dataset
   has_one_attached :binary
+  has_one :archive_extract_request, dependent: :destroy
 
   validates :web_id,      presence: true, uniqueness: true,
                           format: { with: /\A[a-z0-9]{#{WEB_ID_LENGTH}}\z/ }

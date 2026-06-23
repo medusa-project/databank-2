@@ -11,12 +11,8 @@
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-layout
     .idb-sections-content
-      = render "datasets/workflow/edit_actions", dataset: @dataset, form_id: "dataset-edit-form", placement: "top"
-
       = render "form", dataset: @dataset, submit_label: "Update Dataset", form_id: "dataset-edit-form"
-
       = render "datasets/workflow/edit_actions", dataset: @dataset, form_id: "dataset-edit-form", placement: "bottom"
-
       - if can?(:manage_access, @dataset)
         %section#dataset-access-grants.idb-section-card
           %h2.idb-section-title Dataset Access

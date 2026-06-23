@@ -66,6 +66,38 @@ RSpec.describe Migration::BundleImportService do
     expect(dataset.notes.first.author).to eq("curator@example.edu")
   end
 
+  it "reports related material relationship reconciliation metrics" do
+    payload = {
+      "title" => "Bundle Dataset",
+      "identifier" => "10.13012/B2IDB-2323232_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-2323232.json",
+      "owner_uid" => "legacy-owner",
+      "depositor_name" => "Legacy User",
+      "depositor_email" => "legacy@example.edu",
+      "related_materials" => [
+        {
+          "citation" => "Example citation",
+          "uri" => "https://doi.org/10.1000/example",
+          "uri_type" => "DOI",
+          "datacite_list" => "IsSupplementTo,IsCitedBy"
+        }
+      ]
+    }
+
+    File.write(bundle_path, "#{payload.to_json}\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:created]).to eq(1)
+    metrics = summary[:relationship_reconciliation]
+    expect(metrics[:strict_match]).to eq(true)
+    expect(metrics[:exported_total_assertions]).to eq(2)
+    expect(metrics[:imported_total_assertions]).to eq(2)
+    expect(metrics[:exported_by_type]).to eq({ "IsCitedBy" => 1, "IsSupplementTo" => 1 })
+    expect(metrics[:imported_by_type]).to eq({ "IsCitedBy" => 1, "IsSupplementTo" => 1 })
+    expect(metrics[:mismatched_dataset_count]).to eq(0)
+  end
+
   it "replaces notes in overwrite mode" do
     dataset = Dataset.create!(
       key: "IDB-7777777",

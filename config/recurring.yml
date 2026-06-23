@@ -19,3 +19,6 @@ production:
   ingest_send_health_alerts:
     class: Ingest::SendHealthAlertsJob
     schedule: every 10 minutes
+  archive_extract_poll_responses:
+    class: ArchiveExtractResponseJob
+    schedule: every minute

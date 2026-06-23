@@ -25,10 +25,28 @@ async function createDatasetAndOpenEdit(page) {
   await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
 
   await page.locator('input[name="dataset[title]"]').fill(`Deposit Form Dataset ${Date.now()}`);
+  await page.locator('select[name="dataset[license]"]').selectOption("CC0");
 }
 
 async function addCreatorRowFromToolbar(page) {
-  await page.locator('#creator-rows .idb-add-creator-row:not([hidden])').first().click();
+  await page.locator('button[data-action="deposit-form#addCreatorRow"]').click();
+}
+
+async function fillIndividualCreatorRow(page, index, { familyName, givenName, email }) {
+  const row = page.locator("#creator-rows .idb-nested-row").nth(index);
+  await row.locator('input[name*="[family_name]"]').fill(familyName);
+  await row.locator('input[name*="[given_name]"]').fill(givenName);
+  await row.locator('input[name*="[email]"]').fill(email);
+}
+
+async function fillOrganizationCreatorRow(page, index, { institutionName, email }) {
+  const row = page.locator("#creator-rows .idb-nested-row").nth(index);
+  await row.locator('input[name*="[institution_name]"]').fill(institutionName);
+  await row.locator('input[name*="[email]"]').fill(email);
+}
+
+async function selectPrimaryContact(page, index = 0) {
+  await page.locator('#creator-rows input[type="radio"][name="primary_contact_index"]').nth(index).check();
 }
 
 test.describe("deposit form parity behavior", () => {
@@ -112,15 +130,23 @@ test.describe("deposit form parity behavior", () => {
 
     const creatorRows = page.locator("#creator-rows .idb-nested-row");
 
-    await creatorRows.nth(0).locator('input[name*="[family_name]"]').fill("Alpha");
+    await fillIndividualCreatorRow(page, 0, {
+      familyName: "Alpha",
+      givenName: "Ann",
+      email: "alpha@example.test",
+    });
     await addCreatorRowFromToolbar(page);
     await expect(creatorRows).toHaveCount(2);
-    await creatorRows.nth(1).locator('input[name*="[family_name]"]').fill("Beta");
+    await fillIndividualCreatorRow(page, 1, {
+      familyName: "Beta",
+      givenName: "Ben",
+      email: "beta@example.test",
+    });
+    await selectPrimaryContact(page, 0);
 
     await creatorRows.nth(1).locator('button[data-action="deposit-form#moveRowUp"]').click();
-    await page.getByRole("button", { name: "Update Dataset", exact: true }).click();
-    await expect(page).toHaveURL(/\/datasets\//);
-
+    await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+    await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
     await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
     await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
 
@@ -137,7 +163,7 @@ test.describe("deposit form parity behavior", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await createDatasetAndOpenEdit(page);
 
-    const grid = page.locator("#dataset-core-metadata .idb-metadata-grid");
+    const grid = page.locator("#dataset-core-metadata .idb-metadata-grid").first();
     await expect(grid).toBeVisible();
 
     const gridColumnCount = await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length);
@@ -159,13 +185,22 @@ test.describe("deposit form parity behavior", () => {
     await page.locator('input[name="dataset[identifier]"]').fill(`10.5555/SWITCH-${Date.now()}`);
 
     const creatorRows = page.locator("#creator-rows .idb-nested-row");
-    await creatorRows.first().locator('input[name*="[family_name]"]').fill("Alpha");
+    await fillIndividualCreatorRow(page, 0, {
+      familyName: "Alpha",
+      givenName: "Ann",
+      email: "alpha-switch@example.test",
+    });
     await addCreatorRowFromToolbar(page);
     await expect(creatorRows).toHaveCount(2);
-    await creatorRows.nth(1).locator('input[name*="[family_name]"]').fill("Beta");
+    await fillIndividualCreatorRow(page, 1, {
+      familyName: "Beta",
+      givenName: "Ben",
+      email: "beta-switch@example.test",
+    });
+    await selectPrimaryContact(page, 0);
 
     await page.getByRole("button", { name: "Use Organization Creators", exact: true }).click();
-    await expect(page).toHaveURL(/\/datasets\//);
+    await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
     await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
     await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
 
@@ -176,13 +211,20 @@ test.describe("deposit form parity behavior", () => {
 
     const orgRows = page.locator("#creator-rows .idb-nested-row");
     await expect(orgRows).toHaveCount(1);
-    await orgRows.first().locator('input[name*="[institution_name]"]').fill("Org Alpha");
+    await fillOrganizationCreatorRow(page, 0, {
+      institutionName: "Org Alpha",
+      email: "org-alpha@example.test",
+    });
     await addCreatorRowFromToolbar(page);
     await expect(orgRows).toHaveCount(2);
-    await orgRows.nth(1).locator('input[name*="[institution_name]"]').fill("Org Beta");
+    await fillOrganizationCreatorRow(page, 1, {
+      institutionName: "Org Beta",
+      email: "org-beta@example.test",
+    });
+    await selectPrimaryContact(page, 0);
 
     await page.getByRole("button", { name: "Use Individual Creators", exact: true }).click();
-    await expect(page).toHaveURL(/\/datasets\//);
+    await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
     await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
     await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
 

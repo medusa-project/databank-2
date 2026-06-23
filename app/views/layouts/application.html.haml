@@ -27,10 +27,12 @@
     %script{src: "//cdn.disability.illinois.edu/skipto.min.js"}
     :javascript
       var SkipToConfig = { 'settings': { 'skipTo': { displayOption: 'static', colorTheme: 'illinois', headings: 'h1, h2, h3' } } };
+    = stylesheet_link_tag "fontawesome/all.min", "data-turbo-track": "reload"
     = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
     = stylesheet_link_tag "application", "data-turbo-track": "reload"
     = stylesheet_link_tag "databank", "data-turbo-track": "reload"
     = stylesheet_link_tag "buttons", "data-turbo-track": "reload"
+    = stylesheet_link_tag "badges", "data-turbo-track": "reload"
     = stylesheet_link_tag "datasets_index", "data-turbo-track": "reload"
     = stylesheet_link_tag "toolkit_overrides", "data-turbo-track": "reload"
     = stylesheet_link_tag "welcome", "data-turbo-track": "reload"

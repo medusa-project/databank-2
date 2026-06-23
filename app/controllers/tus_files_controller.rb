@@ -31,6 +31,8 @@ class TusFilesController < ApplicationController
     head :no_content
   rescue TusUploadStore::OffsetMismatch
     render plain: "Upload offset mismatch", status: :conflict
+  rescue TusUploadStore::InvalidUploadId
+    render_not_found
   end
 
   def show
@@ -41,6 +43,8 @@ class TusFilesController < ApplicationController
     response.set_header("Upload-Offset", current.fetch("offset").to_s)
     response.set_header("Upload-Length", current.fetch("length").to_s)
     head :ok
+  rescue TusUploadStore::InvalidUploadId
+    render_not_found
   end
 
   def options

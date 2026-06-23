@@ -70,10 +70,12 @@ class DatasetVersionBuilder
 
   def copy_related_materials_to(new_dataset)
     @previous_dataset.nonversion_related_materials.each do |material|
+      relation_values = material.relation_types
       new_dataset.related_materials.create!(
         title: material.title,
         uri: material.uri,
-        relation_type: material.relation_type,
+        relation_type: relation_values.first,
+        datacite_list: relation_values.join(","),
         position: material.position
       )
     end

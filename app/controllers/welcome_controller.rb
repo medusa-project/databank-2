@@ -1,5 +1,5 @@
 class WelcomeController < ApplicationController
-  skip_before_action :authenticate_user!, only: %i[index button_examples]
+  skip_before_action :authenticate_user!, only: %i[index button_examples badge_examples]
   before_action :require_admin_or_curator!, only: %i[admin clear_cache update_system_message create_managed_curator destroy_managed_curator create_managed_deposit_exception destroy_managed_deposit_exception]
   before_action :require_curator!, only: :curator_guide
   before_action :load_admin_page_data, only: :admin
@@ -86,6 +86,8 @@ class WelcomeController < ApplicationController
   end
 
   def button_examples; end
+
+  def badge_examples; end
 
   private
 

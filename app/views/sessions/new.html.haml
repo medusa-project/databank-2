@@ -12,7 +12,7 @@
     %li Curator: Can do anything to anything
     %li Guest: Not signed in. Can view info (guides, policies), and released datasets
     %li No Deposit: Signed in, but not authorized to create datasets.
-%hr
+%div.idb-decorative-divider{ "aria-hidden" => "true" }
 = form_tag("/auth/developer/callback", method: :post, no_validate: "noValidate") do
   = label_tag :email, "Email:"
   = text_field_tag :email
@@ -21,4 +21,4 @@
   = label_tag :role, "Role:"
   = select_tag :role, options_for_select([["Depositor", "depositor"], ["Curator", "admin"], ["Guest", "guest"], ["No Deposit", "no_deposit"]]), { prompt: "Please select" }
   %button{type: "submit"} Sign in
-%hr
+%div.idb-decorative-divider{ "aria-hidden" => "true" }

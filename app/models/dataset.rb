@@ -1,4 +1,6 @@
 class Dataset < ApplicationRecord
+  include Dataset::IllinoisExpertsExportable
+
   KEY_PREFIX = IdbConfig.fetch(:dataset, :key_prefix, default: "IDB").freeze
   KEY_DIGITS = 7
   EMBARGO_NONE = "none".freeze
@@ -7,6 +9,18 @@ class Dataset < ApplicationRecord
   EMBARGO_OPTIONS = [ EMBARGO_NONE, EMBARGO_FILE, EMBARGO_METADATA ].freeze
   CREATOR_TYPE_PERSON = 0
   CREATOR_TYPE_INSTITUTION = 1
+
+  audited except: %i[
+    creator_text
+    key
+    complete
+    is_test
+    is_import
+    updated_at
+    embargo
+    nested_updated_at
+  ]
+  has_associated_audits
 
   has_many :datafiles,         dependent: :destroy
   has_many :dataset_access_grants, -> { order(:email, :access_level) }, dependent: :destroy
@@ -87,7 +101,7 @@ class Dataset < ApplicationRecord
     end
 
     if successor.nil?
-      next_material_uri = related_materials.find_by(relation_type: RelatedMaterial::VERSION_NEW_RELATION)&.uri
+      next_material_uri = related_materials.detect { |material| material.relation_types.include?(RelatedMaterial::VERSION_NEW_RELATION) }&.uri
       successor = resolve_related_dataset_from_uri(next_material_uri)
     end
 
@@ -118,7 +132,7 @@ class Dataset < ApplicationRecord
   end
 
   def previous_version_material
-    related_materials.find_by(relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION)
+    related_materials.detect { |material| material.relation_types.include?(RelatedMaterial::VERSION_PREVIOUS_RELATION) }
   end
 
   def previous_version_dataset
@@ -151,7 +165,7 @@ class Dataset < ApplicationRecord
     missing << "contact creator"  if creators.none?(&:contact_selected?)
     missing << "email address for all creators" if creators.any? { |creator| creator.email.blank? }
     missing << "release date when embargo is file or metadata" if (file_embargoed? || metadata_embargoed?) && release_date.blank?
-    missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_type.blank? }
+    missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_types.empty? }
     missing << "depositor contact" if depositor_email.blank?
     missing
   end

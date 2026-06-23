@@ -172,9 +172,17 @@
 	justify-content: center;
 }
 
-.welcome-spotlight-all {
+.welcome-spotlight .featured-buttons .legacy-btn {
 	width: 100%;
 	justify-content: center;
+}
+
+.welcome-spotlight-all {
+	display: flex;
+	width: 100%;
+	justify-content: center;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .featured-comment {
@@ -189,7 +197,6 @@
 .elbow {
 	margin-top: 0.25rem;
 	padding-left: 0.75rem;
-	border-left: 3px solid #e8e8e8;
 	color: #555;
 }
 
@@ -245,6 +252,14 @@
 }
 
 @media (min-width: 768px) {
+	.welcome-spotlight .featured-buttons .idb-button-primary,
+	.welcome-spotlight .featured-buttons .idb-button-default,
+	.welcome-spotlight .featured-buttons .legacy-btn {
+		width: 50%;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
 	.welcome-role-switch-controls {
 		flex-direction: row;
 		align-items: center;
@@ -258,5 +273,12 @@
 
 	.welcome-role-switch-controls .idb-button-secondary {
 		margin-left: 0.5rem;
+	}
+}
+
+@media (min-width: 992px) {
+	.welcome-spotlight-all {
+		width: 75%;
+		white-space: nowrap;
 	}
 }

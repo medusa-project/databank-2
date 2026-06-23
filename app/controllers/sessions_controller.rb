@@ -1,11 +1,12 @@
 class SessionsController < ApplicationController
   skip_before_action :authenticate_user!
-  skip_before_action :verify_authenticity_token
+  skip_before_action :verify_authenticity_token, only: :create
 
   # Responds to `GET /login`
   def new
+    store_login_return_referer
+
     unless Rails.env.test? || Rails.env.development?
-      session[:login_return_referer] = request.env["HTTP_REFERER"]
       redirect_to(shibboleth_login_path(Databank2::Application.shibboleth_host))
       nil
     end
@@ -28,11 +29,14 @@ class SessionsController < ApplicationController
     user = User.from_omniauth(auth)
 
     if user&.id
+      destination = return_url
+      reset_session
       session[:user_id] = user.id
+      session[:last_seen_at] = Time.current.to_i
       if user.role == "no_deposit" && !user.depositor?
         redirect_to root_url, notice: "ACCOUNT NOT ELIGABLE TO DEPOSIT DATA.<br/>Faculty, staff, and graduate students are eligable to deposit data in Illinois Data Bank.<br/>Please <a href='/help'>contact the Research Data Service</a> if this determination is in error, or if you have any questions."
       else
-        redirect_to return_url
+        redirect_to destination
       end
     else
       redirect_to root_url
@@ -40,7 +44,7 @@ class SessionsController < ApplicationController
   end
 
   def destroy
-    session[:user_id] = nil
+    reset_session
     redirect_to root_url
   end
 
@@ -74,10 +78,33 @@ class SessionsController < ApplicationController
   protected
 
   def return_url
-    session[:login_return_uri] || session[:login_return_referer] || root_path
+    raw = session.delete(:login_return_uri) || session.delete(:login_return_referer)
+    safe_internal_return_path(raw) || root_path
   end
 
   def shibboleth_login_path(host)
     "/Shibboleth.sso/Login?target=https://#{host}/auth/shibboleth/callback"
+  end
+
+  def store_login_return_referer
+    return if session[:login_return_uri].present?
+
+    referer = safe_internal_return_path(request.referer)
+    session[:login_return_referer] = referer if referer.present?
+  end
+
+  def safe_internal_return_path(url)
+    return if url.blank?
+
+    uri = URI.parse(url)
+    return if uri.scheme.present? && !%w[http https].include?(uri.scheme)
+    return if uri.host.present? && uri.host != request.host
+
+    path = uri.path.to_s
+    return if !path.start_with?("/") || path == login_path
+
+    [ path, uri.query.presence && "?#{uri.query}" ].compact.join
+  rescue URI::InvalidURIError
+    nil
   end
 end

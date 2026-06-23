@@ -6,4 +6,4 @@
     = render "individual", featured_researcher: @featured_researcher
 
     .idb-row-actions
-      = link_to "Back to Spotlights", researcher_spotlights_path, class: "idb-button-default"
+      = semantic_action_button(action: :secondary, label: "Back to Spotlights", url: researcher_spotlights_path, style: :idb)

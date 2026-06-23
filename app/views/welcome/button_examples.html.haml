@@ -3,55 +3,9 @@
 %ilw-content.button-examples-page
   %section{ "aria-labelledby" => "button-examples-heading" }
     %h1#button-examples-heading Button Examples
-    %p This temporary page demonstrates each available button style.
-
-  %section{ "aria-labelledby" => "button-examples-standard" }
-    %h2#button-examples-standard Standard Buttons
     %p
-      These now use the legacy effective palette from legacy Data Bank overrides:
-      primary
-      %code #265191
-      , success
-      %code #488222
-      , info
-      %code #B34700
-      , danger
-      %code #C02C2C
-      , warning
-      %code #F47F24
-      with
-      %code #252525
-      text for AA contrast.
-    %p
-      %button.idb-button-primary{ type: "button" } Primary Button
-    %p
-      %button.idb-button-secondary{ type: "button" } Secondary Button
-    %p
-      %button.idb-button-danger{ type: "button" } Danger Button
-    %p
-      %button.idb-button-success{ type: "button" } Success Button
-    %p
-      %button.idb-button-info{ type: "button" } Info Button
-    %p
-      %button.idb-button-warning{ type: "button" } Warning Button (dark text for contrast)
-    %p
-      %button.idb-button-default{ type: "button" } Default Button
-    %p
-      %a.idb-button-link{ href: "#" } Link Button
-
-  %section{ "aria-labelledby" => "button-examples-additional" }
-    %h2#button-examples-additional Additional Toolkit Button Examples
-    %p These temporary samples are distinct from the current named variants.
-    %p
-      %button.idb-button-primary.idb-button-demo-one{ type: "button" } One
-    %p
-      %button.idb-button-primary.idb-button-demo-two{ type: "button" } Two
-    %p
-      %button.idb-button-primary.idb-button-demo-three{ type: "button" } Three
-    %p
-      %button.idb-button-primary.idb-button-demo-four{ type: "button" } Four
-    %p
-      %button.idb-button-primary.idb-button-demo-five{ type: "button" } Five
+      This page shows the legacy effective button styling currently selected for databank-2,
+      followed by semantic helper examples with icons.
 
   %section{ "aria-labelledby" => "button-examples-legacy-effective" }
     %h2#button-examples-legacy-effective Legacy Effective Button Styling
@@ -73,6 +27,12 @@
     %p
       %button.legacy-btn.legacy-btn-default{ type: "button" } Default
 
+    %h3 IDB Neutral Variants
+    %p
+      %button.idb-button-secondary{ type: "button" } Secondary
+    %p
+      %button.idb-button-default{ type: "button" } Default
+
     %h3 Legacy Effective Anchor Variants
     %p
       %a.legacy-btn.legacy-btn-primary{ href: "#" } Primary Link
@@ -87,28 +47,89 @@
     %p
       %a.legacy-btn.legacy-btn-default{ href: "#" } Default Link
 
-  %section{ "aria-labelledby" => "button-examples-anchor" }
-    %h2#button-examples-anchor Anchor Button Variants
+    %h3 Legacy disabled state
     %p
-      %a.idb-button-primary{ href: "#" } Primary Link Button
+      %button.legacy-btn.legacy-btn-primary{ type: "button", disabled: true } Disabled Primary
     %p
-      %a.idb-button-secondary{ href: "#" } Secondary Link Button
+      %button.legacy-btn.legacy-btn-info{ type: "button", disabled: true } Disabled Info
     %p
-      %a.idb-button-danger{ href: "#" } Danger Link Button
+      %button.legacy-btn.legacy-btn-success{ type: "button", disabled: true } Disabled Success
     %p
-      %a.idb-button-success{ href: "#" } Success Link Button
+      %button.legacy-btn.legacy-btn-danger{ type: "button", disabled: true } Disabled Danger
     %p
-      %a.idb-button-info{ href: "#" } Info Link Button
+      %button.legacy-btn.legacy-btn-warning{ type: "button", disabled: true } Disabled Warning
     %p
-      %a.idb-button-warning{ href: "#" } Warning Link Button
+      %button.idb-button-secondary{ type: "button", disabled: true } Disabled Secondary
     %p
-      %a.idb-button-default{ href: "#" } Default Link Button
+      %button.idb-button-default{ type: "button", disabled: true } Disabled Default
+
+
+  %section{ "aria-labelledby" => "button-examples-semantic" }
+    %h2#button-examples-semantic Semantic Helper Buttons (Legacy Style + Icons)
+    %p
+      These samples use
+      %code semantic_action_button
+      from
+      %code ApplicationHelper
+      to keep icon, style, and accessibility behavior consistent.
+    %h3 Text + Icon Buttons
+    %p
+      = semantic_action_button(action: :save, style: :legacy)
+    %p
+      = semantic_action_button(action: :edit, style: :legacy)
+    %p
+      = semantic_action_button(action: :search, style: :legacy)
+    %p
+      = semantic_action_button(action: :preview, style: :idb)
+    %p
+      = semantic_action_button(action: :continue, style: :legacy)
+    %p
+      = semantic_action_button(action: :publish, style: :legacy)
+
+    %h3 Icon-Only Buttons (aria-label)
+    %p
+      = semantic_action_button(action: :save, style: :legacy, icon_only: true, aria_label: "Save changes")
+    %p
+      = semantic_action_button(action: :edit, style: :legacy, icon_only: true, aria_label: "Edit item")
+    %p
+      = semantic_action_button(action: :search, style: :legacy, icon_only: true, aria_label: "Search")
+    %p
+      = semantic_action_button(action: :preview, style: :idb, icon_only: true, aria_label: "Preview")
+    %p
+      = semantic_action_button(action: :continue, style: :legacy, icon_only: true, aria_label: "Continue to next step")
+    %p
+      = semantic_action_button(action: :publish, style: :legacy, icon_only: true, aria_label: "Publish dataset")
+
+    %h3 Link Variants Using the Same Semantics
+    %p
+      = semantic_action_button(action: :save, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :edit, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :search, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :preview, style: :idb, url: "#")
+    %p
+      = semantic_action_button(action: :continue, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :publish, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :dataset, style: :legacy, url: "#")
+    %p
+      = semantic_action_button(action: :article, style: :legacy, url: "#")
+
+    %h3 Icon Position Examples
+    %p
+      = semantic_action_button(action: :search, style: :legacy, icon_position: :left)
+    %p
+      = semantic_action_button(action: :continue, style: :legacy, icon_position: :right)
 
   %section{ "aria-labelledby" => "button-examples-native" }
-    %h2#button-examples-native Native Button Elements
+    %h2#button-examples-native Native Element Reference
     %p
       %button{ type: "button" } Native Button
     %p
       %input{ type: "submit", value: "Native Submit" }
     %p
       %input{ type: "button", value: "Native Input Button" }
+

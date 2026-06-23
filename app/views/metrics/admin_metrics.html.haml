@@ -26,7 +26,9 @@
           %span.dataset-show-list-tertiary= row[:description]
 
           - if refresh_status[row[:key]]
-            %p.idb-workflow-note Refresh in progress. Refresh this page manually to check status.
+            %p.idb-workflow-note
+              = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
+              Refresh this page manually to check status.
 
           - if current_user&.admin?
             .idb-workflow-strip
@@ -34,7 +36,7 @@
                 - if refresh_status[row[:key]]
                   %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
                 - else
-                  = link_to "Regenerate #{row[:title]}", row[:refresh_path], class: "idb-button-success"
+                  = button_to "Regenerate #{row[:title]}", row[:refresh_path], method: :post, class: "idb-button-success"
 
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing

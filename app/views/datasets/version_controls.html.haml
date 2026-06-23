@@ -15,7 +15,7 @@
         %dd= "#{@dataset.title} (#{@dataset.key})"
 
         %dt Publication State
-        %dd= @dataset.publication_state.to_s
+        %dd= semantic_status_badge(status: @dataset.publication_state.to_s, sr_label: "Publication state #{@dataset.publication_state}")
 
         - if @previous_version.present?
           %dt Previous Version
@@ -103,6 +103,7 @@
           - @pending_version_requests.each do |request|
             %li
               %span.dataset-show-list-primary= "#{request.requester_name} (#{request.requester_email})"
+              = semantic_status_badge(status: request.status, sr_label: "Version request status #{request.status}")
               %span.dataset-show-list-secondary= "Requested at #{request.requested_at.utc.iso8601}"
               - if request.comment.present?
                 %span.dataset-show-list-tertiary= request.comment
@@ -134,6 +135,7 @@
           - @approved_version_requests.each do |request|
             %li
               %span.dataset-show-list-primary= "Approved request from #{request.requester_name}"
+              = semantic_status_badge(status: request.status, sr_label: "Version request status #{request.status}")
               %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
               - if request.reviewed_at.present?
                 %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
@@ -152,6 +154,7 @@
           - @rejected_version_requests.each do |request|
             %li
               %span.dataset-show-list-primary= "Rejected request from #{request.requester_name}"
+              = semantic_status_badge(status: request.status, sr_label: "Version request status #{request.status}")
               %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
               - if request.reviewed_at.present?
                 %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"

@@ -47,10 +47,29 @@ module Doi
             publicationYear: publication_year,
             types: {
               resourceTypeGeneral: "Dataset"
-            }
+            },
+            relatedIdentifiers: related_identifiers(dataset)
           }
         }
       }
+    end
+
+    def related_identifiers(dataset)
+      identifiers = []
+
+      dataset.related_materials.each do |material|
+        next if material.uri.blank?
+
+        material.relation_types.each do |relation_type|
+          identifiers << {
+            relatedIdentifier: material.uri,
+            relatedIdentifierType: material.uri_type.presence || "URL",
+            relationType: relation_type
+          }
+        end
+      end
+
+      identifiers
     end
   end
 end

@@ -1,6 +1,8 @@
 class Funder < ApplicationRecord
   belongs_to :dataset
 
+  audited associated_with: :dataset
+
   before_validation :sync_legacy_fields
 
   validates :name, presence: true

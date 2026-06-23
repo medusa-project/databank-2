@@ -3,10 +3,20 @@
   "private": true,
   "scripts": {
     "test:e2e": "playwright test",
-    "test:e2e:a11y": "playwright test playwright/accessibility.spec.js"
+    "test:e2e:a11y": "playwright test playwright/accessibility.spec.js",
+    "lighthouse:clean": "mkdir -p ./tmp/lighthouse && find ./tmp/lighthouse -maxdepth 1 -type f \\( -name '*.report.html' -o -name '*.report.json' \\) -delete",
+    "lighthouse:local": "npm run lighthouse:clean && npm run lighthouse:local:home && npm run lighthouse:local:contact",
+    "lighthouse:local:home": "lighthouse http://127.0.0.1:3000 --only-categories=accessibility,best-practices,performance,seo --preset=desktop --chrome-flags='--headless --no-sandbox' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/home",
+    "lighthouse:local:contact": "lighthouse http://127.0.0.1:3000/contact --only-categories=accessibility,best-practices,performance,seo --preset=desktop --chrome-flags='--headless --no-sandbox' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/contact",
+    "lighthouse:ci": "lhci autorun --config=./lighthouserc.json"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.14.0",
     "@axe-core/playwright": "^4.11.3",
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.54.2",
+    "lighthouse": "^12.8.1"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0"
   }
 }

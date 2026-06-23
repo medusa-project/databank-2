@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_18_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -58,6 +58,60 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
     t.datetime "updated_at", null: false
     t.text "value"
     t.index ["key"], name: "index_app_settings_on_key", unique: true
+  end
+
+  create_table "archive_extract_errors", force: :cascade do |t|
+    t.bigint "archive_extract_response_id", null: false
+    t.datetime "created_at", null: false
+    t.text "error_report"
+    t.string "error_type"
+    t.datetime "updated_at", null: false
+    t.index ["archive_extract_response_id"], name: "index_archive_extract_errors_on_archive_extract_response_id"
+    t.index ["error_type"], name: "index_archive_extract_errors_on_error_type"
+  end
+
+  create_table "archive_extract_requests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "datafile_id", null: false
+    t.text "raw_response"
+    t.datetime "response_at"
+    t.datetime "sent_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["datafile_id"], name: "index_archive_extract_requests_on_datafile_id", unique: true
+    t.index ["status"], name: "index_archive_extract_requests_on_status"
+  end
+
+  create_table "archive_extract_responses", force: :cascade do |t|
+    t.bigint "archive_extract_request_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "response", default: {}, null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["archive_extract_request_id"], name: "index_archive_extract_responses_on_archive_extract_request_id", unique: true
+    t.index ["status"], name: "index_archive_extract_responses_on_status"
+  end
+
+  create_table "audits", force: :cascade do |t|
+    t.string "action"
+    t.integer "associated_id"
+    t.string "associated_type"
+    t.integer "auditable_id"
+    t.string "auditable_type"
+    t.jsonb "audited_changes"
+    t.string "comment"
+    t.datetime "created_at"
+    t.string "remote_address"
+    t.string "request_uuid"
+    t.integer "user_id"
+    t.string "user_type"
+    t.string "username"
+    t.integer "version", default: 0
+    t.index ["associated_id", "associated_type"], name: "associated_index"
+    t.index ["auditable_id", "auditable_type"], name: "auditable_index"
+    t.index ["created_at"], name: "index_audits_on_created_at"
+    t.index ["request_uuid"], name: "index_audits_on_request_uuid"
+    t.index ["user_id", "user_type"], name: "user_index"
   end
 
   create_table "contributors", force: :cascade do |t|
@@ -121,12 +175,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
     t.bigint "dataset_id", null: false
     t.text "description"
     t.string "medusa_id"
+    t.text "peek_content"
+    t.string "peek_type"
     t.integer "row_position"
     t.string "storage_key"
     t.string "storage_root"
     t.datetime "updated_at", null: false
     t.string "web_id"
     t.index ["dataset_id"], name: "index_datafiles_on_dataset_id"
+    t.index ["peek_type"], name: "index_datafiles_on_peek_type"
     t.index ["storage_root", "storage_key"], name: "index_datafiles_on_storage_location"
     t.index ["web_id"], name: "index_datafiles_on_web_id", unique: true
   end
@@ -386,6 +443,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
     t.index ["dataset_id"], name: "index_notes_on_dataset_id"
   end
 
+  create_table "related_material_relationships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position", default: 1, null: false
+    t.bigint "related_material_id", null: false
+    t.string "relation_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["related_material_id", "relation_type"], name: "idx_related_material_relationships_unique_relation", unique: true
+    t.index ["related_material_id"], name: "index_related_material_relationships_on_related_material_id"
+  end
+
   create_table "related_materials", force: :cascade do |t|
     t.string "availability"
     t.text "citation"
@@ -451,6 +518,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "archive_extract_errors", "archive_extract_responses"
+  add_foreign_key "archive_extract_requests", "datafiles"
+  add_foreign_key "archive_extract_responses", "archive_extract_requests"
   add_foreign_key "contributors", "datasets"
   add_foreign_key "creators", "datasets"
   add_foreign_key "datafiles", "datasets"
@@ -461,6 +531,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_05_200000) do
   add_foreign_key "guide_subitems", "guide_items", column: "item_id"
   add_foreign_key "ingest_response_events", "external_delivery_attempts"
   add_foreign_key "notes", "datasets"
+  add_foreign_key "related_material_relationships", "related_materials"
   add_foreign_key "related_materials", "datasets"
   add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"

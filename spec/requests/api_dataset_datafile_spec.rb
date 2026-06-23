@@ -53,6 +53,19 @@ RSpec.describe "API dataset datafile upload", type: :request do
     expect(datafile.storage_key).to include(upload_id)
   end
 
+  it "returns bad request for an invalid tus reference" do
+    post path,
+      params: {
+        tus_url: "https://example.edu/files/not-a-uuid",
+        filename: "via-tus.csv",
+        size: 42
+      },
+      headers: { "Authorization" => "Token token=#{token}" }
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.body).to include("Invalid TUS upload reference")
+  end
+
   it "returns bad credentials for an invalid token" do
     post path,
       params: { binary: uploaded_file("a,b\n") },

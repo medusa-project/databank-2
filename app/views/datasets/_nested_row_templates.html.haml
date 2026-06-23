@@ -10,16 +10,15 @@
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
           = cf.hidden_field :contact, value: false, data: { contactField: true }
           = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
-          = cf.text_field :institution_name, placeholder: "[Organization Name]"
+          = cf.text_field :institution_name, placeholder: "[Organization Name]", required: true
         %td
-          = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]"
+          = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
         %td.idb-contact-cell
-          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
         %td.idb-row-actions.idb-creator-row-actions
-          %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row up", aria: { label: "Move creator row up" }, data: { action: "deposit-form#moveRowUp" }} Up
-          %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row down", aria: { label: "Move creator row down" }, data: { action: "deposit-form#moveRowDown" }} Down
-          %button.idb-button-danger.idb-compact-action{type: "button", title: "Remove creator row", aria: { label: "Remove creator row" }, data: { action: "deposit-form#removeRow" }} Del
-          %button.idb-button-success.idb-compact-action.idb-add-creator-row{type: "button", title: "Add creator row", aria: { label: "Add creator row" }, data: { action: "deposit-form#addCreatorRow" }, hidden: true} Add
+          = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
+          = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
+          = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
   - else
     = f.fields_for :creators, Creator.new(type_of: Dataset::CREATOR_TYPE_PERSON), child_index: "NEW_CREATOR" do |cf|
       %tr.idb-nested-row{data: { deposit_form_target: "creatorRow" }}
@@ -31,23 +30,22 @@
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
           = cf.hidden_field :contact, value: false, data: { contactField: true }
           = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
-          = cf.text_field :family_name, placeholder: "[e.g.: Smith]"
+          = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
         %td
-          = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]"
+          = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
         %td
           = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
           = cf.hidden_field :identifier_scheme, value: "ORCID"
         %td
           %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
         %td
-          = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]"
+          = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
         %td.idb-contact-cell
-          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
         %td.idb-row-actions.idb-creator-row-actions
-          %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row up", aria: { label: "Move creator row up" }, data: { action: "deposit-form#moveRowUp" }} Up
-          %button.idb-button-secondary.idb-compact-action{type: "button", title: "Move creator row down", aria: { label: "Move creator row down" }, data: { action: "deposit-form#moveRowDown" }} Down
-          %button.idb-button-danger.idb-compact-action{type: "button", title: "Remove creator row", aria: { label: "Remove creator row" }, data: { action: "deposit-form#removeRow" }} Del
-          %button.idb-button-success.idb-compact-action.idb-add-creator-row{type: "button", title: "Add creator row", aria: { label: "Add creator row" }, data: { action: "deposit-form#addCreatorRow" }, hidden: true} Add
+          = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
+          = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
+          = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
 
 %template{data: { deposit_form_target: "funderTemplate" }}
   = f.fields_for :funders, Funder.new, child_index: "NEW_FUNDER" do |ff|
@@ -95,8 +93,8 @@
           %button.idb-button-secondary{type: "button", aria: { label: "Move related material row up" }, data: { action: "deposit-form#moveRowUp" }} Up
           %button.idb-button-secondary{type: "button", aria: { label: "Move related material row down" }, data: { action: "deposit-form#moveRowDown" }} Down
       - if can?(:manage, dataset)
-        %fieldset.idb-grid-fieldset
-          %legend DataCite Relationships (Curator)
+        %fieldset.idb-grid-fieldset.idb-curator-only-section.idb-curator-only-section--compact
+          %legend DataCite Relationships (Curator and admin)
           .idb-nested-grid
             .idb-grid-col-5
               - ["IsSupplementTo", "IsSupplementedBy", "IsCitedBy", "IsPreviousVersionOf", "IsNewVersionOf"].each do |relationship|
