@@ -32,6 +32,8 @@ RSpec.describe CuratorDirectory, type: :service do
   end
 
   it "returns managed emails sorted by email" do
+    ManagedCurator.delete_all
+
     ManagedCurator.create!(email: "zeta@example.edu")
     ManagedCurator.create!(email: "alpha@example.edu")
 
