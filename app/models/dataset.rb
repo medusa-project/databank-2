@@ -79,6 +79,7 @@ class Dataset < ApplicationRecord
   has_one :token, class_name: "Token", primary_key: :key, foreign_key: :dataset_key, inverse_of: :dataset, dependent: :destroy
   has_many :version_requests, dependent: :destroy
   has_many :approved_version_requests, class_name: "VersionRequest", foreign_key: :approved_dataset_id, inverse_of: :approved_dataset, dependent: :nullify
+  has_many :external_delivery_attempts, dependent: :destroy
 
   accepts_nested_attributes_for :datafiles, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :creators, reject_if: :invalid_name, allow_destroy: true
@@ -219,6 +220,50 @@ class Dataset < ApplicationRecord
 
   def ready_to_publish?
     missing_publish_fields.empty?
+  end
+
+  def curator_ingested_date
+    attempts = if association(:external_delivery_attempts).loaded?
+                 external_delivery_attempts.select { |attempt| attempt.integration == "ingest" && attempt.status == "succeeded" }
+    else
+                 external_delivery_attempts.where(integration: :ingest, status: :succeeded)
+    end
+
+    latest_attempt = if attempts.respond_to?(:order)
+                       attempts.order(response_received_at: :desc, created_at: :desc).first
+    else
+                       attempts.max_by { |attempt| attempt.response_received_at || attempt.created_at }
+    end
+
+    (latest_attempt&.response_received_at || latest_attempt&.created_at)&.to_date
+  end
+
+  def curator_visibility_label
+    return "Draft" if draft?
+    return "Metadata and Files Publication Delayed (Embargoed)" if metadata_embargoed? && !embargo_released?
+    return "Metadata Published, Files Publication Delayed (Embargoed)" if file_embargoed? && !embargo_released?
+
+    "Published"
+  end
+
+  def has_sharing_link?
+    token.present?
+  end
+
+  def version_request_pending?
+    if association(:version_requests).loaded?
+      version_requests.any?(&:pending?)
+    else
+      version_requests.pending.exists?
+    end
+  end
+
+  def version_request_approved?
+    if association(:version_requests).loaded?
+      version_requests.any?(&:approved?)
+    else
+      version_requests.approved.exists?
+    end
   end
 
   def embargo_mode

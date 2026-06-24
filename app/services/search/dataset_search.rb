@@ -263,9 +263,19 @@ module Search
         .order(:publication_state)
         .count
         .map do |value, count|
-          key = Dataset.publication_states.key(value.to_i) || value.to_s
+          key = publication_state_key(value)
           { value: key, count: count }
         end
+    end
+
+    def publication_state_key(value)
+      normalized = value.to_s.strip
+
+      if Dataset.publication_states.key?(normalized)
+        normalized
+      else
+        Dataset.publication_states.key(value.to_i) || normalized
+      end
     end
 
     def depositor_options(relation)

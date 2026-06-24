@@ -159,12 +159,24 @@ RSpec.describe "External delivery attempts index", type: :request do
     first_attempt.update_columns(created_at: Time.current - 20.minutes)
     second_attempt.update_columns(created_at: Time.current - 10.minutes)
 
-    get admin_external_delivery_attempts_path, params: { per_page: 1, page: 1, sort: "created_at", direction: "desc" }
+    get admin_external_delivery_attempts_path, params: {
+      dataset_key: dataset_one.key,
+      per_page: 1,
+      page: 1,
+      sort: "created_at",
+      direction: "desc"
+    }
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("<td>second</td>")
     expect(response.body).not_to include("<td>first</td>")
 
-    get admin_external_delivery_attempts_path, params: { per_page: 1, page: 2, sort: "created_at", direction: "desc" }
+    get admin_external_delivery_attempts_path, params: {
+      dataset_key: dataset_one.key,
+      per_page: 1,
+      page: 2,
+      sort: "created_at",
+      direction: "desc"
+    }
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("<td>first</td>")
     expect(response.body).not_to include("<td>second</td>")

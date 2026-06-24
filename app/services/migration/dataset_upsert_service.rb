@@ -2,6 +2,22 @@ require "uri"
 
 module Migration
   class DatasetUpsertService
+    LEGACY_DRAFT_STATES = [
+      "draft",
+      "version candidate under curator review"
+    ].freeze
+
+    LEGACY_PUBLISHED_STATES = [
+      "released",
+      "published",
+      "file embargo",
+      "metadata embargo",
+      "files temporarily suppressed",
+      "metadata temporarily suppressed",
+      "files permanently suppressed",
+      "metadata permanently suppressed"
+    ].freeze
+
     DEFAULT_SAMPLE_OWNER_UID = "legacy-import"
     DEFAULT_SAMPLE_DEPOSITOR_NAME = "Legacy Import"
     DEFAULT_SAMPLE_DEPOSITOR_EMAIL = "legacy-import@example.edu"
@@ -63,6 +79,8 @@ module Migration
     end
 
     def assign_dataset_attributes(dataset)
+      legacy_publication_state = normalized_legacy_publication_state(raw: payload["publication_state"])
+
       dataset.title = payload["title"].presence || "Untitled Dataset"
       dataset.description = payload["description"]
       dataset.identifier = payload["identifier"].presence
@@ -70,8 +88,22 @@ module Migration
       dataset.license = payload["license"]
       dataset.keywords = payload["keywords"]
       dataset.subject = payload["subject"]
-      dataset.publication_state = publication_state_value(payload["publication_state"])
-      dataset.published_at = parse_time(payload["release_date"]) || parse_time(payload["updated_at"])
+      dataset.corresponding_creator_name = payload["corresponding_creator_name"].presence
+      dataset.dataset_version = payload["dataset_version"].presence
+      dataset.is_test = ActiveModel::Type::Boolean.new.cast(payload["is_test"]) || false
+      dataset.is_import = ActiveModel::Type::Boolean.new.cast(payload["is_import"]) || false
+      dataset.embargo = normalized_embargo(raw: payload["embargo"]) || derived_embargo_from_legacy_state(legacy_publication_state: legacy_publication_state)
+      dataset.legacy_publication_state = legacy_publication_state
+      dataset.publication_state = publication_state_value(raw: legacy_publication_state)
+      dataset.hold_state = normalized_hold_state(raw: payload["hold_state"])
+      dataset.release_date = parse_date(payload["release_date"])
+      dataset.tombstone_date = parse_date(payload["tombstone_date"])
+      dataset.published_at = published_at_value(
+        legacy_publication_state: legacy_publication_state,
+        explicit_published_at: payload["published_at"],
+        updated_at: payload["updated_at"],
+        release_date: payload["release_date"]
+      )
       dataset.nested_updated_at = parse_time(payload["nested_updated_at"])
 
       owner_uid, depositor_name, depositor_email = depositor_fields
@@ -109,11 +141,46 @@ module Migration
       end
     end
 
-    def publication_state_value(raw)
+    def publication_state_value(raw:)
       value = raw.to_s.downcase
-      return :published if %w[published released].include?(value)
+      return :draft if LEGACY_DRAFT_STATES.include?(value)
+      return :published if LEGACY_PUBLISHED_STATES.include?(value)
 
       :draft
+    end
+
+    def normalized_legacy_publication_state(raw:)
+      raw.to_s.strip.presence
+    end
+
+    def normalized_hold_state(raw:)
+      raw.to_s.strip.presence
+    end
+
+    def normalized_embargo(raw:)
+      normalized = raw.to_s.strip.presence
+      return nil if normalized.blank? || normalized == "none"
+
+      if normalized.include?("metadata")
+        Dataset::EMBARGO_METADATA
+      elsif normalized.include?("file")
+        Dataset::EMBARGO_FILE
+      else
+        nil
+      end
+    end
+
+    def derived_embargo_from_legacy_state(legacy_publication_state:)
+      normalized_embargo(raw: legacy_publication_state)
+    end
+
+    def published_at_value(legacy_publication_state:, explicit_published_at:, updated_at:, release_date:)
+      explicit = parse_time(explicit_published_at)
+      return explicit if explicit.present?
+
+      return nil if publication_state_value(raw: legacy_publication_state) == :draft
+
+      parse_time(updated_at) || parse_time(release_date)
     end
 
     def sync_nested_records!(dataset)
@@ -408,6 +475,17 @@ module Migration
 
       Time.zone.parse(value.to_s)
     rescue ArgumentError
+      nil
+    end
+
+    def parse_date(value)
+      return nil if value.blank?
+
+      parsed_time = parse_time(value)
+      return parsed_time.to_date if parsed_time
+
+      Date.iso8601(value.to_s)
+    rescue ArgumentError, TypeError
       nil
     end
 
