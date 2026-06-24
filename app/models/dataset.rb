@@ -1,6 +1,53 @@
 class Dataset < ApplicationRecord
   include Dataset::IllinoisExpertsExportable
 
+  class << self
+    def citation_report(datasets:, request_url:, current_user:)
+      report_text = String.new
+
+      15.times { report_text << "=" }
+      report_text << "\nIllinois Data Bank\nDatasets Report, generated #{Date.current.iso8601}"
+      report_text << " by #{current_user.username}" if current_user&.username.present?
+      report_text << "\nQuery URL: #{request_url}\n"
+      15.times { report_text << "=" }
+      report_text << "\n"
+
+      datasets.each do |dataset|
+        report_text << "\n\n#{citation_line(dataset: dataset)}"
+
+        if dataset.funders.any?
+          dataset.funders.each do |funder|
+            report_text << "\nFunder: #{funder.name}"
+            grant_value = funder.grant.presence || funder.award_number
+            report_text << ", Grant: #{grant_value}" if grant_value.present?
+          end
+        end
+
+        start_time = (dataset.published_at || dataset.updated_at || dataset.created_at)&.to_date&.iso8601 || Date.current.iso8601
+        report_text << "\nDownloads: #{dataset.total_downloads} (#{start_time} to #{Date.current.iso8601} )\n"
+        5.times { report_text << "-" }
+      end
+
+      report_text
+    end
+
+    private
+
+    def citation_line(dataset:)
+      publication_year = (dataset.published_at || dataset.updated_at || dataset.created_at).year
+      creator_names = dataset.creators.map(&:name).reject(&:blank?)
+
+      parts = []
+      parts << creator_names.join("; ") if creator_names.any?
+      parts << "(#{publication_year})"
+      parts << "#{dataset.title}." if dataset.title.present?
+      parts << dataset.publisher if dataset.publisher.present?
+      parts << "https://doi.org/#{dataset.identifier}" if dataset.identifier.present?
+
+      parts.join(" ")
+    end
+  end
+
   KEY_PREFIX = IdbConfig.fetch(:dataset, :key_prefix, default: "IDB").freeze
   KEY_DIGITS = 7
   EMBARGO_NONE = "none".freeze

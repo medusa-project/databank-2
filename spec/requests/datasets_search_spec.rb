@@ -36,7 +36,7 @@ RSpec.describe "Datasets search", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(dataset_one.title)
-    expect(response.body).to include("Apply Filters")
+    expect(response.body).to include("Clear Filters")
     expect(response.body).to include('<div class="idb-page-title">')
     expect(response.body).to include("<h1>Dataset Search</h1>")
     expect(response.body).not_to include('slot="title"')
@@ -369,5 +369,55 @@ RSpec.describe "Datasets search", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Dataset With NIH Funder")
     expect(response.body).not_to include("Dataset Without NIH Funder")
+  end
+
+  it "renders a citation report from search results" do
+    dataset = Dataset.create!(
+      title: "Report Search Dataset",
+      description: "Included in report output",
+      keywords: "report-query",
+      subject: "Data Science",
+      owner_uid: "owner-report-search",
+      depositor_name: "Owner Report",
+      depositor_email: "owner-report-search@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-0000001"
+    )
+    dataset.creators.create!(name: "Report Creator")
+    dataset.funders.create!(name: "National Science Foundation", grant: "NSF-123")
+
+    get datasets_path, params: { q: "report-query", report: "generate" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Search Citation Report")
+    expect(response.body).to include("Go back to search")
+    expect(response.body).to include("Query URL:")
+    expect(response.body).to include("Report Creator")
+    expect(response.body).to include("Report Search Dataset")
+    expect(response.body).to include("Funder: National Science Foundation, Grant: NSF-123")
+  end
+
+  it "downloads a citation report file from search results" do
+    dataset = Dataset.create!(
+      title: "Report Download Dataset",
+      description: "Included in download output",
+      keywords: "download-report-query",
+      subject: "Data Science",
+      owner_uid: "owner-report-download",
+      depositor_name: "Owner Report Download",
+      depositor_email: "owner-report-download@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-0000002"
+    )
+    dataset.creators.create!(name: "Download Creator")
+
+    get datasets_path, params: { q: "download-report-query", report: "generate", download: "now" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/plain")
+    expect(response.headers["Content-Disposition"]).to include("filename=\"report.txt\"")
+    expect(response.body).to include("Illinois Data Bank")
+    expect(response.body).to include("Download Creator")
+    expect(response.body).to include("Report Download Dataset")
   end
 end

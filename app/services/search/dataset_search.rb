@@ -42,6 +42,10 @@ module Search
       (total_count.to_f / @per_page).ceil
     end
 
+    def report_results
+      @report_results ||= filtered_results_relation
+    end
+
     def offset_value
       (@page - 1) * @per_page
     end

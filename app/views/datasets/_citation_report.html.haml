@@ -1,0 +1,9 @@
+%section.dataset-show-panel.idb-rounded-section.datasets-citation-report{aria: { label: "Search citation report" }}
+  %h2.dataset-show-section-title Search Citation Report
+
+  %nav.datasets-report-actions.hide-when-printing{aria: { label: "Report actions" }}
+    = semantic_action_button(action: :report_back_to_search, url: datasets_path(@report_back_query_params), style: :idb)
+    = semantic_action_button(action: :report_print, url: "javascript:window.print()", style: :idb, icon_position: :right)
+    = semantic_action_button(action: :report_download, url: datasets_path(@report_download_query_params), style: :idb, icon_position: :right)
+
+  = simple_format(@report)
