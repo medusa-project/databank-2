@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_18_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_24_213000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -224,11 +224,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_18_193000) do
     t.string "external_files_link"
     t.text "external_files_note"
     t.string "have_permission"
+    t.string "hold_state"
     t.string "identifier"
     t.boolean "is_import", default: false, null: false
     t.boolean "is_test", default: false, null: false
     t.string "key", null: false
     t.text "keywords"
+    t.string "legacy_publication_state"
     t.string "license"
     t.string "medusa_dataset_dir"
     t.datetime "nested_updated_at"
@@ -242,11 +244,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_18_193000) do
     t.string "search"
     t.string "subject"
     t.string "title", null: false
+    t.date "tombstone_date"
     t.datetime "updated_at", null: false
     t.text "version_comment"
     t.index ["depositor_email"], name: "index_datasets_on_depositor_email"
+    t.index ["hold_state"], name: "index_datasets_on_hold_state"
     t.index ["identifier"], name: "index_datasets_on_identifier", unique: true, where: "(identifier IS NOT NULL)"
     t.index ["key"], name: "index_datasets_on_key", unique: true
+    t.index ["legacy_publication_state"], name: "index_datasets_on_legacy_publication_state"
+    t.index ["tombstone_date"], name: "index_datasets_on_tombstone_date"
   end
 
   create_table "day_file_downloads", force: :cascade do |t|

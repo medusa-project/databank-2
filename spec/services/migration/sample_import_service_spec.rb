@@ -21,6 +21,13 @@ RSpec.describe Migration::SampleImportService do
       "url" => "https://databank.illinois.edu/datasets/IDB-9099901.json",
       "description" => "desc",
       "publication_state" => "released",
+      "hold_state" => "none",
+      "release_date" => "2020-01-10",
+      "embargo" => "metadata embargo",
+      "is_test" => true,
+      "is_import" => true,
+      "dataset_version" => "V3",
+      "tombstone_date" => "2024-12-25",
       "nested_updated_at" => "2020-01-03T00:00:00Z",
       "created_at" => "2020-01-01T00:00:00Z",
       "updated_at" => "2020-01-02T00:00:00Z",
@@ -90,6 +97,15 @@ RSpec.describe Migration::SampleImportService do
     dataset = Dataset.find_by!(identifier: "10.13012/B2IDB-9099901_V1")
     expect(dataset.key).to eq("IDB-9099901")
     expect(dataset.publication_state).to eq("published")
+    expect(dataset.legacy_publication_state).to eq("released")
+    expect(dataset.hold_state).to eq("none")
+    expect(dataset.release_date).to eq(Date.new(2020, 1, 10))
+    expect(dataset.published_at).to eq(Time.zone.parse("2020-01-02T00:00:00Z"))
+    expect(dataset.embargo).to eq(Dataset::EMBARGO_METADATA)
+    expect(dataset.is_test).to be(true)
+    expect(dataset.is_import).to be(true)
+    expect(dataset.dataset_version).to eq("V3")
+    expect(dataset.tombstone_date).to eq(Date.new(2024, 12, 25))
     expect(dataset.nested_updated_at).to eq(Time.zone.parse("2020-01-03T00:00:00Z"))
     expect(dataset.creators.count).to eq(1)
     expect(dataset.contributors.count).to eq(1)
@@ -173,5 +189,29 @@ RSpec.describe Migration::SampleImportService do
     expect(creator.name).to eq("University Library")
     expect(contributor.institution_name).to eq("Research Data Service")
     expect(contributor.name).to eq("Research Data Service")
+  end
+
+  it "maps legacy embargo publication state as published and preserves embargo semantics" do
+    payload = {
+      "title" => "Embargo Publication State Mapping",
+      "identifier" => "10.13012/B2IDB-9099903_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-9099903.json",
+      "publication_state" => "metadata embargo",
+      "release_date" => "2026-08-01",
+      "updated_at" => "2026-06-01T00:00:00Z"
+    }
+
+    File.write(datasets_dir.join("dataset.json"), JSON.pretty_generate(payload))
+
+    summary = described_class.new(input_dir: run_dir.to_s).call
+
+    expect(summary[:created]).to eq(1)
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(identifier: "10.13012/B2IDB-9099903_V1")
+    expect(dataset.legacy_publication_state).to eq("metadata embargo")
+    expect(dataset.publication_state).to eq("published")
+    expect(dataset.embargo).to eq(Dataset::EMBARGO_METADATA)
+    expect(dataset.release_date).to eq(Date.new(2026, 8, 1))
   end
 end

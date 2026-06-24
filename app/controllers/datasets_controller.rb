@@ -18,7 +18,7 @@ class DatasetsController < ApplicationController
       role: current_role
     )
 
-    @datasets = @search.results
+    @datasets = @search.results.includes(:notes, :token, :version_requests, :external_delivery_attempts)
     @facet_options = @search.facet_options
     @available_facets = @search.available_facets
     @total_count = @search.total_count

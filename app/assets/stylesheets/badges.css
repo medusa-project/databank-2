@@ -28,6 +28,12 @@
 	color: #16345a;
 }
 
+.idb-badge--primary {
+	background-color: #265191;
+	border-color: #265191;
+	color: #ffffff;
+}
+
 .idb-badge--success {
 	background-color: #dcefd4;
 	border-color: #4f7f33;

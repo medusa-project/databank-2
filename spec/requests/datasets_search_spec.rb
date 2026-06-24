@@ -128,6 +128,38 @@ RSpec.describe "Datasets search", type: :request do
     expect(response.body).to include("Depositor")
   end
 
+  it "shows accurate publication state facet labels for curator roles" do
+    login_as(email: "admin-publication-state@example.edu", name: "Admin Publication State", role: "admin")
+
+    Dataset.create!(
+      title: "Facet Draft State Dataset",
+      description: "Draft state facet",
+      keywords: "publication-state-facet",
+      subject: "Engineering",
+      owner_uid: "owner-publication-state-draft",
+      depositor_name: "Owner Publication State Draft",
+      depositor_email: "owner-publication-state-draft@example.edu",
+      publication_state: :draft
+    )
+
+    Dataset.create!(
+      title: "Facet Published State Dataset",
+      description: "Published state facet",
+      keywords: "publication-state-facet",
+      subject: "Engineering",
+      owner_uid: "owner-publication-state-published",
+      depositor_name: "Owner Publication State Published",
+      depositor_email: "owner-publication-state-published@example.edu",
+      publication_state: :published
+    )
+
+    get datasets_path, params: { q: "publication-state-facet" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Draft (1)")
+    expect(response.body).to include("Published (1)")
+  end
+
   it "supports pagination with per_page and page" do
     3.times do |index|
       Dataset.create!(
@@ -369,6 +401,107 @@ RSpec.describe "Datasets search", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Dataset With NIH Funder")
     expect(response.body).not_to include("Dataset Without NIH Funder")
+  end
+
+  it "shows curator-only search result badges for admins" do
+    login_as(email: "admin-badges@example.edu", name: "Admin Badges", role: "admin")
+
+    dataset = Dataset.create!(
+      title: "Curator Badge Dataset",
+      description: "Badge visibility dataset",
+      keywords: "curator-badges",
+      subject: "Earth Systems",
+      owner_uid: "owner-curator-badges",
+      depositor_name: "Owner Curator Badges",
+      depositor_email: "owner-curator-badges@example.edu",
+      publication_state: :published,
+      published_at: Time.zone.parse("2026-01-15"),
+      release_date: Date.new(2026, 1, 15)
+    )
+    dataset.notes.create!(body: "Curator note", author: "curator@example.edu")
+    dataset.version_requests.create!(
+      requester_email: "depositor@example.edu",
+      requester_name: "Depositor User",
+      requested_at: Time.zone.parse("2026-01-10"),
+      status: :pending
+    )
+
+    draft_with_share = Dataset.create!(
+      title: "Curator Badge Draft Share Dataset",
+      description: "Draft sharing dataset",
+      keywords: "curator-badges",
+      subject: "Earth Systems",
+      owner_uid: "owner-curator-badges-draft",
+      depositor_name: "Owner Curator Badges Draft",
+      depositor_email: "owner-curator-badges-draft@example.edu",
+      publication_state: :draft
+    )
+    draft_with_share.create_token!(identifier: Token.generate_auth_token)
+
+    get datasets_path, params: { q: "curator-badges" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("updated:")
+    expect(response.body).to include("created:")
+    expect(response.body).to include("ingested:")
+    expect(response.body).to include("ingested: N/A")
+    expect(response.body).to include("released:")
+    expect(response.body).to include("released: 2026-01-15")
+    expect(response.body).to include("published: 2026-01-15")
+    expect(response.body).to include("version candidate under review")
+    expect(response.body).to include("has sharing link")
+    expect(response.body).to include("draft")
+    expect(response.body).to include("Earth Systems")
+    expect(response.body).to include("1 note")
+    expect(response.body).to include("0 notes")
+  end
+
+  it "shows a public published date badge when dataset is published" do
+    login_as(email: "admin-released-fallback@example.edu", name: "Admin Released Fallback", role: "admin")
+
+    Dataset.create!(
+      title: "Released Fallback Dataset",
+      description: "Published without explicit release date",
+      keywords: "released-fallback",
+      subject: "Earth Systems",
+      owner_uid: "owner-released-fallback",
+      depositor_name: "Owner Released Fallback",
+      depositor_email: "owner-released-fallback@example.edu",
+      publication_state: :published,
+      published_at: Time.zone.parse("2026-02-20")
+    )
+
+    get datasets_path, params: { q: "released-fallback" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("published: 2026-02-20")
+  end
+
+  it "hides curator-only search result badges from guests" do
+    dataset = Dataset.create!(
+      title: "Guest Badge Hidden Dataset",
+      description: "Guest badge visibility dataset",
+      keywords: "guest-badge-hidden",
+      subject: "Earth Systems",
+      owner_uid: "owner-guest-badge-hidden",
+      depositor_name: "Owner Guest Hidden",
+      depositor_email: "owner-guest-badge-hidden@example.edu",
+      publication_state: :published,
+      published_at: Time.zone.parse("2026-01-15"),
+      release_date: Date.new(2026, 1, 15)
+    )
+    dataset.notes.create!(body: "Curator note", author: "curator@example.edu")
+
+    get datasets_path, params: { q: "guest-badge-hidden" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("updated:")
+    expect(response.body).not_to include("created:")
+    expect(response.body).not_to include("ingested:")
+    expect(response.body).not_to include("released:")
+    expect(response.body).not_to include("version candidate under review")
+    expect(response.body).not_to include("has sharing link")
+    expect(response.body).to include("published: 2026-01-15")
   end
 
   it "renders a citation report from search results" do
