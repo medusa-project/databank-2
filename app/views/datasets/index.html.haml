@@ -4,11 +4,13 @@
   = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
     .datasets-toolbar
       .datasets-query-controls
-        = f.label :q, "Search", class: "datasets-form-label"
-        = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
-        .datasets-query-actions
-          = f.submit "Apply Filters", class: "idb-button-primary"
-          = link_to "Clear", datasets_path, class: "idb-button-secondary datasets-clear-button", aria: { label: "Clear all search filters" }
+        = f.label :q, "Search datasets", class: "sr-only"
+        .datasets-query-fieldset
+          = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
+          = button_tag type: "submit", class: "legacy-btn legacy-btn-primary legacy-btn-with-icon legacy-btn-icon-only datasets-query-button", aria: { label: "Submit search" } do
+            %i.fa-solid.fa-magnifying-glass{aria: { hidden: true }}
+          = link_to datasets_path(index_query_params(q: nil, page: 1)), class: "legacy-btn legacy-btn-danger legacy-btn-with-icon legacy-btn-icon-only datasets-query-button datasets-clear-button", aria: { label: "Clear search term" } do
+            %i.fa-solid.fa-xmark{aria: { hidden: true }}
 
       - if @total_count.positive?
         - start_item = @search.offset_value + 1
@@ -30,7 +32,7 @@
             = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }
 
       .datasets-per-page-control
-        = f.label :per_page, "Results per page", class: "datasets-form-label"
+        = f.label :per_page, "Results per page", class: "sr-only"
         .datasets-per-page-inline
           = f.select :per_page, options_for_select(Search::DatasetSearch::PER_PAGE_OPTIONS.map { |value| ["#{value} per page", value] }, @per_page), {}, class: "datasets-select-input", aria: { label: "Results per page" }
           = f.submit "Go", class: "idb-button-primary datasets-go-button", aria: { label: "Apply results per page" }
