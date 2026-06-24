@@ -122,6 +122,24 @@ module ApplicationHelper
       variant: "danger",
       icon: "minus",
       icon_style: :solid
+    },
+    report_back_to_search: {
+      label: "Go back to search",
+      variant: "secondary",
+      icon: "caret-left",
+      icon_style: :solid
+    },
+    report_print: {
+      label: "Print",
+      variant: "success",
+      icon: "print",
+      icon_style: :solid
+    },
+    report_download: {
+      label: "Download",
+      variant: "primary",
+      icon: "circle-down",
+      icon_style: :solid
     }
   }.freeze
 

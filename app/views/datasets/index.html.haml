@@ -1,155 +1,161 @@
 - content_for :title, "Dataset Search"
 
 %ilw-content.datasets-search-page
-  = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
-    .datasets-toolbar
-      .datasets-query-controls
-        = f.label :q, "Search datasets", class: "sr-only"
-        .datasets-query-fieldset
-          = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
-          = button_tag type: "submit", class: "legacy-btn legacy-btn-primary legacy-btn-with-icon legacy-btn-icon-only datasets-query-button", aria: { label: "Submit search" } do
-            %i.fa-solid.fa-magnifying-glass{aria: { hidden: true }}
-          = link_to datasets_path(index_query_params(q: nil, page: 1)), class: "legacy-btn legacy-btn-danger legacy-btn-with-icon legacy-btn-icon-only datasets-query-button datasets-clear-button", aria: { label: "Clear search term" } do
-            %i.fa-solid.fa-xmark{aria: { hidden: true }}
+  - if @report_mode
+    = render partial: "citation_report"
+  - else
+    = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
+      .datasets-toolbar
+        .datasets-query-controls
+          = f.label :q, "Search datasets", class: "sr-only"
+          .datasets-query-fieldset
+            = f.search_field :q, value: @query, placeholder: "search for datasets", class: "datasets-search-input", aria: { label: "Search datasets" }
+            = button_tag type: "submit", class: "legacy-btn legacy-btn-primary legacy-btn-with-icon legacy-btn-icon-only datasets-query-button", aria: { label: "Submit search" } do
+              %i.fa-solid.fa-magnifying-glass{aria: { hidden: true }}
+            = link_to datasets_path(index_query_params(q: nil, page: 1)), class: "legacy-btn legacy-btn-danger legacy-btn-with-icon legacy-btn-icon-only datasets-query-button datasets-clear-button", aria: { label: "Clear search term" } do
+              %i.fa-solid.fa-xmark{aria: { hidden: true }}
 
-      - if @total_count.positive?
-        - start_item = @search.offset_value + 1
-        - end_item = [@search.offset_value + @datasets.length, @total_count].min
-        %p.datasets-results-count{aria: { live: "polite" }}= "Displaying #{start_item} - #{end_item} of #{@total_count} in total"
+        - if @total_count.positive?
+          - start_item = @search.offset_value + 1
+          - end_item = [@search.offset_value + @datasets.length, @total_count].min
+          %p.datasets-results-count{aria: { live: "polite" }}= "Displaying #{start_item} - #{end_item} of #{@total_count} in total"
 
-      - if @total_pages > 1
-        %nav.datasets-pagination.datasets-pagination-top{aria: { label: "Results pagination (top)" }}
-          - if @page > 1
-            = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
-          - pagination_items.each do |item|
-            - if item == :gap
-              %span.datasets-page-ellipsis{aria: { hidden: true }} ...
-            - elsif item == @page
-              %span.datasets-page-current{aria: { current: "page" }}= item
-            - else
-              = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
-          - if @page < @total_pages
-            = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }
+        - if @total_pages > 1
+          %nav.datasets-pagination.datasets-pagination-top{aria: { label: "Results pagination (top)" }}
+            - if @page > 1
+              = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
+            - pagination_items.each do |item|
+              - if item == :gap
+                %span.datasets-page-ellipsis{aria: { hidden: true }} ...
+              - elsif item == @page
+                %span.datasets-page-current{aria: { current: "page" }}= item
+              - else
+                = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
+            - if @page < @total_pages
+              = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }
 
-      .datasets-per-page-control
-        = f.label :per_page, "Results per page", class: "sr-only"
-        .datasets-per-page-inline
-          = f.select :per_page, options_for_select(Search::DatasetSearch::PER_PAGE_OPTIONS.map { |value| ["#{value} per page", value] }, @per_page), {}, class: "datasets-select-input", aria: { label: "Results per page" }
-          = f.submit "Go", class: "idb-button-primary datasets-go-button", aria: { label: "Apply results per page" }
+        .datasets-per-page-control
+          = f.label :per_page, "Results per page", class: "sr-only"
+          .datasets-per-page-inline
+            = f.select :per_page, options_for_select(Search::DatasetSearch::PER_PAGE_OPTIONS.map { |value| ["#{value} per page", value] }, @per_page), {}, class: "datasets-select-input", aria: { label: "Results per page" }
+            = f.submit "Go", class: "idb-button-primary datasets-go-button", aria: { label: "Apply results per page" }
 
-    .datasets-search-layout
-      %section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
-        .datasets-filter-header
-          %h2#datasets-filters-heading.datasets-section-heading Filters
-          = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "idb-button-secondary datasets-clear-filters"
+      .datasets-search-layout
+        %section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
+          .datasets-filter-header
+            %h2#datasets-filters-heading.datasets-section-heading Filters
+            .datasets-filter-actions
+              = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "idb-button-secondary datasets-clear-filters"
+              - if @total_count.positive?
+                = link_to "Generate Report from Search Results", datasets_path(index_query_params(report: "generate")), class: "idb-button-primary datasets-generate-report-button"
 
-        - if @available_facets.include?(:subjects)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading Subject Area
-            - @facet_options.fetch(:subjects, []).each do |row|
-              - checked = Array(params[:subjects]).include?(row[:value])
-              - subject_id = "subject_#{row[:value].to_s.parameterize}"
-              .facet-row
-                = check_box_tag "subjects[]", row[:value], checked, id: subject_id, class: "facet-checkbox"
-                = label_tag subject_id, "#{row[:value]} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:subjects)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading Subject Area
+              - @facet_options.fetch(:subjects, []).each do |row|
+                - checked = Array(params[:subjects]).include?(row[:value])
+                - subject_id = "subject_#{row[:value].to_s.parameterize}"
+                .facet-row
+                  = check_box_tag "subjects[]", row[:value], checked, id: subject_id, class: "facet-checkbox"
+                  = label_tag subject_id, "#{row[:value]} (#{row[:count]})", class: "facet-label"
 
-        - if @available_facets.include?(:funders)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading Funder
-            - @facet_options.fetch(:funders, []).each do |row|
-              - checked = Array(params[:funders]).include?(row[:value])
-              - funder_id = "funder_#{row[:value].to_s.parameterize}"
-              .facet-row
-                = check_box_tag "funders[]", row[:value], checked, id: funder_id, class: "facet-checkbox"
-                = label_tag funder_id, "#{row.fetch(:label, row[:value])} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:funders)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading Funder
+              - @facet_options.fetch(:funders, []).each do |row|
+                - checked = Array(params[:funders]).include?(row[:value])
+                - funder_id = "funder_#{row[:value].to_s.parameterize}"
+                .facet-row
+                  = check_box_tag "funders[]", row[:value], checked, id: funder_id, class: "facet-checkbox"
+                  = label_tag funder_id, "#{row.fetch(:label, row[:value])} (#{row[:count]})", class: "facet-label"
 
-        - if @available_facets.include?(:publication_years)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading Publication Year
-            - @facet_options.fetch(:publication_years, []).each do |row|
-              - value = row[:value].to_s
-              - checked = Array(params[:publication_years]).include?(value)
-              - year_id = "publication_year_#{value}"
-              .facet-row
-                = check_box_tag "publication_years[]", value, checked, id: year_id, class: "facet-checkbox"
-                = label_tag year_id, "#{value} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:publication_years)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading Publication Year
+              - @facet_options.fetch(:publication_years, []).each do |row|
+                - value = row[:value].to_s
+                - checked = Array(params[:publication_years]).include?(value)
+                - year_id = "publication_year_#{value}"
+                .facet-row
+                  = check_box_tag "publication_years[]", value, checked, id: year_id, class: "facet-checkbox"
+                  = label_tag year_id, "#{value} (#{row[:count]})", class: "facet-label"
 
-        - if @available_facets.include?(:licenses)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading License
-            - @facet_options.fetch(:licenses, []).each do |row|
-              - checked = Array(params[:licenses]).include?(row[:value])
-              - license_id = "license_#{row[:value].to_s.parameterize}"
-              .facet-row
-                = check_box_tag "licenses[]", row[:value], checked, id: license_id, class: "facet-checkbox"
-                = label_tag license_id, "#{row[:value]} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:licenses)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading License
+              - @facet_options.fetch(:licenses, []).each do |row|
+                - checked = Array(params[:licenses]).include?(row[:value])
+                - license_id = "license_#{row[:value].to_s.parameterize}"
+                .facet-row
+                  = check_box_tag "licenses[]", row[:value], checked, id: license_id, class: "facet-checkbox"
+                  = label_tag license_id, "#{row[:value]} (#{row[:count]})", class: "facet-label"
 
-        - if @available_facets.include?(:publication_states)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading Publication State
-            - @facet_options.fetch(:publication_states, []).each do |row|
-              - state_value = row[:value].to_s
-              - checked = Array(params[:publication_states]).include?(state_value)
-              - state_id = "publication_state_#{state_value.parameterize}"
-              .facet-row
-                = check_box_tag "publication_states[]", state_value, checked, id: state_id, class: "facet-checkbox"
-                = label_tag state_id, "#{state_value.humanize} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:publication_states)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading Publication State
+              - @facet_options.fetch(:publication_states, []).each do |row|
+                - state_value = row[:value].to_s
+                - checked = Array(params[:publication_states]).include?(state_value)
+                - state_id = "publication_state_#{state_value.parameterize}"
+                .facet-row
+                  = check_box_tag "publication_states[]", state_value, checked, id: state_id, class: "facet-checkbox"
+                  = label_tag state_id, "#{state_value.humanize} (#{row[:count]})", class: "facet-label"
 
-        - if @available_facets.include?(:depositors)
-          %fieldset.search-facet
-            %legend.panel-title
-              %h3.filter-heading Depositor
-            - @facet_options.fetch(:depositors, []).each do |row|
-              - checked = Array(params[:depositors]).include?(row[:value])
-              - depositor_id = "depositor_#{row[:value].to_s.parameterize}"
-              .facet-row
-                = check_box_tag "depositors[]", row[:value], checked, id: depositor_id, class: "facet-checkbox"
-                = label_tag depositor_id, "#{row[:label]} (#{row[:count]})", class: "facet-label"
+          - if @available_facets.include?(:depositors)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading Depositor
+              - @facet_options.fetch(:depositors, []).each do |row|
+                - checked = Array(params[:depositors]).include?(row[:value])
+                - depositor_id = "depositor_#{row[:value].to_s.parameterize}"
+                .facet-row
+                  = check_box_tag "depositors[]", row[:value], checked, id: depositor_id, class: "facet-checkbox"
+                  = label_tag depositor_id, "#{row[:label]} (#{row[:count]})", class: "facet-label"
 
-      %section.datasets-results-panel{aria: { labelledby: "datasets-results-heading" }}
-        %h2#datasets-results-heading.datasets-section-heading Results
+        %section.datasets-results-panel{aria: { labelledby: "datasets-results-heading" }}
+          %h2#datasets-results-heading.datasets-section-heading Results
 
-        - if @datasets.any?
-          .datasets-results-list
-            - @datasets.each do |dataset|
-              %article.dataset-result-card
-                - if dataset.published_at.present?
-                  %p.dataset-result-published= "published: #{dataset.published_at.to_date}"
-                %h3.dataset-result-title= link_to dataset.title, dataset_path(dataset)
-                - if dataset.description.present?
-                  - if dataset.description.length > 240
-                    - preview = dataset.description[0, 240].rstrip
-                    - remainder = dataset.description[240..]
-                    %p.dataset-result-description{data: { controller: "description-toggle", description_toggle_more_label_value: "more description", description_toggle_less_label_value: "less description" }}
-                      %span= "#{preview}..."
-                      %span{data: { description_toggle_target: "remainder" }, hidden: true}= remainder
-                      = button_tag "more description", type: "button", class: "dataset-description-toggle", data: { action: "description-toggle#toggle", description_toggle_target: "button" }, aria: { expanded: false }
-                  - else
-                    %p.dataset-result-description= dataset.description
-                .dataset-result-meta
-                  - if dataset.subject.present?
-                    %span Subject: #{dataset.subject}
-                  - if dataset.keywords.present?
-                    %span Keywords: #{dataset.keywords}
-                  %span= dataset.key
-        - else
-          %p.no-results No datasets found.
+          - if @datasets.any?
+            .datasets-results-list
+              - @datasets.each do |dataset|
+                %article.dataset-result-card
+                  - if dataset.published_at.present?
+                    %p.dataset-result-published= "published: #{dataset.published_at.to_date}"
+                  %h3.dataset-result-title= link_to dataset.title, dataset_path(dataset)
+                  - if dataset.description.present?
+                    - if dataset.description.length > 240
+                      - preview = dataset.description[0, 240].rstrip
+                      - remainder = dataset.description[240..]
+                      %p.dataset-result-description{data: { controller: "description-toggle", description_toggle_more_label_value: "more description", description_toggle_less_label_value: "less description" }}
+                        %span= "#{preview}..."
+                        %span{data: { description_toggle_target: "remainder" }, hidden: true}= remainder
+                        = button_tag "more description", type: "button", class: "dataset-description-toggle", data: { action: "description-toggle#toggle", description_toggle_target: "button" }, aria: { expanded: false }
+                    - else
+                      %p.dataset-result-description= dataset.description
+                  .dataset-result-meta
+                    - if dataset.subject.present?
+                      %span Subject: #{dataset.subject}
+                    - if dataset.keywords.present?
+                      %span Keywords: #{dataset.keywords}
+                    %span= dataset.key
+          - else
+            %p.no-results No datasets found.
 
-  - if @total_pages > 1
-    %nav.datasets-pagination{aria: { label: "Results pagination (bottom)" }}
-      - if @page > 1
-        = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
-      - pagination_items.each do |item|
-        - if item == :gap
-          %span.datasets-page-ellipsis{aria: { hidden: true }} ...
-        - elsif item == @page
-          %span.datasets-page-current{aria: { current: "page" }}= item
-        - else
-          = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
-      - if @page < @total_pages
-        = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }
+    - if @total_pages > 1
+      %nav.datasets-pagination{aria: { label: "Results pagination (bottom)" }}
+        - if @page > 1
+          = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
+        - pagination_items.each do |item|
+          - if item == :gap
+            %span.datasets-page-ellipsis{aria: { hidden: true }} ...
+          - elsif item == @page
+            %span.datasets-page-current{aria: { current: "page" }}= item
+          - else
+            = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
+        - if @page < @total_pages
+          = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }

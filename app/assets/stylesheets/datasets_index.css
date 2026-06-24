@@ -15,10 +15,10 @@
 
 .datasets-toolbar {
   display: grid;
-  grid-template-columns: minmax(16rem, 2.1fr) minmax(9rem, 1fr) minmax(12rem, 1.35fr) minmax(8rem, 9rem);
+  grid-template-columns: minmax(16rem, 2.1fr) minmax(9rem, 1fr) minmax(12rem, 1.35fr) minmax(11rem, 13rem);
   align-items: end;
   gap: 0.9rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.28rem;
 }
 
 .datasets-query-controls {
@@ -74,7 +74,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
+  min-height: 2.5rem;
   border-radius: 0;
 }
 
@@ -101,7 +101,7 @@
   margin: 0;
   color: var(--idb-muted);
   font-weight: 600;
-  padding: 0.45rem 0;
+  padding: 0.12rem 0 0.04rem;
   align-self: end;
 }
 
@@ -125,17 +125,33 @@
 }
 
 .datasets-section-heading {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.15rem;
   font-size: 1.05rem;
   color: var(--idb-text);
 }
 
 .datasets-filter-header {
+  display: grid;
+  gap: 0.12rem;
+  margin-bottom: 0.1rem;
+}
+
+.datasets-filter-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
-  margin-bottom: 0.5rem;
+}
+
+.datasets-generate-report-button {
+  white-space: nowrap;
+}
+
+.datasets-report-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .search-facet {
@@ -293,16 +309,24 @@
 
 .datasets-go-button {
   min-width: 3.3rem;
+  height: 2.5rem;
+  box-sizing: border-box;
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
   border-radius: 0 4px 4px 0;
 }
 
 .datasets-per-page-inline {
   display: flex;
   gap: 0;
-  align-items: center;
+  align-items: stretch;
 }
 
 .datasets-per-page-inline .datasets-select-input {
+  min-width: 9.5rem;
+  height: 2.5rem;
+  box-sizing: border-box;
   border-right: 0;
   border-radius: 4px 0 0 4px;
 }

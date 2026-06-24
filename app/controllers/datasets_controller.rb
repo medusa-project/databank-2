@@ -7,6 +7,7 @@ class DatasetsController < ApplicationController
     @query = params[:q].to_s
     @per_page = per_page
     @page = page
+    @report_mode = params[:report] == "generate"
 
     @search = Search::DatasetSearch.new(
       scope: datasets_for_current_role,
@@ -22,6 +23,24 @@ class DatasetsController < ApplicationController
     @available_facets = @search.available_facets
     @total_count = @search.total_count
     @total_pages = @search.total_pages
+
+    return unless @report_mode
+
+    report_query = index_query_params(report: nil, download: nil)
+    report_url = datasets_url(report_query)
+    @report = Dataset.citation_report(
+      datasets: @search.report_results.includes(:creators, :funders),
+      request_url: report_url,
+      current_user: current_user
+    )
+
+    if params[:download] == "now"
+      send_data @report, filename: "report.txt", type: "text/plain; charset=utf-8", disposition: "attachment"
+      return
+    end
+
+    @report_back_query_params = report_query
+    @report_download_query_params = index_query_params(report: "generate", download: "now")
   end
 
   def pre_deposit
