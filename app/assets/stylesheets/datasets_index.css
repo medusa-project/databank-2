@@ -527,7 +527,7 @@
 }
 
 .dataset-show-disclosure > .idb-section-body {
-  padding-top: 0;
+  padding: 0 1rem 1rem 1rem;
 }
 
 .dataset-show-metadata {

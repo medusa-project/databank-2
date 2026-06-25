@@ -73,6 +73,45 @@ class Datafile < ApplicationRecord
     ).exists?
   end
 
+  # File type predicates based on MIME type
+  def content_type
+    return @content_type if defined?(@content_type)
+
+    @content_type = if binary.attached?
+                      binary.content_type.to_s.presence
+    elsif binary_name.present?
+                      Marcel::MimeType.for(name: binary_name).to_s
+    else
+                      "application/octet-stream"
+    end
+  rescue StandardError
+    @content_type = "application/octet-stream"
+  end
+
+  def text?
+    content_type.start_with?("text/")
+  end
+
+  def pdf?
+    content_type == "application/pdf"
+  end
+
+  def image?
+    content_type.start_with?("image/")
+  end
+
+  def microsoft?
+    microsoft_mimes = [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/msword",
+      "application/vnd.ms-excel",
+      "application/vnd.ms-powerpoint"
+    ]
+    microsoft_mimes.include?(content_type)
+  end
+
   private
 
   def set_web_id

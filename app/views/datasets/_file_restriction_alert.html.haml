@@ -1,0 +1,7 @@
+- if dataset.embargo_mode == Dataset::EMBARGO_FILE || dataset.embargo_mode == Dataset::EMBARGO_METADATA
+  .alert.alert-warning{role: "alert"}
+    %strong Warning:
+    - if dataset.embargo_mode == Dataset::EMBARGO_FILE
+      %span File access is currently restricted due to embargo. Files will become available on #{dataset.release_date.strftime('%B %d, %Y')}.
+    - elsif dataset.embargo_mode == Dataset::EMBARGO_METADATA
+      %span This dataset is currently under embargo. Both metadata and files will become publicly available on #{dataset.release_date.strftime('%B %d, %Y')}.

@@ -1,0 +1,391 @@
+/* -----------------------------------------------------------------------
+ * Dataset Show View Styles
+ * Specific styling for the dataset detail/show view
+ * ----------------------------------------------------------------------- */
+
+/* Add left padding to create space between the left border and content */
+.dataset-show-disclosure > .idb-section-body {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Files section controls bar */
+.dataset-files-controls {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f7fafc;
+  border: 1px solid var(--il-storm-85);
+  border-radius: 0.4rem;
+}
+
+.dataset-files-controls-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.dataset-select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dataset-select-all-label input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.dataset-files-controls-left {
+  flex-shrink: 0;
+}
+
+.dataset-files-controls-center {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dataset-files-controls-right {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dataset-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--il-blue);
+  font-size: 0.9rem;
+}
+
+.dataset-help-link:hover {
+  text-decoration: underline;
+}
+
+/* Multi-column file list */
+.dataset-files-list {
+  margin-top: 1.5rem;
+  display: block;
+}
+
+.dataset-files-header {
+  display: grid;
+  grid-template-columns: 3rem minmax(200px, 1fr) 100px 90px 120px;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f7fafc;
+  border: 1px solid var(--il-storm-85);
+  border-radius: 0.4rem 0.4rem 0 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-bottom: 2px solid var(--il-blue);
+}
+
+.dataset-files-header .dataset-file-col-checkbox,
+.dataset-files-header .dataset-file-col-name,
+.dataset-files-header .dataset-file-col-size,
+.dataset-files-header .dataset-file-col-preview,
+.dataset-files-header .dataset-file-col-download {
+  display: flex;
+  align-items: center;
+}
+
+.dataset-file-item {
+  display: grid !important;
+  grid-template-columns: 3rem minmax(200px, 1fr) 100px 90px 120px !important;
+  gap: 0.75rem;
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--il-storm-90);
+  align-items: start;
+}
+
+.dataset-file-item:last-child {
+  border-bottom: 1px solid var(--il-storm-85);
+  border-radius: 0 0 0.4rem 0.4rem;
+}
+
+.dataset-file-col-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dataset-file-col-checkbox label {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.dataset-file-col-checkbox input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.dataset-file-col-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  word-break: break-word;
+}
+
+.dataset-file-col-name label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.dataset-file-col-name input[type="checkbox"] {
+  margin: 0.25rem 0 0 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dataset-file-description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--il-storm-60);
+  font-style: italic;
+}
+
+.dataset-file-col-size {
+  display: flex;
+  align-items: center;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataset-file-col-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dataset-file-col-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.idb-button-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Responsive layout for tablet */
+@media (max-width: 1200px) {
+  .dataset-files-header,
+  .dataset-file-item {
+    grid-template-columns: 2.5rem minmax(150px, 1fr) 90px 80px 100px !important;
+    gap: 0.5rem;
+  }
+
+  .dataset-file-col-name {
+    min-width: 0;
+  }
+
+  .dataset-files-controls-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dataset-files-controls-left,
+  .dataset-files-controls-center,
+  .dataset-files-controls-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dataset-files-controls-right {
+    justify-content: flex-start;
+  }
+}
+
+/* Responsive layout for mobile */
+@media (max-width: 640px) {
+  .dataset-files-header {
+    display: none;
+  }
+
+  .dataset-files-list {
+    margin-top: 1rem;
+  }
+
+  .dataset-file-item {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--il-storm-90);
+    border-radius: 0.4rem;
+    margin-bottom: 0.75rem;
+    background-color: #fafbfc;
+  }
+
+  .dataset-file-item:last-child {
+    border-color: var(--il-storm-90);
+  }
+
+  .dataset-file-col-checkbox,
+  .dataset-file-col-name,
+  .dataset-file-col-size,
+  .dataset-file-col-preview,
+  .dataset-file-col-download {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .dataset-file-col-size::before {
+    content: "Size: ";
+    font-weight: 700;
+    margin-right: 0.5rem;
+  }
+
+  .dataset-file-col-preview,
+  .dataset-file-col-download {
+    gap: 0.5rem;
+  }
+
+  .dataset-file-col-preview::before {
+    content: "";
+  }
+
+  .dataset-file-col-download::before {
+    content: "";
+  }
+
+  .dataset-files-controls-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dataset-files-controls-center button {
+    width: 100%;
+  }
+}
+
+/* Text preview page */
+.dataset-text-preview {
+  min-height: 100vh;
+}
+
+.dataset-text-content {
+  background-color: #f5f5f5;
+  border: 1px solid var(--il-storm-85);
+  border-radius: 0.4rem;
+  padding: 1rem;
+  max-height: 80vh;
+  overflow: auto;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "monospace";
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--il-text);
+}
+
+.dataset-preview-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Download Link Modal */
+#download-link-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+#download-link-modal[aria-hidden="true"] {
+  display: none !important;
+}
+
+#download-link-modal[aria-hidden="false"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: #ffffff;
+  border-radius: 0.4rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--il-text);
+}
+
+.download-link-info {
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.download-link-info p {
+  margin: 0.75rem 0;
+}
+
+.download-link-info a {
+  color: var(--il-blue);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.download-link-info a:hover {
+  color: var(--il-blue-darker, #003366);
+}
+
+.download-link-info a:focus {
+  outline: 2px solid var(--il-blue);
+  outline-offset: 2px;
+}
+
+/* Modal close button */
+#download-link-modal .idb-button-secondary {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* Responsive modal for smaller screens */
+@media (max-width: 640px) {
+  #download-link-modal {
+    padding: 1rem;
+  }
+
+  .modal-content {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .modal-content h2 {
+    font-size: 1.25rem;
+  }
+}

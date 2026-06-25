@@ -54,6 +54,11 @@ class DatasetsController < ApplicationController
     @latest_delivery_attempts = latest_delivery_attempts
     @failed_delivery_counts = failed_delivery_counts
     @ingest_health_summary = Ingest::HealthSummary.new(dataset: @dataset, latest_attempt: @latest_delivery_attempts["ingest"]).call
+
+    # File download availability
+    @dataset_preserved = @dataset.fileset_preserved?
+    @globus_downloadable = @dataset.globus_downloadable?
+    @dataset_aggregate_downloadable = (@dataset_preserved || @globus_downloadable) && !@dataset.external_files?
   end
 
   def record_text

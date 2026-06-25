@@ -1,0 +1,19 @@
+.ilw-content
+  .dataset-text-preview
+    %section.dataset-show-panel.idb-rounded-section{aria: { label: "File preview" }}
+      .idb-section-body
+        %h1= @datafile.binary_name.presence || @datafile.web_id
+        
+        - if defined?(error)
+          .alert.alert-warning{role: "alert"}
+            %strong Warning:
+            = error
+        
+        - if @text_content.present?
+          %pre.dataset-text-content= @text_content
+        - else
+          %p No content to display.
+        
+        %div.dataset-preview-actions
+          = link_to "Download", download_dataset_datafile_path(@dataset, @datafile), class: "idb-button-primary"
+          = link_to "Back", dataset_path(@dataset), class: "idb-button-secondary"
