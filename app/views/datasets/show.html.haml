@@ -27,10 +27,6 @@
 
     .dataset-show-titlebar
       = render "datasets/workflow/show_actions", dataset: @dataset
-      .idb-workflow-strip
-        %nav.idb-workflow-actions-right{aria: { label: "Dataset text record actions" }}
-          = link_to "Dataset info text", record_text_dataset_path(@dataset), class: "idb-button-secondary"
-
     - if citation_text.present? || doi_url.present?
       .dataset-show-citation
         - if citation_text.present?
@@ -43,8 +39,7 @@
             %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
             .dataset-show-persistent-controls
               %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
-              %button.idb-button-primary.dataset-show-copy-button{type: "button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });"}
-                Copy
+              = semantic_action_button(action: :copy, style: :idb, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
               %span#copy-status.sr-only{aria: { live: "polite" }}
 
     - if logged_in? && can?(:update, @dataset)

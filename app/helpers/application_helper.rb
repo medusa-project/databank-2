@@ -123,6 +123,12 @@ module ApplicationHelper
       icon: "minus",
       icon_style: :solid
     },
+    copy: {
+      label: "Copy",
+      variant: "secondary",
+      icon: "copy",
+      icon_style: :regular
+    },
     report_back_to_search: {
       label: "Go back to search",
       variant: "secondary",
