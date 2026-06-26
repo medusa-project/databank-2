@@ -7,6 +7,24 @@ export default class extends Controller {
     const checkboxes = document.querySelectorAll('input[name="selected_files[]"]:checked')
     const button = document.getElementById("request-download-button")
     button.disabled = checkboxes.length === 0
+    
+    // Update button text with count
+    const allCheckboxes = document.querySelectorAll('input[name="selected_files[]"]')
+    const countSpan = document.getElementById("custom-download-count")
+    if (countSpan) {
+      countSpan.textContent = `(${checkboxes.length})`
+    }
+  }
+
+  toggleSelectAll(event) {
+    const isChecked = event.target.checked
+    const checkboxes = document.querySelectorAll('input[name="selected_files[]"]')
+    
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = isChecked
+    })
+    
+    this.updateTotal()
   }
 
   requestDownload() {
@@ -69,7 +87,22 @@ export default class extends Controller {
 
     if (modal) {
       modal.setAttribute("aria-hidden", "false")
-      modal.style.display = "block"
+      modal.style.display = "flex"
+      
+      // Capture focus in the modal
+      const closeButton = modal.querySelector("button")
+      if (closeButton) {
+        // Small delay to ensure display is applied
+        setTimeout(() => closeButton.focus(), 50)
+      }
+      
+      // Bind keyboard handler for Escape key
+      this.modalKeyHandler = (e) => {
+        if (e.key === "Escape") {
+          this.closeModal()
+        }
+      }
+      document.addEventListener("keydown", this.modalKeyHandler)
     }
   }
 
@@ -78,6 +111,18 @@ export default class extends Controller {
     if (modal) {
       modal.setAttribute("aria-hidden", "true")
       modal.style.display = "none"
+      
+      // Remove keyboard handler
+      if (this.modalKeyHandler) {
+        document.removeEventListener("keydown", this.modalKeyHandler)
+        this.modalKeyHandler = null
+      }
+      
+      // Return focus to the button that opened the modal
+      const button = document.getElementById("request-download-button")
+      if (button) {
+        button.focus()
+      }
     }
   }
 

@@ -1,0 +1,4 @@
+- if dataset.published? && dataset.fileset_preserved? && !@globus_downloadable
+  .alert.alert-info{role: "alert"}
+    %strong Note:
+    %span This dataset has been published but is not yet available through Globus. It may take some time for files to appear. Please try again later or contact support if you experience issues.

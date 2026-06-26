@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_24_213000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_25_200346) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -440,6 +440,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_24_213000) do
     t.index ["status"], name: "index_migration_runs_on_status"
   end
 
+  create_table "nested_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "datafile_id", null: false
+    t.boolean "is_directory", default: false
+    t.string "item_name", null: false
+    t.text "item_path"
+    t.string "media_type"
+    t.bigint "parent_id"
+    t.bigint "size"
+    t.datetime "updated_at", null: false
+    t.index ["datafile_id", "item_name"], name: "index_nested_items_on_datafile_id_and_item_name"
+    t.index ["datafile_id"], name: "index_nested_items_on_datafile_id"
+    t.index ["parent_id"], name: "index_nested_items_on_parent_id"
+  end
+
   create_table "notes", force: :cascade do |t|
     t.string "author"
     t.text "body"
@@ -536,6 +551,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_24_213000) do
   add_foreign_key "guide_items", "guide_sections", column: "section_id"
   add_foreign_key "guide_subitems", "guide_items", column: "item_id"
   add_foreign_key "ingest_response_events", "external_delivery_attempts"
+  add_foreign_key "nested_items", "datafiles"
+  add_foreign_key "nested_items", "nested_items", column: "parent_id"
   add_foreign_key "notes", "datasets"
   add_foreign_key "related_material_relationships", "related_materials"
   add_foreign_key "related_materials", "datasets"

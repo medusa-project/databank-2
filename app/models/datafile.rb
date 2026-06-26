@@ -1,17 +1,20 @@
 class Datafile < ApplicationRecord
   include Datafile::Storable
+  include Datafile::Viewable
 
   WEB_ID_LENGTH = 5 unless const_defined?(:WEB_ID_LENGTH)
 
   belongs_to :dataset
   has_one_attached :binary
   has_one :archive_extract_request, dependent: :destroy
+  has_many :nested_items, dependent: :destroy
 
   validates :web_id,      presence: true, uniqueness: true,
                           format: { with: /\A[a-z0-9]{#{WEB_ID_LENGTH}}\z/ }
   validates :binary_name, presence: true, allow_blank: true
 
   before_validation :set_web_id, on: :create
+  after_save :set_peek_type_after_save
 
   def to_param
     web_id
@@ -73,6 +76,45 @@ class Datafile < ApplicationRecord
     ).exists?
   end
 
+  # File type predicates based on MIME type
+  def content_type
+    return @content_type if defined?(@content_type)
+
+    @content_type = if binary.attached?
+                      binary.content_type.to_s.presence
+    elsif binary_name.present?
+                      Marcel::MimeType.for(name: binary_name).to_s
+    else
+                      "application/octet-stream"
+    end
+  rescue StandardError
+    @content_type = "application/octet-stream"
+  end
+
+  def text?
+    content_type.start_with?("text/")
+  end
+
+  def pdf?
+    content_type == "application/pdf"
+  end
+
+  def image?
+    content_type.start_with?("image/")
+  end
+
+  def microsoft?
+    microsoft_mimes = [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/msword",
+      "application/vnd.ms-excel",
+      "application/vnd.ms-powerpoint"
+    ]
+    microsoft_mimes.include?(content_type)
+  end
+
   private
 
   def set_web_id
@@ -84,5 +126,12 @@ class Datafile < ApplicationRecord
       candidate = (36**(WEB_ID_LENGTH - 1) + rand(36**WEB_ID_LENGTH - 36**(WEB_ID_LENGTH - 1))).to_s(36)
       break candidate unless self.class.exists?(web_id: candidate)
     end
+  end
+
+  def set_peek_type_after_save
+    return if peek_type.present?
+
+    set_peek_type
+    update_column(:peek_type, peek_type) if peek_type.present?
   end
 end

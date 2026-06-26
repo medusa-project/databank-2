@@ -185,50 +185,84 @@
           %summary
             %h2.dataset-show-section-title Files
           .idb-section-body
-            - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1
-              .dataset-show-custom-download
-                %h3 Download Selected Files
-                %p= "Create a custom zip file with selected files from this dataset."
+            = render "file_restriction_alert", dataset: @dataset
+            = render "globus_delay_alert", dataset: @dataset
+            
+            - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+              .dataset-files-controls
+                %form#custom-download-form{data: {controller: "custom-downloader"}, style: "margin: 0"}
+                  .dataset-files-controls-row
+                    .dataset-files-controls-left
+                      %label.dataset-select-all-label
+                        %input#checkAllFiles{type: "checkbox", data: {action: "custom-downloader#toggleSelectAll"}, aria: {label: "Select all files"}}
+                        %span Select all
+                    .dataset-files-controls-center
+                      %button.idb-button-primary{type: "button", data: {action: "custom-downloader#requestDownload"}, id: "request-download-button", disabled: true, aria: {label: "Create a custom zip file with selected files from this dataset"}}
+                        %span Get Custom Zip and Download Link for Selected
+                        %span#custom-download-count (0)
+                    - if @globus_downloadable
+                      .dataset-files-controls-right
+                        = link_to "Open in Globus", dataset_open_in_globus_path(@dataset), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: {label: "Open files in Globus transfer service"}
+                        %a{href: guides_path(anchor: "upload_globus"), target: "_blank", rel: "noopener noreferrer", class: "dataset-help-link", aria: {label: "What is Globus?"}}
+                          %i.far.fa-question-circle
+                          %span what's this?
 
-                %form#custom-download-form{data: {controller: "custom-downloader"}, style: "margin: 1rem 0"}
-                  .dataset-custom-files-checkboxes
-                    - @dataset.datafiles.each do |datafile|
-                      .dataset-custom-file-item
-                        %label
-                          %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, data: {action: "custom-downloader#updateTotal"}, class: "dataset-file-checkbox"}
-                          = datafile.binary_name.presence || datafile.web_id
-                          - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
-                          - if file_size.present?
-                            %span.dataset-file-size= "(" + number_to_human_size(file_size) + ")"
-
-                  .dataset-download-info
-                    %p
-                      %strong Total size:
-                      %span#custom-download-total-size 0 bytes
-
-                  .dataset-download-actions
-                    %button.idb-button-primary{type: "button", data: {action: "custom-downloader#requestDownload"}, id: "request-download-button", disabled: true}
-                      Get Custom Zip and Download Link for Selected
-
-              #download-link-modal.modal{role: "dialog", aria: {labelledby: "download-link-modal-title", hidden: "true"}}
+              #download-link-modal{role: "dialog", aria: {labelledby: "download-link-modal-title", hidden: "true"}}
                 .modal-content
                   %h2#download-link-modal-title Download Link Ready
                   .download-link-info
                     %p Your download link is ready:
                     %p#download-link-result
                     %p#download-file-size
-                  %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}} Close
-            %ul.dataset-show-file-list
-              - @dataset.datafiles.each do |datafile|
-                - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
-                %li
-                  .dataset-show-file-row
-                    %span.dataset-show-list-primary.dataset-show-file-name= datafile.binary_name.presence || datafile.web_id
-                    %span.dataset-show-list-secondary.dataset-show-file-size= file_size.present? ? number_to_human_size(file_size) : "-"
-                    - if can?(:view_files, @dataset)
-                      %span.dataset-show-download.dataset-show-download-cell= link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary dataset-show-download-button"
-                  - if datafile.description.present?
-                    %span.dataset-show-list-tertiary.dataset-show-file-description= datafile.description
+                  %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}, aria: {label: "Close download link modal"}} Close
+
+            .dataset-files-list
+              - if @dataset.datafiles.count > 0
+                .dataset-files-header
+                  .dataset-file-col-checkbox
+                    - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                      %span.sr-only Select files
+                  .dataset-file-col-name
+                    %span File Name
+                  .dataset-file-col-size
+                    %span File Size
+                  - if can?(:view_files, @dataset)
+                    .dataset-file-col-preview
+                      %span Preview
+                    .dataset-file-col-download
+                      %span Download
+
+                - @dataset.datafiles.each do |datafile|
+                  - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
+                  .dataset-file-item
+                    .dataset-file-col-checkbox
+                      - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                        %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, data: {action: "custom-downloader#updateTotal"}, class: "dataset-file-checkbox", aria: {label: "Select #{datafile.binary_name.presence || datafile.web_id}"}}
+                    .dataset-file-col-name
+                      - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                        %span= datafile.binary_name.presence || datafile.web_id
+                      - else
+                        %span= datafile.binary_name.presence || datafile.web_id
+                      - if datafile.description.present?
+                        %p.dataset-file-description= datafile.description
+                    .dataset-file-col-size
+                      %span= file_size.present? ? number_to_human_size(file_size) : "-"
+                    .dataset-file-col-preview
+                      - if can?(:view_files, @dataset)
+                        - if datafile.text?
+                          = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
+                        - elsif datafile.pdf?
+                          = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
+                        - elsif datafile.image?
+                          = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
+                        - elsif datafile.microsoft?
+                          = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
+                    .dataset-file-col-download
+                      - if can?(:view_files, @dataset)
+                        = link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary idb-button-sm", aria: {label: "Download #{datafile.binary_name.presence || datafile.web_id}"}
+              - else
+                %p No files available.
+
 
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Change log" }}
       %details.idb-section-disclosure.dataset-show-disclosure

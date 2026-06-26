@@ -1,5 +1,6 @@
 class Dataset < ApplicationRecord
   include Dataset::IllinoisExpertsExportable
+  include Dataset::Globusable
 
   class << self
     def citation_report(datasets:, request_url:, current_user:)

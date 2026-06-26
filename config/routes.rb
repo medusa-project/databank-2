@@ -41,7 +41,10 @@ Rails.application.routes.draw do
       post :replay_failed_deliveries
     end
     resources :datafiles, param: :web_id, except: %i[index new show] do
-      member { get :download }
+      member {
+        get :download
+        get :view
+      }
     end
     resources :dataset_access_grants, only: %i[create destroy]
     resources :creators,          except: %i[index new show] do
