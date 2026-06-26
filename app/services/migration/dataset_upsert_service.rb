@@ -201,11 +201,45 @@ module Migration
       end
 
       sync_collection!(dataset.datafiles, normalized_datafiles) do |record, attrs|
+        nested_items = attrs.delete(:nested_items)
         record.assign_attributes(attrs)
+        sync_nested_items!(record, nested_items) if nested_items.present?
       end
 
       sync_collection!(dataset.notes, normalized_notes) do |record, attrs|
         record.assign_attributes(attrs)
+      end
+    end
+
+    def sync_nested_items!(datafile, nested_items_data)
+      datafile.nested_items.delete_all if overwrite
+      return if nested_items_data.blank?
+
+      build_nested_items_tree(parent_datafile: datafile, items_data: nested_items_data, parent_item: nil)
+    end
+
+    def build_nested_items_tree(parent_datafile:, items_data:, parent_item:)
+      Array(items_data).each do |item_data|
+        nested_item = NestedItem.find_or_create_by(
+          datafile_id: parent_datafile.id,
+          parent_id: parent_item&.id,
+          item_name: item_data["item_name"]
+        )
+
+        nested_item.update!(
+          media_type: item_data["media_type"],
+          size: item_data["size"],
+          item_path: item_data["item_path"],
+          is_directory: item_data["is_directory"] || false
+        )
+
+        if item_data["children"].present?
+          build_nested_items_tree(
+            parent_datafile: parent_datafile,
+            items_data: item_data["children"],
+            parent_item: nested_item
+          )
+        end
       end
     end
 
@@ -349,8 +383,11 @@ module Migration
           storage_root: datafile["storage_root"],
           storage_key: datafile["storage_key"],
           description: datafile["description"],
+          peek_type: datafile["peek_type"],
+          peek_content: datafile["peek_text"],
           source_created_at: datafile["created_at"],
-          source_updated_at: datafile["updated_at"]
+          source_updated_at: datafile["updated_at"],
+          nested_items: datafile["nested_items"]
         }
       end
     end
