@@ -1,6 +1,9 @@
 require "rails_helper"
+require Rails.root.join("spec/support/archive_extractor_payload_helper")
 
 RSpec.describe ArchiveExtractor::ResponseConsumer, type: :service do
+  include ArchiveExtractorPayloadHelper
+
   let(:sqs_client) { double("sqs_client") }
   let(:message_root) { double("message_root") }
   let(:logger) { instance_double(Logger, error: nil, warn: nil) }
@@ -19,20 +22,46 @@ RSpec.describe ArchiveExtractor::ResponseConsumer, type: :service do
     let!(:request) { ArchiveExtractRequest.create!(datafile: datafile, status: :pending) }
 
     it "persists successful extractor responses and updates datafile peek" do
-      envelope = {
-        "object_key" => "messages/#{datafile.web_id}.json",
-        "s3_status" => "success",
-        "error" => []
-      }
-      payload = {
-        "web_id" => datafile.web_id,
-        "status" => "success",
-        "peek_type" => "listing",
-        "peek_text" => "peek result",
-        "error" => [
+      stale_item = datafile.nested_items.create!(
+        item_name: "stale.txt",
+        item_path: "stale.txt",
+        media_type: "text/plain",
+        size: 9,
+        is_directory: false
+      )
+
+      envelope = archive_envelope(web_id: datafile.web_id)
+      payload = archive_payload(
+        web_id: datafile.web_id,
+        peek_type: "listing",
+        nested_items: [
+          {
+            "item_name" => "folder",
+            "item_path" => "folder",
+            "media_type" => "inode/directory",
+            "is_directory" => true,
+            "children" => [
+              {
+                "item_name" => "child.txt",
+                "item_path" => "folder/child.txt",
+                "media_type" => "text/plain",
+                "item_size" => 123,
+                "is_directory" => false
+              }
+            ]
+          },
+          {
+            "item_name" => "root.txt",
+            "item_path" => "root.txt",
+            "media_type" => "text/plain",
+            "size" => 42,
+            "is_directory" => false
+          }
+        ],
+        error: [
           { "error_type" => "example", "report" => "example report" }
         ]
-      }
+      )
 
       message = double("message", body: envelope.to_json, receipt_handle: "receipt-1")
       allow(sqs_client).to receive(:receive_message).and_return(double(messages: [ message ]))
@@ -55,8 +84,20 @@ RSpec.describe ArchiveExtractor::ResponseConsumer, type: :service do
       expect(request.archive_extract_response).to be_present
       expect(request.archive_extract_response.status).to eq("success")
       expect(request.archive_extract_errors.count).to eq(1)
-      expect(datafile.reload.peek_type).to eq("listing")
+      expect(datafile.reload.peek_type).to eq("archive")
       expect(datafile.peek_content).to eq("peek result")
+
+      expect(datafile.nested_items.where(id: stale_item.id)).to be_empty
+      expect(datafile.nested_items.count).to eq(3)
+
+      folder = datafile.nested_items.find_by!(item_name: "folder")
+      child = datafile.nested_items.find_by!(item_name: "child.txt")
+      root_file = datafile.nested_items.find_by!(item_name: "root.txt")
+
+      expect(folder.is_directory).to be(true)
+      expect(child.parent_id).to eq(folder.id)
+      expect(child.size).to eq(123)
+      expect(root_file.parent_id).to be_nil
     end
 
     it "skips messages without object_key and acknowledges the message" do

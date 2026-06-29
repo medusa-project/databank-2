@@ -1,4 +1,6 @@
 class DatafilesController < ApplicationController
+  ArchiveTreeNode = Struct.new(:name, :path, :is_directory, :size, :children, keyword_init: true)
+
   skip_before_action :authenticate_user!, only: %i[download view]
 
   before_action :set_dataset
@@ -80,27 +82,36 @@ class DatafilesController < ApplicationController
       return
     end
 
-    # For text files: render inline
-    if @datafile.text?
+    # For text and markdown previews, render stored preview content.
+    if @datafile.text? || @datafile.markdown?
       render_text_preview
       return
     end
 
     # For PDFs: redirect to viewer route or serve with inline disposition
     if @datafile.pdf?
+      @datafile.record_download(request.remote_ip)
       render_pdf_preview
       return
     end
 
     # For images: render image view
     if @datafile.image?
+      @datafile.record_download(request.remote_ip)
       render_image_preview
       return
     end
 
     # For Microsoft files: redirect to Office365 viewer
     if @datafile.microsoft?
+      @datafile.record_download(request.remote_ip)
       redirect_to microsoft_preview_url(@datafile), allow_other_host: true
+      return
+    end
+
+    # For archive files: render nested archive listing page
+    if @datafile.archive?
+      render_archive_preview
       return
     end
 
@@ -124,7 +135,9 @@ class DatafilesController < ApplicationController
   end
 
   def render_text_preview
-    @text_content = if @datafile.binary.attached?
+    @text_content = if @datafile.peek_content.present?
+                      @datafile.peek_content
+    elsif @datafile.binary.attached?
                       @datafile.binary.download.force_encoding("UTF-8")
     elsif @datafile.exists_on_storage?
                       @datafile.with_input_io do |io|
@@ -134,9 +147,17 @@ class DatafilesController < ApplicationController
                       "(Preview not available)"
     end
 
+    @render_markdown = @datafile.markdown?
+
     render :text_preview
   rescue Encoding::InvalidByteSequenceError
     render :text_preview, locals: { error: "File contains invalid UTF-8 characters and cannot be displayed" }
+  end
+
+  def render_archive_preview
+    nested_items = @datafile.nested_items.order(:item_path, :item_name)
+    @archive_nodes = build_archive_tree(nested_items: nested_items)
+    render :archive_preview
   end
 
   def render_pdf_preview
@@ -190,5 +211,99 @@ class DatafilesController < ApplicationController
 
     file_url = url_for(datafile.binary)
     "https://view.officeapps.live.com/op/view.aspx?src=#{ERB::Util.url_encode(file_url)}"
+  end
+
+  def build_archive_tree(nested_items:)
+    return [] if nested_items.blank?
+
+    if nested_items.where.not(parent_id: nil).exists?
+      build_archive_tree_from_parent_ids(nested_items: nested_items)
+    else
+      build_archive_tree_from_paths(nested_items: nested_items)
+    end
+  end
+
+  def build_archive_tree_from_parent_ids(nested_items:)
+    node_by_id = {}
+    nested_items.each do |item|
+      node_by_id[item.id] = ArchiveTreeNode.new(
+        name: item.item_name,
+        path: item.item_path,
+        is_directory: ActiveModel::Type::Boolean.new.cast(item.is_directory),
+        size: item.size,
+        children: []
+      )
+    end
+
+    roots = []
+    nested_items.each do |item|
+      node = node_by_id[item.id]
+      parent_node = node_by_id[item.parent_id]
+      if parent_node
+        parent_node.children << node
+      else
+        roots << node
+      end
+    end
+
+    sort_archive_nodes!(nodes: roots)
+  end
+
+  def build_archive_tree_from_paths(nested_items:)
+    root_map = {}
+
+    nested_items.each do |item|
+      path = item.item_path.presence || item.item_name.to_s
+      parts = path.split("/").reject(&:blank?)
+      next if parts.empty?
+
+      current = root_map
+      built_path = []
+
+      parts.each_with_index do |part, index|
+        built_path << part
+        key = built_path.join("/")
+        is_last = index == parts.length - 1
+
+        current[key] ||= ArchiveTreeNode.new(
+          name: part,
+          path: key,
+          is_directory: !is_last,
+          size: nil,
+          children: {}
+        )
+
+        node = current[key]
+        if is_last
+          node.is_directory = true if ActiveModel::Type::Boolean.new.cast(item.is_directory)
+          node.size = item.size if item.size.present?
+        end
+
+        current = node.children
+      end
+    end
+
+    nodes = root_map.values
+    finalize_archive_path_nodes!(nodes: nodes)
+    sort_archive_nodes!(nodes: nodes)
+  end
+
+  def finalize_archive_path_nodes!(nodes:)
+    nodes.each do |node|
+      if node.children.is_a?(Hash)
+        child_nodes = node.children.values
+        node.children = child_nodes
+      end
+      node.is_directory = true if node.children.any?
+      finalize_archive_path_nodes!(nodes: node.children)
+    end
+  end
+
+  def sort_archive_nodes!(nodes:)
+    nodes.each { |node| sort_archive_nodes!(nodes: node.children) }
+
+    nodes.sort_by do |node|
+      [ node.is_directory ? 0 : 1, node.name.to_s.downcase ]
+    end
   end
 end

@@ -140,10 +140,49 @@ module ArchiveExtractor
         raw_response: raw_response
       )
 
+      normalized_peek_type = normalized_peek_type(payload["peek_type"])
+
       request.datafile.update!(
-        peek_type: payload["peek_type"],
+        peek_type: normalized_peek_type,
         peek_content: payload["peek_text"]
       )
+
+      sync_nested_items!(datafile: request.datafile, nested_items_data: payload["nested_items"]) if payload.key?("nested_items")
+    end
+
+    def sync_nested_items!(datafile:, nested_items_data:)
+      datafile.nested_items.destroy_all
+      return if nested_items_data.blank?
+
+      create_nested_items!(datafile: datafile, items_data: Array(nested_items_data), parent_item: nil)
+    end
+
+    def create_nested_items!(datafile:, items_data:, parent_item:)
+      items_data.each do |item|
+        nested_item = datafile.nested_items.create!(
+          parent: parent_item,
+          item_name: item["item_name"].presence || item["name"].presence || "unnamed",
+          item_path: item["item_path"],
+          media_type: item["media_type"],
+          size: item["size"] || item["item_size"],
+          is_directory: truthy?(item["is_directory"])
+        )
+
+        children = item["children"]
+        next if children.blank?
+
+        create_nested_items!(datafile: datafile, items_data: Array(children), parent_item: nested_item)
+      end
+    end
+
+    def normalized_peek_type(value)
+      return "archive" if value.to_s == "listing"
+
+      value
+    end
+
+    def truthy?(value)
+      ActiveModel::Type::Boolean.new.cast(value)
     end
 
     def extract_errors(payload:, envelope:)

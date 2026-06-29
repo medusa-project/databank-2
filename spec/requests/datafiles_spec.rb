@@ -203,6 +203,206 @@ RSpec.describe "Datafiles", type: :request do
     expect(response.body).to include("Download placeholder for #{datafile.web_id}")
   end
 
+  it "renders text preview from persisted peek content without storage access" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: "all_text",
+      peek_content: "cached preview text"
+    )
+
+    expect_any_instance_of(Datafile).not_to receive(:exists_on_storage?)
+    expect_any_instance_of(Datafile).not_to receive(:with_input_io)
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("cached preview text")
+  end
+
+  it "renders markdown preview content as sanitized HTML" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: "markdown",
+      peek_content: "<h2>Overview</h2><script>alert('x')</script><p>Paragraph</p>"
+    )
+
+    expect_any_instance_of(Datafile).not_to receive(:exists_on_storage?)
+    expect_any_instance_of(Datafile).not_to receive(:with_input_io)
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    preview_html = Nokogiri::HTML(response.body).at_css(".dataset-text-content")&.inner_html.to_s
+
+    expect(response).to have_http_status(:ok)
+    expect(preview_html).to include("<h2>Overview</h2>")
+    expect(preview_html).to include("<p>Paragraph</p>")
+    expect(preview_html).not_to include("<script")
+  end
+
+  it "renders part_text preview from persisted peek content" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: "part_text",
+      peek_content: "truncated preview lines"
+    )
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("truncated preview lines")
+  end
+
+  it "renders archive preview page with nested items" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(:datafile, dataset: dataset, attach_binary: false, peek_type: "archive")
+    root = datafile.nested_items.create!(
+      item_name: "folder",
+      item_path: "folder",
+      media_type: "inode/directory",
+      is_directory: true
+    )
+    datafile.nested_items.create!(
+      item_name: "file.txt",
+      item_path: "folder/file.txt",
+      media_type: "text/plain",
+      size: 25,
+      parent: root,
+      is_directory: false
+    )
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Archive Contents")
+    expect(response.body).to include("folder")
+    expect(response.body).to include("file.txt")
+    expect(response.body).to include("idb-archive-depth-0")
+    expect(response.body).to include("idb-archive-depth-1")
+    expect(response.body).to include("idb-archive-branch")
+  end
+
+  it "renders PDF preview inline" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    published_dataset = create(
+      :dataset,
+      :published,
+      depositor_email: owner_email,
+      identifier: "10.5555/pdf-view-count"
+    )
+    datafile = create(:datafile, dataset: published_dataset, peek_type: "pdf")
+
+    get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.12" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Type"]).to include("application/pdf")
+    expect(response.headers["Content-Disposition"]).to include("inline")
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally).to eq(1)
+  end
+
+  it "renders image preview inline" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    published_dataset = create(
+      :dataset,
+      :published,
+      depositor_email: owner_email,
+      identifier: "10.5555/image-view-count"
+    )
+    datafile = create(:datafile, dataset: published_dataset, peek_type: "image")
+
+    get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.13" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Type"]).to include("text/csv")
+    expect(response.headers["Content-Disposition"]).to include("inline")
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally).to eq(1)
+  end
+
+  it "redirects microsoft preview files to Office viewer" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    published_dataset = create(
+      :dataset,
+      :published,
+      depositor_email: owner_email,
+      identifier: "10.5555/microsoft-view-count"
+    )
+    datafile = create(:datafile, dataset: published_dataset, peek_type: "microsoft")
+
+    get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.14" }
+
+    expect(response).to have_http_status(:redirect)
+    expect(response.headers["Location"]).to include("view.officeapps.live.com")
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally).to eq(1)
+  end
+
+  it "does not count text preview view as a download" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    published_dataset = create(
+      :dataset,
+      :published,
+      depositor_email: owner_email,
+      identifier: "10.5555/text-view-no-count"
+    )
+    datafile = create(
+      :datafile,
+      dataset: published_dataset,
+      attach_binary: false,
+      peek_type: "all_text",
+      peek_content: "cached preview text"
+    )
+
+    get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.15" }
+
+    expect(response).to have_http_status(:ok)
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)).to be_nil
+  end
+
+  it "does not count archive listing view as a download" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    published_dataset = create(
+      :dataset,
+      :published,
+      depositor_email: owner_email,
+      identifier: "10.5555/archive-view-no-count"
+    )
+    datafile = create(
+      :datafile,
+      dataset: published_dataset,
+      attach_binary: false,
+      peek_type: "archive",
+      peek_content: "archive listing"
+    )
+    datafile.nested_items.create!(
+      item_name: "folder",
+      item_path: "folder",
+      media_type: "inode/directory",
+      is_directory: true
+    )
+
+    get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.16" }
+
+    expect(response).to have_http_status(:ok)
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)).to be_nil
+  end
+
+  it "falls back to download for unsupported peek types" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(:datafile, dataset: dataset, peek_type: "none")
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to redirect_to(download_dataset_datafile_path(dataset, datafile))
+    expect(flash[:notice]).to eq("Preview not available for this file type. Downloading instead.")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

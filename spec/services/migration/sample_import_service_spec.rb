@@ -214,4 +214,82 @@ RSpec.describe Migration::SampleImportService do
     expect(dataset.embargo).to eq(Dataset::EMBARGO_METADATA)
     expect(dataset.release_date).to eq(Date.new(2026, 8, 1))
   end
+
+  it "maps listing peek type to archive and replaces nested items on overwrite" do
+    identifier = "10.13012/B2IDB-9099904_V1"
+    url = "https://databank.illinois.edu/datasets/IDB-9099904.json"
+
+    initial_payload = {
+      "title" => "Archive Import Dataset",
+      "identifier" => identifier,
+      "url" => url,
+      "publication_state" => "released",
+      "datafiles" => [
+        {
+          "web_id" => "arc11",
+          "binary_name" => "archive.zip",
+          "binary_size" => 1024,
+          "storage_root" => "medusa",
+          "storage_key" => "archive.zip",
+          "peek_type" => "listing",
+          "peek_text" => "listing preview",
+          "nested_items" => [
+            {
+              "item_name" => "folder",
+              "item_path" => "folder",
+              "media_type" => "inode/directory",
+              "is_directory" => "true",
+              "children" => [
+                {
+                  "item_name" => "child.txt",
+                  "item_path" => "folder/child.txt",
+                  "media_type" => "text/plain",
+                  "item_size" => 10,
+                  "is_directory" => "false"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+
+    File.write(datasets_dir.join("dataset.json"), JSON.pretty_generate(initial_payload))
+
+    initial_summary = described_class.new(input_dir: run_dir.to_s).call
+    expect(initial_summary[:created]).to eq(1)
+
+    dataset = Dataset.find_by!(identifier: identifier)
+    datafile = dataset.datafiles.find_by!(web_id: "arc11")
+
+    expect(datafile.peek_type).to eq("archive")
+    expect(datafile.nested_items.count).to eq(2)
+    folder = datafile.nested_items.find_by!(item_name: "folder")
+    child = datafile.nested_items.find_by!(item_name: "child.txt")
+    expect(folder.is_directory).to be(true)
+    expect(child.is_directory).to be(false)
+    expect(child.size).to eq(10)
+    expect(child.parent_id).to eq(folder.id)
+
+    overwrite_payload = initial_payload.deep_dup
+    overwrite_payload["title"] = "Archive Import Dataset Updated"
+    overwrite_payload["datafiles"][0]["nested_items"] = [
+      {
+        "item_name" => "new_root.txt",
+        "item_path" => "new_root.txt",
+        "media_type" => "text/plain",
+        "size" => 99,
+        "is_directory" => false
+      }
+    ]
+
+    File.write(datasets_dir.join("dataset.json"), JSON.pretty_generate(overwrite_payload))
+
+    overwrite_summary = described_class.new(input_dir: run_dir.to_s, overwrite: true).call
+    expect(overwrite_summary[:updated]).to eq(1)
+
+    updated_datafile = dataset.reload.datafiles.find_by!(web_id: "arc11")
+    expect(updated_datafile.peek_type).to eq("archive")
+    expect(updated_datafile.nested_items.pluck(:item_name)).to eq([ "new_root.txt" ])
+  end
 end

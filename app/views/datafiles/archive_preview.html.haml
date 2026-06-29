@@ -1,0 +1,17 @@
+%main.idb-container
+  %section.idb-main-section
+    %h1
+      = @datafile.binary_name.presence || @datafile.web_id
+    %p.idb-text-muted
+      = link_to "← Back to dataset", dataset_path(@dataset)
+
+    %section.idb-rounded-section
+      %h2 Archive Contents
+      
+      - if @archive_nodes.any?
+        .idb-archive-tree
+          %ul.idb-archive-list
+            - @archive_nodes.each do |node|
+              = render "nested_item", node: node, depth: 0
+      - else
+        %p.idb-text-muted No items to display

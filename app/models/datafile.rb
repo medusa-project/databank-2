@@ -14,7 +14,7 @@ class Datafile < ApplicationRecord
   validates :binary_name, presence: true, allow_blank: true
 
   before_validation :set_web_id, on: :create
-  after_save :set_peek_type_after_save
+  after_commit :set_peek_type_after_save, on: %i[create update]
 
   def to_param
     web_id
@@ -91,30 +91,6 @@ class Datafile < ApplicationRecord
     @content_type = "application/octet-stream"
   end
 
-  def text?
-    content_type.start_with?("text/")
-  end
-
-  def pdf?
-    content_type == "application/pdf"
-  end
-
-  def image?
-    content_type.start_with?("image/")
-  end
-
-  def microsoft?
-    microsoft_mimes = [
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/msword",
-      "application/vnd.ms-excel",
-      "application/vnd.ms-powerpoint"
-    ]
-    microsoft_mimes.include?(content_type)
-  end
-
   private
 
   def set_web_id
@@ -129,9 +105,18 @@ class Datafile < ApplicationRecord
   end
 
   def set_peek_type_after_save
-    return if peek_type.present?
+    updates = {}
+    derived_peek_type = peek_type.presence || derive_peek_type
 
-    set_peek_type
-    update_column(:peek_type, peek_type) if peek_type.present?
+    updates[:peek_type] = derived_peek_type if peek_type.blank? && derived_peek_type.present?
+
+    if peek_content.blank?
+      generated_peek_content = generated_peek_content_for(peek_type: derived_peek_type)
+      updates[:peek_content] = generated_peek_content if generated_peek_content.present?
+    end
+
+    return if updates.empty?
+
+    update_columns(updates)
   end
 end
