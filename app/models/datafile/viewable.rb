@@ -156,6 +156,8 @@ module Datafile::Viewable
   def preview_button_label
     return nil unless preview_available?
 
+    return "View First Lines" if part_txt?
+
     archive? ? "List Contents" : "View"
   end
 
