@@ -200,19 +200,22 @@ module Migration
         record.assign_attributes(attrs)
       end
 
-      # Save datafiles first WITHOUT nested_items, then sync nested_items after save
-      datafiles_data = normalized_datafiles
-      sync_collection!(dataset.datafiles, datafiles_data) do |record, attrs|
-        nested_items = attrs.delete(:nested_items)
-        record.assign_attributes(attrs)
-        # Don't sync nested_items here - do it after save
-      end
+      # Only sync datafiles when payload explicitly includes them.
+      if datafiles_payload_provided?
+        # Save datafiles first WITHOUT nested_items, then sync nested_items after save
+        datafiles_data = normalized_datafiles
+        sync_collection!(dataset.datafiles, datafiles_data) do |record, attrs|
+          nested_items = attrs.delete(:nested_items)
+          record.assign_attributes(attrs)
+          # Don't sync nested_items here - do it after save
+        end
 
-      # Now sync nested_items for all datafiles
-      dataset.datafiles.each do |datafile|
-        datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
-        if datafile_data&.dig(:nested_items).present?
-          sync_nested_items!(datafile, datafile_data[:nested_items])
+        # Now sync nested_items for all datafiles
+        dataset.datafiles.each do |datafile|
+          datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
+          if datafile_data&.dig(:nested_items).present?
+            sync_nested_items!(datafile, datafile_data[:nested_items])
+          end
         end
       end
 
@@ -395,7 +398,7 @@ module Migration
     end
 
     def normalized_datafiles
-      Array(payload["datafiles"]).filter_map do |datafile|
+      Array(datafiles_payload).filter_map do |datafile|
         # Convert legacy "listing" peek_type to "archive" for databank-2
         peek_type = datafile["peek_type"]
         peek_type = "archive" if peek_type == "listing"
@@ -415,6 +418,17 @@ module Migration
           nested_items: datafile["nested_items"]
         }
       end
+    end
+
+    def datafiles_payload
+      return payload["datafiles"] if payload.respond_to?(:key?) && payload.key?("datafiles")
+      return payload[:datafiles] if payload.respond_to?(:key?) && payload.key?(:datafiles)
+
+      nil
+    end
+
+    def datafiles_payload_provided?
+      !datafiles_payload.nil?
     end
 
     def normalized_notes

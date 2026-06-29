@@ -171,6 +171,37 @@ RSpec.describe Migration::BundleImportService do
     expect(Token.where(dataset_key: dataset.key).count).to eq(1)
   end
 
+  it "preserves existing datafiles in overwrite mode when payload omits datafiles" do
+    dataset = Dataset.create!(
+      key: "IDB-1212121",
+      identifier: "10.13012/B2IDB-1212121_V1",
+      title: "Original",
+      owner_uid: "legacy-owner",
+      depositor_name: "Legacy User",
+      depositor_email: "legacy@example.edu"
+    )
+    existing_datafile = dataset.datafiles.create!(web_id: "z9y8x", binary_name: "existing.csv", binary_size: 42)
+
+    payload = {
+      "title" => "Updated Bundle Dataset",
+      "identifier" => "10.13012/B2IDB-1212121_V1",
+      "url" => "https://databank.illinois.edu/datasets/IDB-1212121.json",
+      "owner_uid" => "legacy-owner",
+      "depositor_name" => "Legacy User",
+      "depositor_email" => "legacy@example.edu"
+    }
+
+    File.write(bundle_path, "#{payload.to_json}\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s, overwrite: true).call
+
+    expect(summary[:updated]).to eq(1)
+    dataset.reload
+    expect(dataset.datafiles.count).to eq(1)
+    expect(dataset.datafiles.first.id).to eq(existing_datafile.id)
+    expect(dataset.datafiles.first.binary_name).to eq("existing.csv")
+  end
+
   it "fails when checksum does not match" do
     payload = {
       "title" => "Bundle Dataset",
