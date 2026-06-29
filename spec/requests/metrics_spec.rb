@@ -172,12 +172,17 @@ RSpec.describe "Metrics", type: :request do
     dataset = create(:dataset, :published, embargo: Dataset::EMBARGO_NONE, identifier: "10.5555/TEST-METRICS")
     datafile = create(:datafile, dataset: dataset)
 
-    get download_dataset_datafile_path(dataset, datafile)
+    file_download_scope = DayFileDownload.where(file_web_id: datafile.web_id)
+    file_tally_before = FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally.to_i
+    dataset_tally_before = DatasetDownloadTally.find_by(dataset_key: dataset.key)&.tally.to_i
+
+    expect do
+      get download_dataset_datafile_path(dataset, datafile)
+    end.to change { file_download_scope.count }.by(1)
 
     expect(response).to have_http_status(:ok)
-    expect(DayFileDownload.count).to eq(1)
-    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally).to eq(1)
-    expect(DatasetDownloadTally.find_by(dataset_key: dataset.key)&.tally).to eq(1)
+    expect(FileDownloadTally.find_by(file_web_id: datafile.web_id)&.tally).to eq(file_tally_before + 1)
+    expect(DatasetDownloadTally.find_by(dataset_key: dataset.key)&.tally).to eq(dataset_tally_before + 1)
   end
 
   it "does not enqueue a refresh when the metric is already in progress" do
