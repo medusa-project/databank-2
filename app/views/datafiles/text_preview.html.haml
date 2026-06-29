@@ -10,7 +10,10 @@
             = error
         
         - if @text_content.present?
-          %pre.dataset-text-content= @text_content
+          - if @render_markdown
+            .dataset-text-content= sanitize(@text_content, tags: %w[p br a em strong ul ol li blockquote code pre h1 h2 h3 h4 h5 h6], attributes: %w[href title])
+          - else
+            %pre.dataset-text-content= @text_content
         - else
           %p No content to display.
         

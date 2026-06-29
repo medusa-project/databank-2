@@ -1,0 +1,22 @@
+- current_depth = (local_assigns[:depth] || 0).to_i
+%li.idb-archive-node{class: "idb-archive-depth-#{current_depth}"}
+  .idb-archive-item{class: node.is_directory ? "idb-archive-directory" : "idb-archive-file"}
+    .idb-archive-item-header{style: "--archive-depth: #{current_depth};"}
+      %span.idb-archive-indent{aria: {hidden: true}}
+      %span.idb-archive-branch{aria: {hidden: true}}
+      - if node.is_directory
+        %details.idb-archive-details{open: true}
+          %summary
+            %span.idb-archive-icon 📁
+            %span.idb-archive-name= node.name
+          %ul.idb-archive-list
+            - children = Array(node.children)
+            - if children.any?
+              - children.each do |child_node|
+                = render "nested_item", node: child_node, depth: current_depth + 1
+      - else
+        .idb-archive-file-item
+          %span.idb-archive-icon 📄
+          %span.idb-archive-name= node.name
+          - if node.size.present?
+            %span.idb-archive-size= number_to_human_size(node.size)

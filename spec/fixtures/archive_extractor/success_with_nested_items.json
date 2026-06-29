@@ -1,0 +1,31 @@
+{
+  "web_id": "abc12",
+  "status": "success",
+  "peek_type": "listing",
+  "peek_text": "Archive contains 2 files",
+  "nested_items": [
+    {
+      "item_name": "folder",
+      "item_path": "folder",
+      "media_type": "inode/directory",
+      "is_directory": true,
+      "children": [
+        {
+          "item_name": "inside.txt",
+          "item_path": "folder/inside.txt",
+          "media_type": "text/plain",
+          "item_size": 18,
+          "is_directory": false
+        }
+      ]
+    },
+    {
+      "item_name": "root.txt",
+      "item_path": "root.txt",
+      "media_type": "text/plain",
+      "size": 42,
+      "is_directory": false
+    }
+  ],
+  "error": []
+}

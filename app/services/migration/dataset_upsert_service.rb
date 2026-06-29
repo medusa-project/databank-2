@@ -200,10 +200,20 @@ module Migration
         record.assign_attributes(attrs)
       end
 
-      sync_collection!(dataset.datafiles, normalized_datafiles) do |record, attrs|
+      # Save datafiles first WITHOUT nested_items, then sync nested_items after save
+      datafiles_data = normalized_datafiles
+      sync_collection!(dataset.datafiles, datafiles_data) do |record, attrs|
         nested_items = attrs.delete(:nested_items)
         record.assign_attributes(attrs)
-        sync_nested_items!(record, nested_items) if nested_items.present?
+        # Don't sync nested_items here - do it after save
+      end
+
+      # Now sync nested_items for all datafiles
+      dataset.datafiles.each do |datafile|
+        datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
+        if datafile_data&.dig(:nested_items).present?
+          sync_nested_items!(datafile, datafile_data[:nested_items])
+        end
       end
 
       sync_collection!(dataset.notes, normalized_notes) do |record, attrs|
@@ -228,9 +238,9 @@ module Migration
 
         nested_item.update!(
           media_type: item_data["media_type"],
-          size: item_data["size"],
+          size: item_data["size"] || item_data["item_size"],
           item_path: item_data["item_path"],
-          is_directory: item_data["is_directory"] || false
+          is_directory: cast_boolean(item_data["is_directory"])
         )
 
         if item_data["children"].present?
@@ -243,8 +253,12 @@ module Migration
       end
     end
 
+    def cast_boolean(value)
+      ActiveModel::Type::Boolean.new.cast(value)
+    end
+
     def sync_collection!(association, rows)
-      association.delete_all if overwrite
+      association.destroy_all if overwrite
       return if rows.empty?
 
       rows.each do |attrs|
@@ -255,7 +269,14 @@ module Migration
         record = find_existing_child(association: association, attrs: row)
         record ||= association.build
         yield(record, row)
-        record.save!
+        begin
+          record.save!
+        rescue StandardError => e
+          Rails.logger.error("Failed to save #{association.klass.name}: #{e.message}")
+          Rails.logger.error("  Record: #{record.inspect}")
+          Rails.logger.error("  Errors: #{record.errors.full_messages}")
+          raise
+        end
         apply_timestamps!(record, source_created_at, source_updated_at)
       end
     end
@@ -375,6 +396,10 @@ module Migration
 
     def normalized_datafiles
       Array(payload["datafiles"]).filter_map do |datafile|
+        # Convert legacy "listing" peek_type to "archive" for databank-2
+        peek_type = datafile["peek_type"]
+        peek_type = "archive" if peek_type == "listing"
+
         {
           web_id: datafile["web_id"].presence,
           medusa_id: datafile["medusa_id"],
@@ -383,7 +408,7 @@ module Migration
           storage_root: datafile["storage_root"],
           storage_key: datafile["storage_key"],
           description: datafile["description"],
-          peek_type: datafile["peek_type"],
+          peek_type: peek_type,
           peek_content: datafile["peek_text"],
           source_created_at: datafile["created_at"],
           source_updated_at: datafile["updated_at"],

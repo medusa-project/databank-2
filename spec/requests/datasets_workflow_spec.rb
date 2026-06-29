@@ -3560,6 +3560,48 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).not_to include(%(href="/datasets/#{draft_successor.key}"))
   end
 
+  it "shows legacy-equivalent preview labels for part text and archive listings" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    dataset = Dataset.create!(
+      title: "Preview Labels Dataset",
+      description: "Dataset with multiple preview label types.",
+      keywords: "preview,labels",
+      subject: "Data Science",
+      license: "CC0",
+      publisher: "Illinois Data Bank",
+      owner_uid: "owner-preview",
+      depositor_name: "Owner User",
+      depositor_email: "owner@example.edu",
+      publication_state: :published,
+      identifier: "10.5555/IDB-9100001"
+    )
+
+    create(:datafile, dataset: dataset, peek_type: "all_text", peek_content: "full")
+    create(:datafile, dataset: dataset, peek_type: "part_text", peek_content: "truncated")
+
+    archive_datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: "archive",
+      peek_content: "archive summary"
+    )
+    archive_datafile.nested_items.create!(
+      item_name: "folder",
+      item_path: "folder",
+      media_type: "inode/directory",
+      is_directory: true
+    )
+
+    get dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("View")
+    expect(response.body).to include("View First Lines")
+    expect(response.body).to include("List Contents")
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

@@ -303,6 +303,114 @@
   gap: 0.5rem;
 }
 
+/* Archive preview tree */
+.idb-archive-tree {
+  border: 1px solid var(--il-storm-85);
+  border-radius: 0.4rem;
+  background-color: #fbfbfb;
+  padding: 0.75rem;
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.idb-archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.idb-archive-node {
+  margin: 0;
+  padding: 0;
+}
+
+.idb-archive-item-header {
+  --archive-indent-step: 1.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.18rem 0.25rem;
+  margin-left: calc(var(--archive-depth, 0) * var(--archive-indent-step));
+}
+
+.idb-archive-indent,
+.idb-archive-branch {
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.idb-archive-indent {
+  width: 0;
+}
+
+.idb-archive-branch {
+  width: 0.9rem;
+  height: 1.15rem;
+  margin-top: 0.1rem;
+  border-left: 1px solid var(--il-storm-85);
+  border-bottom: 1px solid var(--il-storm-85);
+}
+
+.idb-archive-details {
+  width: 100%;
+}
+
+.idb-archive-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.idb-archive-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.idb-archive-details > summary::before {
+  content: "▸";
+  color: var(--il-storm-55);
+  font-size: 0.82rem;
+  margin-right: 0.15rem;
+}
+
+.idb-archive-details[open] > summary::before {
+  content: "▾";
+}
+
+.idb-archive-file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.idb-archive-name {
+  color: var(--il-text);
+  word-break: break-word;
+}
+
+.idb-archive-size {
+  color: var(--il-storm-45);
+  font-size: 0.82rem;
+  margin-left: 0.3rem;
+}
+
+.idb-archive-node.idb-archive-depth-0 .idb-archive-branch {
+  border-left: 0;
+}
+
+.idb-archive-details > summary:focus-visible {
+  outline: 2px solid var(--il-blue);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .idb-archive-item-header {
+    --archive-indent-step: 0.85rem;
+  }
+}
+
 /* Download Link Modal */
 #download-link-modal {
   display: none;

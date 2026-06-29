@@ -11,6 +11,9 @@
 module Datafile::Viewable
   extend ActiveSupport::Concern
 
+  ALLOWED_CHAR_NUM = 1024 * 8
+  ALLOWED_DISPLAY_BYTES = ALLOWED_CHAR_NUM * 8
+
   class_methods do
     ##
     # Return the datafiles peek type based on its mime type and size
@@ -23,7 +26,8 @@ module Datafile::Viewable
       mime_parts = mime_type.split("/")
       return "none" unless mime_parts.length == 2
 
-      return "markdown" if mime_parts[0] == "markdown"
+      markdown_subtypes = [ "markdown", "x-markdown" ]
+      return "markdown" if mime_parts[0] == "markdown" || (mime_parts[0] == "text" && markdown_subtypes.include?(mime_parts[1].downcase))
 
       text_subtypes = [ "csv", "xml", "x-sh", "x-javascript", "json", "r", "rb" ]
       supported_image_subtypes = [ "jp2", "jpeg", "dicom", "gif", "png", "bmp" ]
@@ -61,7 +65,9 @@ module Datafile::Viewable
 
       subtype = mime_parts[1].downcase
       if mime_parts[0] == "text" || text_subtypes.include?(subtype)
-        "text"
+        return "all_text" unless num_bytes > ALLOWED_DISPLAY_BYTES
+
+        "part_text"
       elsif mime_parts[0] == "image"
         return "image" if supported_image_subtypes.include?(subtype)
 
@@ -92,10 +98,20 @@ module Datafile::Viewable
     peek_type == "archive"
   end
 
+  # @return [Boolean] true if the datafile's full text preview is stored
+  def all_txt?
+    peek_type == "all_text"
+  end
+
+  # @return [Boolean] true if the datafile's preview is a truncated text excerpt
+  def part_txt?
+    peek_type == "part_text"
+  end
+
   ##
-  # @return [Boolean] true if the datafile is a text file
+  # @return [Boolean] true if the datafile is a text file preview type
   def text?
-    peek_type == "text"
+    all_txt? || part_txt? || peek_type == "text"
   end
 
   ##
@@ -130,5 +146,43 @@ module Datafile::Viewable
   # Set peek_type based on content_type
   def set_peek_type
     self.peek_type = Datafile.peek_type_from_mime(content_type, binary_size)
+  end
+
+  # Derive the canonical peek_type while preserving markdown extension behavior.
+  def derive_peek_type
+    return "markdown" if markdown_extension?
+
+    Datafile.peek_type_from_mime(content_type, binary_size)
+  end
+
+  # Generate persisted preview content for peek-capable text-like types.
+  def generated_peek_content_for(peek_type:)
+    case peek_type
+    when "all_text"
+      preview_text_from_attachment
+    when "part_text"
+      preview_text_from_attachment(max_bytes: ALLOWED_DISPLAY_BYTES)
+    when "markdown"
+      preview_text_from_attachment
+    else
+      nil
+    end
+  end
+
+  private
+
+  def markdown_extension?
+    extension = binary_name.to_s.split(".").last.to_s.downcase
+    [ "md", "mdown", "mkdn", "mkd", "markdown" ].include?(extension)
+  end
+
+  def preview_text_from_attachment(max_bytes: nil)
+    return nil unless binary.attached?
+
+    content = binary.download
+    content = content.byteslice(0, max_bytes) if max_bytes
+    content.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "?").delete("\u0000")
+  rescue StandardError
+    nil
   end
 end

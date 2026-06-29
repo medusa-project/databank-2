@@ -1,0 +1,12 @@
+{
+  "web_id": "abc12",
+  "status": "error",
+  "peek_type": "none",
+  "peek_text": "",
+  "error": [
+    {
+      "error_type": "extractor_failure",
+      "report": "Archive parse failed"
+    }
+  ]
+}

@@ -249,8 +249,12 @@
                       %span= file_size.present? ? number_to_human_size(file_size) : "-"
                     .dataset-file-col-preview
                       - if can?(:view_files, @dataset)
-                        - if datafile.text?
+                        - if datafile.all_txt? || datafile.markdown?
                           = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
+                        - elsif datafile.part_txt?
+                          = link_to "View First Lines", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View first lines for #{datafile.binary_name.presence || datafile.web_id}"}
+                        - elsif datafile.archive? && (datafile.peek_content.present? || datafile.nested_items.exists?)
+                          = link_to "List Contents", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "List contents for #{datafile.binary_name.presence || datafile.web_id}"}
                         - elsif datafile.pdf?
                           = link_to "View", view_dataset_datafile_path(@dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "View #{datafile.binary_name.presence || datafile.web_id}"}
                         - elsif datafile.image?
