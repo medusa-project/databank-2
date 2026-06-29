@@ -142,6 +142,23 @@ module Datafile::Viewable
     "#{preview_base}=#{preview_ref}"
   end
 
+  # @return [Boolean] true when a preview target can be rendered without falling back to placeholders.
+  def preview_available?
+    return true if archive? && (peek_content.present? || nested_items.exists?)
+    return true if microsoft? && binary.attached?
+
+    return false unless text? || pdf? || image?
+
+    binary.attached? || preview_storage_reference?
+  end
+
+  # @return [String, nil] label for the dataset preview action button.
+  def preview_button_label
+    return nil unless preview_available?
+
+    archive? ? "List Contents" : "View"
+  end
+
   ##
   # Set peek_type based on content_type
   def set_peek_type
@@ -184,5 +201,9 @@ module Datafile::Viewable
     content.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "?").delete("\u0000")
   rescue StandardError
     nil
+  end
+
+  def preview_storage_reference?
+    storage_root.present? && storage_key.present?
   end
 end

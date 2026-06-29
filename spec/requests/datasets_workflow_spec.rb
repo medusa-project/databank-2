@@ -157,6 +157,44 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.related_materials.first.title).to eq("Research Group (2026) Companion article")
   end
 
+  it "hides preview action when no preview is available" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: {
+      dataset: {
+        title: "Preview Visibility Dataset",
+        description: "desc",
+        keywords: "k",
+        subject: "s",
+        license: "CC0",
+        publisher: "Illinois Data Bank"
+      }
+    }
+    dataset = Dataset.order(:created_at).last
+
+    previewable_file = create(:datafile, dataset: dataset)
+    unavailable_preview_file = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      binary_name: "raw.bin",
+      binary_size: 128,
+      storage_root: nil,
+      storage_key: nil,
+      peek_type: "none",
+      peek_content: nil
+    )
+
+    get dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+
+    previewable_path = view_dataset_datafile_path(dataset, previewable_file)
+    unavailable_path = view_dataset_datafile_path(dataset, unavailable_preview_file)
+    expect(response.body).to include(previewable_path)
+    expect(response.body).not_to include(unavailable_path)
+  end
+
   it "destroys individual creators when switching to organization creator mode" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
