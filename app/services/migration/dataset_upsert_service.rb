@@ -261,7 +261,10 @@ module Migration
     end
 
     def sync_collection!(association, rows)
-      association.destroy_all if overwrite
+      if overwrite
+        # Use reorder to explicitly specify order for cursor-based pagination
+        association.reorder(:id).destroy_all
+      end
       return if rows.empty?
 
       rows.each do |attrs|
