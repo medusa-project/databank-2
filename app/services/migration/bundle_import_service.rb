@@ -249,7 +249,9 @@ module Migration
 
       by_type = Hash.new(0)
 
-      dataset.related_materials.includes(:related_material_relationships).find_each do |material|
+      dataset.related_materials.includes(:related_material_relationships)
+             .reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC"))
+             .find_each do |material|
         material.relation_types.each do |relation_type|
           by_type[relation_type] += 1
         end
