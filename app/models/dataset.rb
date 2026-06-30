@@ -445,7 +445,7 @@ class Dataset < ApplicationRecord
     self.corresponding_creator_name = nil
     self.corresponding_creator_email = nil
 
-    creators.each do |creator|
+    creators.to_a.each do |creator|
       next unless creator.contact_selected?
 
       self.corresponding_creator_name = creator.display_name
