@@ -211,7 +211,7 @@ module Migration
         end
 
         # Now sync nested_items for all datafiles
-        dataset.datafiles.each do |datafile|
+        dataset.datafiles.reorder(:id).each do |datafile|
           datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
           if datafile_data&.dig(:nested_items).present?
             sync_nested_items!(datafile, datafile_data[:nested_items])
