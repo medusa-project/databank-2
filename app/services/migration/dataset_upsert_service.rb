@@ -228,23 +228,37 @@ module Migration
       datafile.nested_items.delete_all if overwrite
       return if nested_items_data.blank?
 
-      build_nested_items_tree(parent_datafile: datafile, items_data: nested_items_data, parent_item: nil)
+      # Wrap entire tree build in a transaction for efficiency
+      NestedItem.transaction do
+        build_nested_items_tree(parent_datafile: datafile, items_data: nested_items_data, parent_item: nil)
+      end
     end
 
     def build_nested_items_tree(parent_datafile:, items_data:, parent_item:)
+      datafile_id = parent_datafile.id
+      parent_id = parent_item&.id
+
       Array(items_data).each do |item_data|
+        # Use find_or_create_by
         nested_item = NestedItem.find_or_create_by(
-          datafile_id: parent_datafile.id,
-          parent_id: parent_item&.id,
+          datafile_id: datafile_id,
+          parent_id: parent_id,
           item_name: item_data["item_name"]
         )
 
-        nested_item.update!(
-          media_type: item_data["media_type"],
-          size: item_data["size"] || item_data["item_size"],
-          item_path: item_data["item_path"],
-          is_directory: cast_boolean(item_data["is_directory"])
-        )
+        # Only update if needed to reduce database writes
+        if nested_item.media_type != item_data["media_type"] ||
+           nested_item.size != (item_data["size"] || item_data["item_size"]) ||
+           nested_item.item_path != item_data["item_path"] ||
+           nested_item.is_directory != cast_boolean(item_data["is_directory"])
+
+          nested_item.update!(
+            media_type: item_data["media_type"],
+            size: item_data["size"] || item_data["item_size"],
+            item_path: item_data["item_path"],
+            is_directory: cast_boolean(item_data["is_directory"])
+          )
+        end
 
         if item_data["children"].present?
           build_nested_items_tree(

@@ -34,6 +34,10 @@ module Migration
 
       processed_count = 0
 
+      # Optimize memory usage during large imports
+      original_logger = ActiveRecord::Base.logger
+      ActiveRecord::Base.logger = nil # Disable SQL logging to save memory
+
       File.foreach(bundle_path).with_index(1) do |line, line_number|
         next if line.strip.empty?
 
@@ -46,6 +50,9 @@ module Migration
           dry_run: dry_run,
           require_sensitive_fields: true
         ).call
+
+        # Clear payload to free memory
+        payload.clear
 
         increment_summary(summary: summary, status: result.status)
         accumulate_exported_relationship_metrics!(summary: summary, metrics: exported_relation_metrics)
@@ -73,7 +80,13 @@ module Migration
           related_material_relationships_imported: imported_relation_metrics&.dig(:total)
         }
         processed_count += 1
+
+        # Force garbage collection every 50 datasets to keep memory in check
+        GC.collect if (processed_count % 50).zero?
       end
+
+      # Restore logging
+      ActiveRecord::Base.logger = original_logger
 
       verify_expected_record_count!(processed_count)
 

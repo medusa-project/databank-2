@@ -50,6 +50,9 @@
 !/migration_bundles/guides/.keep
 !/migration_bundles/featured_researchers/.keep
 
+/test_bundle/*
+!/test_bundle/.keep
+
 # Local workstation / editor artifacts
 .DS_Store
 /.vscode/
