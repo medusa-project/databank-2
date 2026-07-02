@@ -31,7 +31,7 @@ RSpec.describe "cutover tasks" do
 
     expected_order = [
       "migration:users:import_from_dir",
-      "migration:bundle:import_from_dir",
+      "migration:flat_bundle:import_from_dir",
       "migration:permissions:import_from_dir",
       "migration:dataset_access_grants:import_from_dir",
       "migration:guides:import_from_dir",
@@ -82,7 +82,7 @@ RSpec.describe "cutover tasks" do
   it "writes reconciliation report when required runs are present" do
     required_run_types = %w[
       users_bundle_import
-      bundle_import
+      flat_bundle_import
       permissions_bundle_import
       dataset_access_grants_bundle_import
       guides_bundle_import
@@ -125,7 +125,7 @@ RSpec.describe "cutover tasks" do
   it "fails smoke when a required migration run is missing" do
     MigrationRun.delete_all
 
-    run_type = "bundle_import"
+    run_type = "flat_bundle_import"
     MigrationRun.create!(
       run_type: run_type,
       status: "completed",

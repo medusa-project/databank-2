@@ -1,12 +1,28 @@
 require "json"
 
-# given a file structure like:
-# ls /tmp/databank_exports/
-# dataset_20260605T212924Z                dataset_access_grants_20260605T213858Z  guide_20260605T213946Z           permissions_20260605T213042Z
-# dataset_access_grants_20260605T213119Z  download_metrics_20260605T214133Z       medusa_ingests_20260605T214056Z  spotlight_20260605T214012Z
-# users_20260618T220000Z                  audit_20260618T221000Z
-# the command to import all datasets and related data would be:
-# BUNDLE_ROOT=/tmp/databank_exports bundle exec rails cutover:import_all
+# Orchestrates full cutover import sequence from legacy databank exports.
+# Expected directory structure from migration:legacy:export_all:
+#   /tmp/databank_exports/
+#   ├── users_20260618T220000Z/                 (migration:legacy:export_users_bundle)
+#   ├── dataset_20260605T212924Z/               (migration:legacy:export_bundle - flat NDJSON format)
+#   ├── permissions_20260605T213042Z/           (migration:legacy:export_permissions_bundle)
+#   ├── dataset_access_grants_20260605T213119Z/ (migration:legacy:export_dataset_access_grants_bundle)
+#   ├── guide_20260605T213946Z/                 (migration:legacy:export_guides_bundle)
+#   ├── spotlight_20260605T214012Z/             (migration:legacy:export_featured_researchers_bundle)
+#   ├── medusa_ingests_20260605T214056Z/        (migration:legacy:export_medusa_ingests_bundle)
+#   ├── download_metrics_20260605T214133Z/      (migration:legacy:export_download_metrics_bundle)
+#   └── audit_20260618T221000Z/                 (migration:legacy:export_audits_bundle)
+#
+# Dataset imports use flat NDJSON format (format_version: 2):
+#   - Separate records for datasets, datafiles, nested_items
+#   - Streaming batch import (100 records per flush)
+#   - Memory-efficient for large exports
+#
+# To run the full cutover import:
+#   BUNDLE_ROOT=/tmp/databank_exports bundle exec rails cutover:import_all
+#
+# To run with dry-run (no database changes):
+#   BUNDLE_ROOT=/tmp/databank_exports DRY_RUN=true bundle exec rails cutover:import_all
 
 
 namespace :cutover do
@@ -23,7 +39,7 @@ namespace :cutover do
     },
     {
       key: "datasets",
-      task: "migration:bundle:import_from_dir",
+      task: "migration:flat_bundle:import_from_dir",
       default_bundle_file: "legacy_datasets.ndjson",
       dir_env: "DATASETS_DIR",
       dir_prefix: "dataset_"
@@ -81,7 +97,7 @@ namespace :cutover do
 
   CUTOVER_REQUIRED_RUN_TYPES = %w[
     users_bundle_import
-    bundle_import
+    flat_bundle_import
     permissions_bundle_import
     dataset_access_grants_bundle_import
     guides_bundle_import

@@ -34,10 +34,6 @@ module Migration
 
       processed_count = 0
 
-      # Optimize memory usage during large imports
-      original_logger = ActiveRecord::Base.logger
-      ActiveRecord::Base.logger = nil # Disable SQL logging to save memory
-
       File.foreach(bundle_path).with_index(1) do |line, line_number|
         next if line.strip.empty?
 
@@ -81,12 +77,9 @@ module Migration
         }
         processed_count += 1
 
-        # Force garbage collection every 50 datasets to keep memory in check
-        GC.collect if (processed_count % 50).zero?
+        # Force garbage collection every 10 datasets to keep memory in check
+        GC.collect if (processed_count % 10).zero?
       end
-
-      # Restore logging
-      ActiveRecord::Base.logger = original_logger
 
       verify_expected_record_count!(processed_count)
 

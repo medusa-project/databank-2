@@ -1315,6 +1315,72 @@ namespace :migration do
     end
   end
 
+  namespace :flat_bundle do
+    desc "Import flat NDJSON bundle (format_version: 2) with separate entity records"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      overwrite = ENV.fetch("OVERWRITE", "false").casecmp("true").zero?
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+
+      summary = record_migration_run(
+        run_type: "flat_bundle_import",
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run,
+          overwrite: overwrite
+        }
+      ) do
+        Migration::FlatBundleImportService.new(
+          bundle_path: bundle_path.to_s,
+          overwrite: overwrite,
+          dry_run: dry_run,
+          checksum_path: checksum_path,
+          manifest_path: manifest_path,
+          report_path: resolved_report_path.to_s
+        ).call
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Updated: #{summary[:updated]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      if dry_run
+        puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
+      end
+      puts "Datasets: #{summary[:record_counts][:datasets]}" if summary[:record_counts]
+      puts "Datafiles: #{summary[:record_counts][:datafiles]}" if summary[:record_counts]
+      puts "Nested items: #{summary[:record_counts][:nested_items]}" if summary[:record_counts]
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+  end
+
   namespace :audits do
     desc "Import a secure NDJSON audit bundle exported from legacy databank"
     task import: :environment do

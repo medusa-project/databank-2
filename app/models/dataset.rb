@@ -93,7 +93,7 @@ class Dataset < ApplicationRecord
   enum :publication_state, { draft: 0, published: 1 }, default: :draft
 
   scope :publicly_readable_now, lambda {
-    published.where(
+    published.where(is_test: false).where(
       <<~SQL.squish,
         COALESCE(NULLIF(embargo, ''), :none) <> :metadata
         OR (
@@ -284,6 +284,7 @@ class Dataset < ApplicationRecord
   end
 
   def publicly_readable_now?(on_date: Date.current)
+    return false if is_test?
     return false unless published?
     return true unless metadata_embargoed?
 
@@ -291,6 +292,7 @@ class Dataset < ApplicationRecord
   end
 
   def files_publicly_readable_now?(on_date: Date.current)
+    return false if is_test?
     return false unless published?
     return true unless file_embargoed? || metadata_embargoed?
 
