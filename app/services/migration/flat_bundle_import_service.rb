@@ -68,10 +68,6 @@ module Migration
 
           when "nested_item"
             batches[:nested_items] << record
-            if batches[:nested_items].size >= batch_size
-              flush_nested_items_batch(batches[:nested_items], summary, dry_run)
-              batches[:nested_items] = []
-            end
           end
 
           processed_count += 1
@@ -94,7 +90,11 @@ module Migration
       # Flush remaining batches
       flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run) if batches[:datasets].any?
       flush_datafiles_batch(batches[:datafiles], summary, dry_run) if batches[:datafiles].any?
-      flush_nested_items_batch(batches[:nested_items], summary, dry_run) if batches[:nested_items].any?
+
+      # Nested items depend on datafiles, so process these only after all datafiles are created.
+      batches[:nested_items].each_slice(batch_size) do |slice|
+        flush_nested_items_batch(slice, summary, dry_run)
+      end
 
       summary[:processed_count] = processed_count
       summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_counts", "datasets") }
@@ -169,7 +169,7 @@ module Migration
           keywords: record["keywords"],
           hold_state: record["hold_state"],
           release_date: record["release_date"],
-          embargo: record["embargo"],
+          embargo: normalize_embargo(record["embargo"]),
           is_test: boolean_or_false(record["is_test"]),
           is_import: boolean_or_false(record["is_import"]),
           tombstone_date: record["tombstone_date"],
@@ -218,7 +218,7 @@ module Migration
           storage_root: record["storage_root"],
           storage_key: record["storage_key"],
           description: record["description"],
-          peek_type: record["peek_type"],
+          peek_type: normalize_datafile_peek_type(record["peek_type"]),
           peek_content: record["peek_text"]
         }
 
@@ -414,10 +414,31 @@ module Migration
       normalized.presence
     end
 
+    def normalize_embargo(value)
+      normalized = value.to_s.strip.downcase
+      return "none" if normalized.blank? || normalized == "none"
+      return "file" if [ "file", "file embargo" ].include?(normalized)
+      return "metadata" if [ "metadata", "metadata embargo" ].include?(normalized)
+
+      normalized
+    end
+
+    def normalize_datafile_peek_type(value)
+      normalized = value.to_s.strip.downcase
+      return Datafile::PeekType::LISTING if normalized == Datafile::PeekType::LISTING
+      return Datafile::PeekType::NONE if normalized == Datafile::PeekType::NONE
+
+      normalized.presence
+    end
+
     def normalized_datafile_web_id(dataset_key:, source_id:)
       raw_value = source_id.to_s.strip
       downcased_value = raw_value.downcase
-      return downcased_value if downcased_value.match?(web_id_format_regex)
+
+      if downcased_value.match?(web_id_format_regex)
+        existing = Datafile.find_by(web_id: downcased_value)
+        return downcased_value if existing.blank? || existing.dataset&.key == dataset_key
+      end
 
       cache_key = "#{dataset_key}:#{raw_value}"
       return @normalized_datafile_ids[cache_key] if @normalized_datafile_ids.key?(cache_key)

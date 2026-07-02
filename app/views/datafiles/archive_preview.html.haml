@@ -7,11 +7,8 @@
 
     %section.idb-rounded-section
       %h2 Archive Contents
-      
-      - if @archive_nodes.any?
+      - if @archive_listing_html.present?
         .idb-archive-tree
-          %ul.idb-archive-list
-            - @archive_nodes.each do |node|
-              = render "nested_item", node: node, depth: 0
+          .idb-archive-legacy-listing= @archive_listing_html
       - else
         %p.idb-text-muted No items to display

@@ -399,6 +399,32 @@
   border-left: 0;
 }
 
+/* Legacy archive listings rendered from peek_content HTML */
+.idb-archive-legacy-listing {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "monospace";
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.idb-archive-legacy-listing .indent {
+  margin-left: 1.15rem;
+}
+
+.idb-archive-legacy-listing .glyphicon {
+  display: inline-block;
+  width: 1rem;
+  margin-right: 0.25rem;
+  color: var(--il-storm-45);
+}
+
+.idb-archive-legacy-listing .glyphicon-folder-open::before {
+  content: "\1F4C1";
+}
+
+.idb-archive-legacy-listing .glyphicon-file::before {
+  content: "\1F4C4";
+}
+
 .idb-archive-details > summary:focus-visible {
   outline: 2px solid var(--il-blue);
   outline-offset: 2px;

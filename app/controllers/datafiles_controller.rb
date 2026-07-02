@@ -155,8 +155,12 @@ class DatafilesController < ApplicationController
   end
 
   def render_archive_preview
-    nested_items = @datafile.nested_items.order(:item_path, :item_name)
-    @archive_nodes = build_archive_tree(nested_items: nested_items)
+    @archive_listing_html = view_context.sanitize(
+      @datafile.peek_content.to_s,
+      tags: %w[div span br p ul ol li],
+      attributes: %w[class]
+    )
+
     render :archive_preview
   end
 

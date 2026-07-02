@@ -254,4 +254,177 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(datafile.web_id).to match(/\A[a-z0-9]{5}\z/)
     expect(datafile.nested_items.pluck(:id)).to include(nested_item_id)
   end
+
+  it "normalizes legacy embargo labels to target values" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Legacy Embargo Label Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "metadata embargo",
+        release_date: Date.current.iso8601
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(key: dataset_key)
+    expect(dataset.embargo).to eq("metadata")
+  end
+
+  it "remaps colliding valid web_ids that belong to another dataset" do
+    existing_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    import_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    existing_dataset = Dataset.create!(
+      key: existing_dataset_key,
+      title: "Existing Dataset",
+      owner_uid: "legacy-owner",
+      depositor_name: "Legacy User",
+      depositor_email: "legacy@example.edu",
+      publication_state: :draft,
+      embargo: "none"
+    )
+    existing_dataset.datafiles.create!(web_id: "ab123", binary_name: "existing.csv")
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: import_dataset_key,
+        title: "Incoming Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      },
+      {
+        type: "datafile",
+        dataset_id: import_dataset_key,
+        datafile_id: "ab123",
+        binary_name: "incoming.csv",
+        binary_size: 111,
+        storage_root: "draft",
+        storage_key: "flat/incoming.csv"
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+
+    imported_dataset = Dataset.find_by!(key: import_dataset_key)
+    imported_datafile = imported_dataset.datafiles.first
+
+    expect(imported_datafile.web_id).to match(/\A[a-z0-9]{5}\z/)
+    expect(imported_datafile.web_id).not_to eq("ab123")
+  end
+
+  it "normalizes legacy datafile archive/listing peek_type to listing" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Legacy Peek Type Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      },
+      {
+        type: "datafile",
+        dataset_id: dataset_key,
+        datafile_id: "ab123",
+        binary_name: "archive.zip",
+        binary_size: 100,
+        storage_root: "draft",
+        storage_key: "flat/archive.zip",
+        peek_type: Datafile::PeekType::LISTING,
+        peek_text: "archive listing"
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(key: dataset_key)
+    datafile = dataset.datafiles.find_by!(binary_name: "archive.zip")
+
+    expect(datafile.peek_type).to eq(Datafile::PeekType::LISTING)
+    expect(datafile.peek_content).to eq("archive listing")
+  end
+
+  it "imports nested items even when nested records appear before datafile records" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    nested_count = 120
+
+    nested_records = (1..nested_count).map do |idx|
+      {
+        type: "nested_item",
+        dataset_id: dataset_key,
+        datafile_id: "ab123",
+        item_id: "ni-#{idx}",
+        parent_item_id: nil,
+        item_name: "file_#{idx}.txt",
+        media_type: "text/plain",
+        size: idx,
+        item_path: "folder/file_#{idx}.txt",
+        is_directory: false
+      }
+    end
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Interleaved Nested Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      }
+    ] + nested_records + [
+      {
+        type: "datafile",
+        dataset_id: dataset_key,
+        datafile_id: "ab123",
+        binary_name: "archive.zip",
+        binary_size: 2048,
+        storage_root: "draft",
+        storage_key: "flat/archive.zip",
+        peek_type: Datafile::PeekType::LISTING,
+        peek_text: "archive listing"
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+    expect(summary.dig(:record_counts, :nested_items)).to eq(nested_count)
+
+    dataset = Dataset.find_by!(key: dataset_key)
+    datafile = dataset.datafiles.find_by!(web_id: "ab123")
+    expect(datafile.nested_items.count).to eq(nested_count)
+  end
 end

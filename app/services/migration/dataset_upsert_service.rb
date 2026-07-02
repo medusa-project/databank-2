@@ -416,9 +416,9 @@ module Migration
 
     def normalized_datafiles
       Array(datafiles_payload).filter_map do |datafile|
-        # Convert legacy "listing" peek_type to "archive" for databank-2
+        # Keep canonical listing terminology for archive previews.
         peek_type = datafile["peek_type"]
-        peek_type = "archive" if peek_type == "listing"
+        peek_type = Datafile::PeekType::LISTING if peek_type == Datafile::PeekType::LISTING
 
         {
           web_id: datafile["web_id"].presence,

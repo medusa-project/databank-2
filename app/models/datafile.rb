@@ -4,6 +4,18 @@ class Datafile < ApplicationRecord
 
   WEB_ID_LENGTH = 5 unless const_defined?(:WEB_ID_LENGTH)
 
+  class PeekType
+    ALL_TEXT = "all_text"
+    PART_TEXT = "part_text"
+    IMAGE = "image"
+    MICROSOFT = "microsoft"
+    PDF = "pdf"
+    LISTING = "listing"
+    MARKDOWN = "markdown"
+    BLOCKED = "blocked"
+    NONE = "none"
+  end
+
   belongs_to :dataset
   has_one_attached :binary
   has_one :archive_extract_request, dependent: :destroy

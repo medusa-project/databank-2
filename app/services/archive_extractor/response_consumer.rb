@@ -176,7 +176,8 @@ module ArchiveExtractor
     end
 
     def normalized_peek_type(value)
-      return "archive" if value.to_s == "listing"
+      normalized = value.to_s.strip.downcase
+      return Datafile::PeekType::LISTING if normalized == Datafile::PeekType::LISTING
 
       value
     end

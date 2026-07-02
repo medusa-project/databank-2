@@ -21,13 +21,13 @@ module Datafile::Viewable
     # @param [Integer] num_bytes the number of bytes in the binary object
     # @return [String] the datafile's peek type
     def peek_type_from_mime(mime_type, num_bytes)
-      return "none" unless num_bytes && mime_type && !mime_type.empty?
+      return Datafile::PeekType::NONE unless num_bytes && mime_type && !mime_type.empty?
 
       mime_parts = mime_type.split("/")
-      return "none" unless mime_parts.length == 2
+      return Datafile::PeekType::NONE unless mime_parts.length == 2
 
       markdown_subtypes = [ "markdown", "x-markdown" ]
-      return "markdown" if mime_parts[0] == "markdown" || (mime_parts[0] == "text" && markdown_subtypes.include?(mime_parts[1].downcase))
+      return Datafile::PeekType::MARKDOWN if mime_parts[0] == "markdown" || (mime_parts[0] == "text" && markdown_subtypes.include?(mime_parts[1].downcase))
 
       text_subtypes = [ "csv", "xml", "x-sh", "x-javascript", "json", "r", "rb" ]
       supported_image_subtypes = [ "jp2", "jpeg", "dicom", "gif", "png", "bmp" ]
@@ -65,21 +65,21 @@ module Datafile::Viewable
 
       subtype = mime_parts[1].downcase
       if mime_parts[0] == "text" || text_subtypes.include?(subtype)
-        return "all_text" unless num_bytes > ALLOWED_DISPLAY_BYTES
+        return Datafile::PeekType::ALL_TEXT unless num_bytes > ALLOWED_DISPLAY_BYTES
 
-        "part_text"
+        Datafile::PeekType::PART_TEXT
       elsif mime_parts[0] == "image"
-        return "image" if supported_image_subtypes.include?(subtype)
+        return Datafile::PeekType::IMAGE if supported_image_subtypes.include?(subtype)
 
-        "none"
+        Datafile::PeekType::NONE
       elsif microsoft_subtypes.include?(subtype)
-        "microsoft"
+        Datafile::PeekType::MICROSOFT
       elsif pdf_subtypes.include?(subtype)
-        "pdf"
+        Datafile::PeekType::PDF
       elsif archive_subtypes.include?(subtype)
-        "archive"
+        Datafile::PeekType::LISTING
       else
-        "none"
+        Datafile::PeekType::NONE
       end
     end
   end
@@ -89,47 +89,47 @@ module Datafile::Viewable
   ##
   # @return [Boolean] true if the datafile is a markdown file
   def markdown?
-    peek_type == "markdown"
+    peek_type == Datafile::PeekType::MARKDOWN
   end
 
   ##
   # @return [Boolean] true if the datafile is an archive file
   def archive?
-    peek_type == "archive"
+    peek_type == Datafile::PeekType::LISTING
   end
 
   # @return [Boolean] true if the datafile's full text preview is stored
   def all_txt?
-    peek_type == "all_text"
+    peek_type == Datafile::PeekType::ALL_TEXT
   end
 
   # @return [Boolean] true if the datafile's preview is a truncated text excerpt
   def part_txt?
-    peek_type == "part_text"
+    peek_type == Datafile::PeekType::PART_TEXT
   end
 
   ##
   # @return [Boolean] true if the datafile is a text file preview type
   def text?
-    all_txt? || part_txt? || peek_type == "text"
+    all_txt? || part_txt?
   end
 
   ##
   # @return [Boolean] true if the datafile is an image file
   def image?
-    peek_type == "image"
+    peek_type == Datafile::PeekType::IMAGE
   end
 
   ##
   # @return [Boolean] true if the datafile is a microsoft file that can be previewed in the browser
   def microsoft?
-    peek_type == "microsoft"
+    peek_type == Datafile::PeekType::MICROSOFT
   end
 
   ##
   # @return [Boolean] true if the datafile is a pdf file that can be previewed in the browser
   def pdf?
-    peek_type == "pdf"
+    peek_type == Datafile::PeekType::PDF
   end
 
   ##
@@ -169,7 +169,7 @@ module Datafile::Viewable
 
   # Derive the canonical peek_type while preserving markdown extension behavior.
   def derive_peek_type
-    return "markdown" if markdown_extension?
+    return Datafile::PeekType::MARKDOWN if markdown_extension?
 
     Datafile.peek_type_from_mime(content_type, binary_size)
   end
@@ -177,11 +177,11 @@ module Datafile::Viewable
   # Generate persisted preview content for peek-capable text-like types.
   def generated_peek_content_for(peek_type:)
     case peek_type
-    when "all_text"
+    when Datafile::PeekType::ALL_TEXT
       preview_text_from_attachment
-    when "part_text"
+    when Datafile::PeekType::PART_TEXT
       preview_text_from_attachment(max_bytes: ALLOWED_DISPLAY_BYTES)
-    when "markdown"
+    when Datafile::PeekType::MARKDOWN
       preview_text_from_attachment
     else
       nil
