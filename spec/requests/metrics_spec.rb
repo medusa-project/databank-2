@@ -60,6 +60,9 @@ RSpec.describe "Metrics", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Metrics exports")
+    expect(response.body).to include("Dataset downloads JSON")
+    expect(response.body).to include("Daily download tallies grouped at the dataset level")
+    expect(response.body).to include("Field definitions")
   end
 
   it "serves admin metrics for curators" do
@@ -69,6 +72,7 @@ RSpec.describe "Metrics", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Metrics exports")
+    expect(response.body).to include("Regenerate Dataset downloads JSON")
   end
 
   it "blocks refresh actions for non-admin users" do

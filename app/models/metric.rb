@@ -13,28 +13,112 @@ class Metric
     funders_csv
     related_materials_csv
   ].freeze
+  MIMETYPE_DEFAULT = "application/octet-stream"
+
+  Definition = Struct.new(:key, :config, keyword_init: true) do
+    def label
+      config_value(:label) || key.to_s.tr("_", " ")
+    end
+
+    def relative_path
+      config_value(:relative_path).to_s
+    end
+
+    def download_path
+      path = config_value(:download_path)
+      return path if path.present?
+
+      absolute_path = relative_path
+      root_prefix = Rails.root.to_s
+      return absolute_path.delete_prefix(root_prefix) if absolute_path.start_with?(root_prefix)
+
+      "/#{File.basename(absolute_path)}"
+    end
+
+    def content_type
+      config_value(:content_type) || begin
+        case File.extname(relative_path)
+        when ".json"
+          "application/json"
+        when ".csv"
+          "text/csv"
+        when ".tsv"
+          "text/tab-separated-values"
+        when ".txt"
+          "text/plain"
+        else
+          MIMETYPE_DEFAULT
+        end
+      end
+    end
+
+    def summary
+      config_value(:summary)
+    end
+
+    def description_blocks
+      config_value(:description_blocks) || []
+    end
+
+    def columns
+      config_value(:columns) || []
+    end
+
+    def show_in_admin?
+      explicit_value = config_value(:show_in_admin)
+      return explicit_value unless explicit_value.nil?
+
+      refreshable?
+    end
+
+    def refreshable?
+      explicit_value = config_value(:refreshable)
+      return explicit_value unless explicit_value.nil?
+
+      Metric::LOCK_KEYS.include?(key)
+    end
+
+    def writer_method
+      configured_method = config_value(:write_method)
+      return configured_method.to_sym if configured_method.present?
+
+      "write_#{key}".to_sym
+    end
+
+    def lock_path
+      "#{relative_path}.lock"
+    end
+
+    def in_progress?
+      File.exist?(lock_path)
+    end
+
+    private
+
+    def config_value(name)
+      config[name] || config[name.to_s]
+    end
+  end
 
   class << self
     def refresh_all
-      write_dataset_downloads_json
-      write_datafile_downloads_json
-      write_datafiles_csv
-      write_datasets_tsv
-      write_container_contents_csv
-      write_funders_csv
-      write_related_materials_csv
+      refreshable_definitions.each do |definition|
+        public_send(writer_method_for(definition.key))
+      end
     end
 
     def lock_path(metric_key)
-      "#{metric_path(metric_key)}.lock"
+      definition_for(metric_key).lock_path
     end
 
     def in_progress?(metric_key)
-      File.exist?(lock_path(metric_key))
+      definition_for(metric_key).in_progress?
     end
 
     def refresh_status
-      LOCK_KEYS.each_with_object({}) { |key, hash| hash[key] = in_progress?(key) }
+      refreshable_definitions.each_with_object({}) do |definition, statuses|
+        statuses[definition.key] = definition.in_progress?
+      end
     end
 
     def set_in_progress(metric_key)
@@ -49,15 +133,54 @@ class Metric
     def modified_times
       ensure_metrics_exist!
 
-      {
-        dataset_downloads_json: format_mtime(:dataset_downloads_json),
-        datafile_downloads_json: format_mtime(:datafile_downloads_json),
-        datafiles_csv: format_mtime(:datafiles_csv),
-        datasets_tsv: format_mtime(:datasets_tsv),
-        container_contents_csv: format_mtime(:container_contents_csv),
-        funders_csv: format_mtime(:funders_csv),
-        related_materials_csv: format_mtime(:related_materials_csv)
-      }
+      refreshable_definitions.each_with_object({}) do |definition, modified|
+        modified[definition.key] = format_mtime(definition.key)
+      end
+    end
+
+    def ensure_fresh_metrics
+      refreshable_definitions.each do |definition|
+        path = definition.relative_path
+
+        if !File.exist?(path) || File.mtime(path) < 1.day.ago
+          public_send(writer_method_for(definition.key))
+        end
+      end
+    end
+
+    def definitions
+      METRICS_CONFIG.each_with_object([]) do |(raw_key, raw_config), arr|
+        metric_key = raw_key.to_sym
+        metric_config = raw_config.respond_to?(:to_h) ? raw_config.to_h : {}
+        arr << Definition.new(key: metric_key, config: metric_config)
+      end
+    end
+
+    def definition_for(metric_key)
+      normalized_key = metric_key.to_sym
+      definition = definitions.find { |item| item.key == normalized_key }
+      raise ArgumentError, "Unknown metric key: #{metric_key}" unless definition
+
+      definition
+    end
+
+    def refreshable_definitions
+      definitions.select(&:refreshable?).sort_by do |definition|
+        LOCK_KEYS.index(definition.key) || LOCK_KEYS.length
+      end
+    end
+
+    def admin_definitions
+      definitions.select(&:show_in_admin?).sort_by do |definition|
+        LOCK_KEYS.index(definition.key) || LOCK_KEYS.length
+      end
+    end
+
+    def writer_method_for(metric_key)
+      method_name = definition_for(metric_key).writer_method
+      return method_name if respond_to?(method_name)
+
+      raise ArgumentError, "Unknown metric key: #{metric_key}"
     end
 
     def write_datasets_tsv
@@ -311,29 +434,22 @@ class Metric
     private
 
     def ensure_metrics_exist!
-      LOCK_KEYS.each do |metric_key|
-        next if File.exist?(metric_path(metric_key))
-
-        write_method_for(metric_key)
+      refreshable_definitions.each do |definition|
+        ensure_metric_file_present(definition)
       end
     end
 
-    def write_method_for(metric_key)
-      case metric_key
-      when :dataset_downloads_json then write_dataset_downloads_json
-      when :datafile_downloads_json then write_datafile_downloads_json
-      when :datasets_tsv then write_datasets_tsv
-      when :datafiles_csv then write_datafiles_csv
-      when :container_contents_csv then write_container_contents_csv
-      when :funders_csv then write_funders_csv
-      when :related_materials_csv then write_related_materials_csv
-      else
-        raise ArgumentError, "Unknown metric key: #{metric_key}"
-      end
+    def ensure_metric_file_present(definition)
+      return if File.exist?(definition.relative_path)
+
+      public_send(writer_method_for(definition.key))
+      return if File.exist?(definition.relative_path)
+
+      raise StandardError, "unable to create #{definition.label}"
     end
 
     def metric_path(metric_key)
-      METRICS_CONFIG.fetch(metric_key).fetch(:relative_path).to_s
+      definition_for(metric_key).relative_path
     end
 
     def format_mtime(metric_key)

@@ -620,6 +620,10 @@ namespace :migration do
         raise ArgumentError, "manifest file not found: #{manifest_path}" if manifest_path.present? && !File.file?(manifest_path)
 
         manifest_data = manifest_path.present? ? JSON.parse(File.read(manifest_path)) : nil
+        if manifest_data&.dig("format_version").present? && manifest_data["format_version"].to_i != 1
+          raise ArgumentError, "unsupported download metrics bundle format_version"
+        end
+
         expected_checksum = manifest_data&.dig("sha256").to_s.strip.presence
         if expected_checksum.blank? && checksum_path.present?
           expected_checksum = File.read(checksum_path).strip.split.first.to_s.strip.presence
@@ -808,6 +812,10 @@ namespace :migration do
         summary[:processed_count] = line_count
         summary[:expected_record_count] = manifest_data&.dig("record_count")
         summary[:checksum] = expected_checksum
+        summary[:manifest_format_version] = manifest_data&.dig("format_version")
+        summary[:include_tests] = manifest_data&.dig("include_tests") unless manifest_data.nil?
+        summary[:since] = manifest_data&.dig("since")
+        summary[:until] = manifest_data&.dig("until")
         summary[:counts] = {
           "DatasetDownloadTally" => type_counts["DatasetDownloadTally"].to_i,
           "FileDownloadTally" => type_counts["FileDownloadTally"].to_i,

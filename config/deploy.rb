@@ -23,6 +23,16 @@ set :assets_roles, %i[web app]
 set :keep_assets, 2
 
 namespace :deploy do
+  task :ensure_fresh_metrics do
+    on roles(:app) do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          execute :bundle, :exec, :rake, "metrics:ensure_fresh_metrics"
+        end
+      end
+    end
+  end
+
   task :restart do
     on roles(:app) do
       execute "~/svc_hooks/shutdown"
@@ -30,5 +40,6 @@ namespace :deploy do
     end
   end
 
-  after "deploy:publishing", "deploy:restart"
+  after "deploy:publishing", "deploy:ensure_fresh_metrics"
+  after "deploy:ensure_fresh_metrics", "deploy:restart"
 end

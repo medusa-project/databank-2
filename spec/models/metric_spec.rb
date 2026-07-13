@@ -3,7 +3,14 @@ require "rails_helper"
 RSpec.describe Metric, type: :model do
   def metric_config_for(tmpdir)
     {
-      dataset_downloads_json: { relative_path: File.join(tmpdir, "dataset_downloads.json") },
+      dataset_downloads_json: {
+        relative_path: File.join(tmpdir, "dataset_downloads.json"),
+        download_path: "/dataset_downloads.json",
+        content_type: "application/json",
+        label: "Dataset downloads JSON",
+        summary: "Daily download tallies grouped at the dataset level.",
+        columns: [ { name: "doi", description: "DOI that identifies the dataset." } ]
+      },
       datafile_downloads_json: { relative_path: File.join(tmpdir, "datafile_downloads.json") },
       datasets_tsv: { relative_path: File.join(tmpdir, "datasets.tsv") },
       datafiles_csv: { relative_path: File.join(tmpdir, "datafiles.csv") },
@@ -37,6 +44,28 @@ RSpec.describe Metric, type: :model do
     described_class::LOCK_KEYS.each do |key|
       expect(described_class).to have_received("write_#{key}")
     end
+  end
+
+  it "builds config-backed metric definitions" do
+    definition = described_class.definition_for(:dataset_downloads_json)
+
+    expect(definition.label).to eq("Dataset downloads JSON")
+    expect(definition.download_path).to eq("/dataset_downloads.json")
+    expect(definition.content_type).to eq("application/json")
+    expect(definition.summary).to include("Daily download tallies")
+    expect(definition.columns).to include(include(name: "doi"))
+  end
+
+  it "filters admin definitions to refreshable metrics" do
+    admin_keys = described_class.admin_definitions.map(&:key)
+
+    expect(admin_keys).to match_array(described_class::LOCK_KEYS)
+    expect(admin_keys).not_to include(:dataset_report_csv)
+  end
+
+  it "returns a writer method for known metric keys" do
+    expect(described_class.writer_method_for(:funders_csv)).to eq(:write_funders_csv)
+    expect { described_class.writer_method_for(:missing_metric) }.to raise_error(ArgumentError, /Unknown metric key/)
   end
 
   it "tracks lock files and refresh status" do
@@ -82,6 +111,35 @@ RSpec.describe Metric, type: :model do
       expect(File.exist?(METRICS_CONFIG[key][:relative_path])).to be(true)
       expect(modified_times[key]).to eq(File.mtime(METRICS_CONFIG[key][:relative_path]).to_fs(:long))
     end
+  end
+
+  it "refreshes only missing or stale metrics when ensuring freshness" do
+    fresh_key = :dataset_downloads_json
+    stale_key = :datafile_downloads_json
+    missing_key = :datasets_tsv
+    stale_time = 2.days.ago.to_time
+
+    File.write(METRICS_CONFIG[fresh_key][:relative_path], "fresh")
+    File.write(METRICS_CONFIG[stale_key][:relative_path], "stale")
+    File.utime(stale_time, stale_time, METRICS_CONFIG[stale_key][:relative_path])
+
+    allow(described_class).to receive(:write_dataset_downloads_json)
+    allow(described_class).to receive(:write_datafile_downloads_json) do
+      File.write(METRICS_CONFIG[stale_key][:relative_path], "rewritten stale")
+    end
+    allow(described_class).to receive(:write_datasets_tsv) do
+      File.write(METRICS_CONFIG[missing_key][:relative_path], "new file")
+    end
+    allow(described_class).to receive(:write_datafiles_csv)
+    allow(described_class).to receive(:write_container_contents_csv)
+    allow(described_class).to receive(:write_funders_csv)
+    allow(described_class).to receive(:write_related_materials_csv)
+
+    described_class.ensure_fresh_metrics
+
+    expect(described_class).not_to have_received(:write_dataset_downloads_json)
+    expect(described_class).to have_received(:write_datafile_downloads_json)
+    expect(described_class).to have_received(:write_datasets_tsv)
   end
 
   it "writes dataset downloads json and aggregate totals" do

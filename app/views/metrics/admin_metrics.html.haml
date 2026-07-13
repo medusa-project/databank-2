@@ -1,7 +1,7 @@
 - content_for :title, "Admin metrics"
 - modified_times = @modified_times || {}
 - refresh_status = @refresh_status || {}
-- metrics_rows = @metrics_rows || []
+- metric_definitions = @metric_definitions || []
 
 %ilw-content.dataset-show-page
   %section.dataset-show-panel.idb-rounded-section{aria: { label: "Metrics exports" }}
@@ -10,33 +10,57 @@
     %p
       = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
 
+    - if metric_definitions.empty?
+      %p.idb-workflow-note No metric exports are currently configured.
+
     %ul.dataset-show-list
-      - metrics_rows.each do |row|
+      - metric_definitions.each do |definition|
+        - metric_key = definition.key
+        - refresh_in_progress = refresh_status[metric_key]
         %li
           %span.dataset-show-list-primary
-            - if modified_times[row[:key]].to_s == "not found"
-              = "#{row[:title]} not currently available"
+            - if modified_times[metric_key].to_s == "not found"
+              = "#{definition.label} not currently available"
             - else
-              = link_to row[:title], row[:href]
+              = link_to definition.label, definition.download_path
 
           %span.dataset-show-list-secondary
             Modified:
-            = modified_times[row[:key]].presence || "not found"
+            = modified_times[metric_key].presence || "not found"
 
-          %span.dataset-show-list-tertiary= row[:description]
+          - if definition.summary.present?
+            %span.dataset-show-list-tertiary= definition.summary
 
-          - if refresh_status[row[:key]]
+          - if refresh_in_progress
             %p.idb-workflow-note
               = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
               Refresh this page manually to check status.
 
-          - if current_user&.admin?
+          - description_blocks = definition.description_blocks || []
+          - if description_blocks.any?
+            .dataset-show-list-tertiary
+              - description_blocks.each do |block|
+                %p= block
+
+          - columns = definition.columns || []
+          - if columns.any?
+            .dataset-show-list-tertiary
+              %strong Field definitions
+              %ul
+                - columns.each do |column|
+                  - column_name = column[:name] || column["name"]
+                  - column_description = column[:description] || column["description"]
+                  %li
+                    %strong= "#{column_name}:"
+                    = column_description
+
+          - if current_user&.admin? || current_user&.curator?
             .idb-workflow-strip
-              %nav.idb-workflow-actions-right{aria: { label: "#{row[:title]} actions" }}
-                - if refresh_status[row[:key]]
+              %nav.idb-workflow-actions-right{aria: { label: "#{definition.label} actions" }}
+                - if refresh_in_progress
                   %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
                 - else
-                  = button_to "Regenerate #{row[:title]}", row[:refresh_path], method: :post, class: "idb-button-success"
+                  = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post, class: "idb-button-success"
 
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing
