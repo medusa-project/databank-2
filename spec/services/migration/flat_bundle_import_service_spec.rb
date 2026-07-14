@@ -3,10 +3,12 @@ require "rails_helper"
 RSpec.describe Migration::FlatBundleImportService do
   let(:bundle_path) { Rails.root.join("tmp", "spec_flat_migration_bundle.ndjson") }
   let(:checksum_path) { Rails.root.join("tmp", "spec_flat_migration_bundle.ndjson.sha256") }
+  let(:checkpoint_path) { Rails.root.join("tmp", "spec_flat_migration_bundle.checkpoint.json") }
 
   after do
     FileUtils.rm_f(bundle_path)
     FileUtils.rm_f(checksum_path)
+    FileUtils.rm_f(checkpoint_path)
   end
 
   it "imports dataset, datafile, and nested items from flat records" do
@@ -282,6 +284,44 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(dataset.embargo).to eq("metadata")
   end
 
+  it "continues processing datasets when one record in a batch is invalid" do
+    invalid_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    valid_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: invalid_key,
+        title: nil,
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      },
+      {
+        type: "dataset",
+        dataset_id: valid_key,
+        title: "Valid Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(1)
+    expect(summary[:created]).to eq(1)
+    expect(summary[:records].map { |row| row[:status] || row["status"] }).to include(:failed)
+    expect(Dataset.find_by(key: invalid_key)).to be_nil
+    expect(Dataset.find_by(key: valid_key)).to be_present
+  end
+
   it "remaps colliding valid web_ids that belong to another dataset" do
     existing_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
     import_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
@@ -426,5 +466,96 @@ RSpec.describe Migration::FlatBundleImportService do
     dataset = Dataset.find_by!(key: dataset_key)
     datafile = dataset.datafiles.find_by!(web_id: "ab123")
     expect(datafile.nested_items.count).to eq(nested_count)
+  end
+
+  it "uses env-configurable batch size and pause between batches" do
+    dataset_keys = Array.new(3) { "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}" }
+
+    records = dataset_keys.map do |key|
+      {
+        type: "dataset",
+        dataset_id: key,
+        title: "Batch Config Dataset #{key}",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      }
+    end
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    begin
+      ENV["FLAT_BUNDLE_IMPORT_BATCH_SIZE"] = "2"
+      ENV["FLAT_BUNDLE_IMPORT_BATCH_PAUSE_SECONDS"] = "0.01"
+
+      service = described_class.new(bundle_path: bundle_path.to_s, dry_run: true)
+      expect(service).to receive(:sleep).with(0.01).at_least(:once)
+
+      summary = service.call
+
+      expect(summary[:failed]).to eq(0)
+      expect(summary.dig(:record_counts, :datasets)).to eq(3)
+    ensure
+      ENV.delete("FLAT_BUNDLE_IMPORT_BATCH_SIZE")
+      ENV.delete("FLAT_BUNDLE_IMPORT_BATCH_PAUSE_SECONDS")
+    end
+  end
+
+  it "supports windowed processing with resume line and max records" do
+    dataset_key_1 = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    dataset_key_2 = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key_1,
+        title: "Window Dataset 1",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      },
+      {
+        type: "dataset",
+        dataset_id: dataset_key_2,
+        title: "Window Dataset 2",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none"
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    begin
+      ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"] = "1"
+      ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"] = "1"
+      ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"] = checkpoint_path.to_s
+
+      first_summary = described_class.new(bundle_path: bundle_path.to_s).call
+      expect(first_summary[:processed_count]).to eq(1)
+      expect(first_summary[:stopped_early]).to eq(true)
+      expect(first_summary[:next_resume_from_line]).to eq(2)
+
+      checkpoint = JSON.parse(File.read(checkpoint_path))
+      expect(checkpoint["next_resume_from_line"]).to eq(2)
+
+      ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"] = checkpoint["next_resume_from_line"].to_s
+
+      second_summary = described_class.new(bundle_path: bundle_path.to_s).call
+      expect(second_summary[:processed_count]).to eq(1)
+      expect(second_summary[:stopped_early]).to eq(false)
+      expect(Dataset.find_by(key: dataset_key_1)).to be_present
+      expect(Dataset.find_by(key: dataset_key_2)).to be_present
+    ensure
+      ENV.delete("FLAT_BUNDLE_IMPORT_MAX_RECORDS")
+      ENV.delete("FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE")
+      ENV.delete("FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE")
+    end
   end
 end

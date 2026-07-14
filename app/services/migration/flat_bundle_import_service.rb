@@ -1,8 +1,18 @@
 require "json"
 require "digest"
+require "fileutils"
 
 module Migration
   class FlatBundleImportService
+    DEFAULT_BATCH_SIZE = 100
+    BATCH_SIZE_ENV = "FLAT_BUNDLE_IMPORT_BATCH_SIZE"
+    BATCH_PAUSE_ENV = "FLAT_BUNDLE_IMPORT_BATCH_PAUSE_SECONDS"
+    CHECKPOINT_EVERY_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_EVERY"
+    CHECKPOINT_FILE_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"
+    RESUME_FROM_LINE_ENV = "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"
+    MAX_RECORDS_ENV = "FLAT_BUNDLE_IMPORT_MAX_RECORDS"
+    DEFAULT_CHECKPOINT_EVERY = 5_000
+
     attr_reader :bundle_path, :overwrite, :dry_run, :checksum_path, :manifest_path, :report_path
 
     def initialize(bundle_path:, overwrite: false, dry_run: false, checksum_path: nil, manifest_path: nil, report_path: nil)
@@ -13,11 +23,19 @@ module Migration
       @manifest_path = manifest_path.present? ? Pathname(manifest_path) : nil
       @report_path = resolve_report_path(report_path)
       @normalized_datafile_ids = {}
+      @batch_size = configured_batch_size
+      @batch_pause_seconds = configured_batch_pause_seconds
+      @checkpoint_every = configured_checkpoint_every
+      @checkpoint_path = configured_checkpoint_path
+      @resume_from_line = configured_resume_from_line
+      @max_records = configured_max_records
     end
 
     def call
       summary = {
         bundle_path: bundle_path.to_s,
+        resume_from_line: resume_from_line,
+        max_records: max_records,
         created: 0,
         updated: 0,
         skipped_existing: 0,
@@ -37,19 +55,33 @@ module Migration
       verify_bundle_integrity!
 
       processed_count = 0
+      last_source_line = nil
+      stopped_early = false
       start_time = Time.current
 
       # Batch processing
       batches = { datasets: [], datafiles: [], nested_items: [] }
-      batch_size = 100
       dataset_map = {} # Track created datasets for relationships
+
+      if batch_size != DEFAULT_BATCH_SIZE || batch_pause_seconds.positive?
+        puts "Flat import config: batch_size=#{batch_size}, batch_pause_seconds=#{batch_pause_seconds}"
+      end
+      if resume_from_line > 1 || max_records.present?
+        puts "Flat import window: resume_from_line=#{resume_from_line}, max_records=#{max_records || 'all'}"
+      end
 
       File.foreach(bundle_path).with_index(1) do |line, line_number|
         next if line.strip.empty?
+        next if line_number < resume_from_line
+        if max_records.present? && processed_count >= max_records
+          stopped_early = true
+          break
+        end
 
         begin
           record = JSON.parse(line)
           record_type = record.delete("type")
+          record["_source_line"] = line_number
 
           case record_type
           when "dataset"
@@ -57,6 +89,7 @@ module Migration
             if batches[:datasets].size >= batch_size
               flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
               batches[:datasets] = []
+              pause_between_batches!
             end
 
           when "datafile"
@@ -64,6 +97,7 @@ module Migration
             if batches[:datafiles].size >= batch_size
               flush_datafiles_batch(batches[:datafiles], summary, dry_run)
               batches[:datafiles] = []
+              pause_between_batches!
             end
 
           when "nested_item"
@@ -71,12 +105,15 @@ module Migration
           end
 
           processed_count += 1
+          last_source_line = line_number
 
           # Progress every 500 records
           if processed_count % 500 == 0
             elapsed = (Time.current - start_time).to_i
             puts "[#{processed_count}] records processed (#{elapsed}s)"
           end
+
+          write_checkpoint_artifact!(summary: summary, processed_count: processed_count, last_source_line: last_source_line, stopped_early: stopped_early) if checkpoint_every.positive? && (processed_count % checkpoint_every).zero?
         rescue StandardError => e
           summary[:failed] += 1
           summary[:records] << {
@@ -88,18 +125,30 @@ module Migration
       end
 
       # Flush remaining batches
-      flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run) if batches[:datasets].any?
-      flush_datafiles_batch(batches[:datafiles], summary, dry_run) if batches[:datafiles].any?
+      if batches[:datasets].any?
+        flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+        pause_between_batches!
+      end
+
+      if batches[:datafiles].any?
+        flush_datafiles_batch(batches[:datafiles], summary, dry_run)
+        pause_between_batches!
+      end
 
       # Nested items depend on datafiles, so process these only after all datafiles are created.
       batches[:nested_items].each_slice(batch_size) do |slice|
         flush_nested_items_batch(slice, summary, dry_run)
+        pause_between_batches!
       end
 
       summary[:processed_count] = processed_count
+      summary[:last_source_line] = last_source_line
+      summary[:stopped_early] = stopped_early
+      summary[:next_resume_from_line] = last_source_line.present? ? last_source_line + 1 : resume_from_line
       summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_counts", "datasets") }
       summary[:checksum] = safe_expected_checksum
       write_report_artifact!(summary)
+      write_checkpoint_artifact!(summary: summary, processed_count: processed_count, last_source_line: last_source_line, stopped_early: stopped_early)
 
       total_time = (Time.current - start_time).to_i
       puts "Import complete: #{processed_count} records processed in #{total_time}s"
@@ -112,9 +161,19 @@ module Migration
       summary[:validation_error] = e.message if defined?(summary)
       summary[:failed] += 1 if defined?(summary)
       summary[:processed_count] = processed_count if defined?(processed_count) && defined?(summary)
+      summary[:last_source_line] = last_source_line if defined?(last_source_line) && defined?(summary)
+      summary[:stopped_early] = stopped_early if defined?(stopped_early) && defined?(summary)
+      if defined?(summary)
+        summary[:next_resume_from_line] = if defined?(last_source_line) && last_source_line.present?
+          last_source_line + 1
+        else
+          resume_from_line
+        end
+      end
       summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_counts", "datasets") } if defined?(summary)
       summary[:checksum] = safe_expected_checksum if defined?(summary)
       write_report_artifact!(summary) if defined?(summary)
+      write_checkpoint_artifact!(summary: summary, processed_count: processed_count || 0, last_source_line: defined?(last_source_line) ? last_source_line : nil, stopped_early: defined?(stopped_early) ? stopped_early : false) if defined?(summary)
       summary || {
         bundle_path: bundle_path.to_s,
         created: 0,
@@ -130,6 +189,64 @@ module Migration
 
     private
 
+  attr_reader :batch_size, :batch_pause_seconds, :checkpoint_every, :checkpoint_path, :resume_from_line, :max_records
+
+    def configured_batch_size
+      raw = ENV[BATCH_SIZE_ENV]
+      parsed = Integer(raw, exception: false)
+      return DEFAULT_BATCH_SIZE if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
+    def configured_batch_pause_seconds
+      raw = ENV[BATCH_PAUSE_ENV]
+      return 0.0 if raw.blank?
+
+      parsed = Float(raw, exception: false)
+      return 0.0 if parsed.nil? || parsed.negative?
+
+      parsed
+    end
+
+    def pause_between_batches!
+      return unless batch_pause_seconds.positive?
+
+      sleep(batch_pause_seconds)
+    end
+
+    def configured_checkpoint_every
+      raw = ENV[CHECKPOINT_EVERY_ENV]
+      parsed = Integer(raw, exception: false)
+      return DEFAULT_CHECKPOINT_EVERY if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
+    def configured_checkpoint_path
+      raw = ENV[CHECKPOINT_FILE_ENV]
+      return report_path.sub_ext(".checkpoint.json") if raw.blank?
+
+      path = Pathname(raw)
+      path.absolute? ? path : bundle_path.dirname.join(path)
+    end
+
+    def configured_resume_from_line
+      raw = ENV[RESUME_FROM_LINE_ENV]
+      parsed = Integer(raw, exception: false)
+      return 1 if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
+    def configured_max_records
+      raw = ENV[MAX_RECORDS_ENV]
+      parsed = Integer(raw, exception: false)
+      return nil if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
     def flush_datasets_batch(records, dataset_map, summary, dry_run)
       return if records.empty?
 
@@ -139,59 +256,68 @@ module Migration
       end
 
       records.each do |record|
-        dataset_id = record["dataset_id"]
+        begin
+          dataset_id = record["dataset_id"]
 
-        existing = Dataset.find_by(key: dataset_id)
+          existing = Dataset.find_by(key: dataset_id)
 
-        if existing && !overwrite
-          summary[:skipped_existing] += 1
-          dataset_map[dataset_id] = existing
-          next
+          if existing && !overwrite
+            summary[:skipped_existing] += 1
+            dataset_map[dataset_id] = existing
+            next
+          end
+
+          dataset = existing || Dataset.new(key: dataset_id)
+
+          normalized_publication_state = normalize_publication_state(record["publication_state"])
+
+          # Assign attributes from flat record
+          attributes = {
+            title: record["title"],
+            identifier: normalize_identifier(record["identifier"]),
+            publisher: record["publisher"],
+            publication_year: record["publication_year"],
+            description: record["description"],
+            license: record["license"],
+            owner_uid: record["owner_uid"],
+            corresponding_creator_name: record["corresponding_creator_name"],
+            depositor_name: record["depositor_name"],
+            depositor_email: record["depositor_email"],
+            subject: record["subject"],
+            keywords: record["keywords"],
+            hold_state: record["hold_state"],
+            release_date: record["release_date"],
+            embargo: normalize_embargo(record["embargo"]),
+            is_test: boolean_or_false(record["is_test"]),
+            is_import: boolean_or_false(record["is_import"]),
+            tombstone_date: record["tombstone_date"],
+            dataset_version: record["dataset_version"],
+            nested_updated_at: record["nested_updated_at"]
+          }
+          attributes[:publication_state] = normalized_publication_state if normalized_publication_state.present?
+          dataset.assign_attributes(assignable_attributes(dataset, attributes))
+
+          dataset.save!
+
+          # Sync nested records from flat format after the dataset exists
+          sync_flat_collections!(dataset, record)
+          dataset_map[dataset_id] = dataset
+
+          if existing
+            summary[:updated] += 1
+          else
+            summary[:created] += 1
+          end
+
+          summary[:record_counts][:datasets] += 1
+        rescue StandardError => e
+          summary[:failed] += 1
+          summary[:records] << {
+            line: record["_source_line"],
+            status: :failed,
+            message: e.message
+          }
         end
-
-        dataset = existing || Dataset.new(key: dataset_id)
-
-        normalized_publication_state = normalize_publication_state(record["publication_state"])
-
-        # Assign attributes from flat record
-        attributes = {
-          title: record["title"],
-          identifier: normalize_identifier(record["identifier"]),
-          publisher: record["publisher"],
-          publication_year: record["publication_year"],
-          description: record["description"],
-          license: record["license"],
-          owner_uid: record["owner_uid"],
-          corresponding_creator_name: record["corresponding_creator_name"],
-          depositor_name: record["depositor_name"],
-          depositor_email: record["depositor_email"],
-          subject: record["subject"],
-          keywords: record["keywords"],
-          hold_state: record["hold_state"],
-          release_date: record["release_date"],
-          embargo: normalize_embargo(record["embargo"]),
-          is_test: boolean_or_false(record["is_test"]),
-          is_import: boolean_or_false(record["is_import"]),
-          tombstone_date: record["tombstone_date"],
-          dataset_version: record["dataset_version"],
-          nested_updated_at: record["nested_updated_at"]
-        }
-        attributes[:publication_state] = normalized_publication_state if normalized_publication_state.present?
-        dataset.assign_attributes(assignable_attributes(dataset, attributes))
-
-        dataset.save!
-
-        # Sync nested records from flat format after the dataset exists
-        sync_flat_collections!(dataset, record)
-        dataset_map[dataset_id] = dataset
-
-        if existing
-          summary[:updated] += 1
-        else
-          summary[:created] += 1
-        end
-
-        summary[:record_counts][:datasets] += 1
       end
     end
 
@@ -514,6 +640,35 @@ module Migration
 
     def write_report_artifact!(summary)
       File.write(report_path, JSON.pretty_generate(summary))
+    end
+
+    def write_checkpoint_artifact!(summary:, processed_count:, last_source_line:, stopped_early:)
+      payload = {
+        generated_at: Time.current.iso8601,
+        bundle_path: bundle_path.to_s,
+        report_path: report_path.to_s,
+        checkpoint_every: checkpoint_every,
+        resume_from_line: resume_from_line,
+        max_records: max_records,
+        processed_count: processed_count,
+        last_source_line: last_source_line,
+        next_resume_from_line: last_source_line.present? ? last_source_line + 1 : resume_from_line,
+        stopped_early: stopped_early,
+        summary: {
+          created: summary[:created],
+          updated: summary[:updated],
+          skipped_existing: summary[:skipped_existing],
+          failed: summary[:failed],
+          datasets: summary.dig(:record_counts, :datasets),
+          datafiles: summary.dig(:record_counts, :datafiles),
+          nested_items: summary.dig(:record_counts, :nested_items),
+          validation_error: summary[:validation_error]
+        }
+      }
+
+      temp_path = Pathname("#{checkpoint_path}.tmp")
+      File.write(temp_path, JSON.pretty_generate(payload))
+      FileUtils.mv(temp_path, checkpoint_path)
     end
   end
 end

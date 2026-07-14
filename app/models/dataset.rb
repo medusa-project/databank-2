@@ -426,6 +426,7 @@ class Dataset < ApplicationRecord
   end
 
   def release_date_required_for_embargo
+    return unless published?
     return unless file_embargoed? || metadata_embargoed?
     return if release_date.present?
 

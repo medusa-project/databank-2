@@ -4,7 +4,7 @@ require "json"
 # Expected directory structure from migration:legacy:export_all:
 #   /tmp/databank_exports/
 #   ├── users_20260618T220000Z/                 (migration:legacy:export_users_bundle)
-#   ├── dataset_20260605T212924Z/               (migration:legacy:export_bundle - flat NDJSON format)
+#   ├── dataset_flat_20260605T212924Z/          (migration:legacy:export_bundle - flat NDJSON format)
 #   ├── permissions_20260605T213042Z/           (migration:legacy:export_permissions_bundle)
 #   ├── dataset_access_grants_20260605T213119Z/ (migration:legacy:export_dataset_access_grants_bundle)
 #   ├── guide_20260605T213946Z/                 (migration:legacy:export_guides_bundle)
@@ -27,7 +27,7 @@ require "json"
 
 namespace :cutover do
   # dir_prefix matches the subdir prefix created by the legacy export tasks, e.g.:
-  #   migration:legacy:export_bundle           → dataset_<timestamp>/
+  #   migration:legacy:export_bundle           → dataset_flat_<timestamp>/
   #   migration:legacy:export_permissions_bundle → permissions_<timestamp>/
   CUTOVER_IMPORT_STEPS = [
     {
@@ -42,7 +42,7 @@ namespace :cutover do
       task: "migration:flat_bundle:import_from_dir",
       default_bundle_file: "legacy_datasets.ndjson",
       dir_env: "DATASETS_DIR",
-      dir_prefix: "dataset_"
+      dir_prefixes: [ "dataset_flat_", "dataset_" ]
     },
     {
       key: "permissions",
@@ -125,14 +125,23 @@ namespace :cutover do
   def resolve_step_dir(step, bundle_root)
     explicit = ENV[step[:dir_env]].presence
     return explicit if explicit.present?
-    return bundle_root unless bundle_root.present? && step[:dir_prefix].present?
+    return bundle_root unless bundle_root.present?
 
-    candidates = Dir.glob(File.join(bundle_root, "#{step[:dir_prefix]}[0-9]*"))
-                    .select { |path| File.directory?(path) }
-                    .sort_by { |path| File.mtime(path) }
-                    .reverse
+    prefixes = Array(step[:dir_prefixes]).presence || Array(step[:dir_prefix]).presence
+    return bundle_root if prefixes.blank?
 
-    raise ArgumentError, "no subdirectory matching '#{step[:dir_prefix]}*' found in #{bundle_root}" if candidates.empty?
+    candidates = prefixes.flat_map do |prefix|
+      Dir.glob(File.join(bundle_root, "#{prefix}[0-9]*"))
+    end
+                       .select { |path| File.directory?(path) }
+                       .uniq
+                       .sort_by { |path| File.mtime(path) }
+                       .reverse
+
+    if candidates.empty?
+      prefix_description = prefixes.map { |prefix| "'#{prefix}*'" }.join(" or ")
+      raise ArgumentError, "no subdirectory matching #{prefix_description} found in #{bundle_root}"
+    end
 
     candidates.first
   end

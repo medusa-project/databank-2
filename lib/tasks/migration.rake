@@ -1387,6 +1387,163 @@ namespace :migration do
       puts "Nested items: #{summary[:record_counts][:nested_items]}" if summary[:record_counts]
       puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
     end
+
+    desc "Run flat bundle import in bounded resumable windows using checkpoint state"
+    task import_in_chunks: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
+      checkpoint_file = ENV.fetch("CHECKPOINT_FILE", "flat_bundle_import.checkpoint.json")
+      report_file = ENV.fetch("REPORT_FILE", "import_report.json")
+      max_records = ENV.fetch("MAX_RECORDS", "50000")
+      max_iterations = ENV.fetch("MAX_ITERATIONS", "100").to_i
+      max_minutes = ENV.fetch("MAX_MINUTES", "240").to_i
+      max_consecutive_failures = ENV.fetch("MAX_CONSECUTIVE_FAILURES", "5").to_i
+      max_stalled_runs = ENV.fetch("MAX_STALLED_RUNS", "2").to_i
+      resume_overlap = ENV.fetch("RESUME_OVERLAP_LINES", "200").to_i
+      backoff_base_seconds = ENV.fetch("BACKOFF_BASE_SECONDS", "10").to_i
+      lock_file = ENV.fetch("LOCK_FILE", "flat_bundle_import.lock")
+
+      checkpoint_path = Pathname(checkpoint_file)
+      checkpoint_path = dir.join(checkpoint_path) unless checkpoint_path.absolute?
+      report_path = Pathname(report_file)
+      report_path = dir.join(report_path) unless report_path.absolute?
+      lock_path = Pathname(lock_file)
+      lock_path = dir.join(lock_path) unless lock_path.absolute?
+
+      if max_iterations <= 0
+        raise ArgumentError, "MAX_ITERATIONS must be positive"
+      end
+      if max_minutes <= 0
+        raise ArgumentError, "MAX_MINUTES must be positive"
+      end
+      if max_consecutive_failures <= 0
+        raise ArgumentError, "MAX_CONSECUTIVE_FAILURES must be positive"
+      end
+      if max_stalled_runs <= 0
+        raise ArgumentError, "MAX_STALLED_RUNS must be positive"
+      end
+
+      FileUtils.mkdir_p(dir)
+
+      lock_handle = File.open(lock_path, File::RDWR | File::CREAT, 0o644)
+      unless lock_handle.flock(File::LOCK_EX | File::LOCK_NB)
+        raise "Chunked flat import is already running (lock: #{lock_path})"
+      end
+
+      started_at = Time.current
+      deadline = started_at + max_minutes.minutes
+      iteration = 0
+      consecutive_failures = 0
+      stalled_runs = 0
+      previous_next_resume = nil
+      completed = false
+      last_summary = nil
+
+      begin
+        while Time.current <= deadline && iteration < max_iterations
+          iteration += 1
+
+          next_resume_line = 1
+          if checkpoint_path.file?
+            checkpoint = JSON.parse(File.read(checkpoint_path))
+            candidate = checkpoint["next_resume_from_line"].to_i
+            next_resume_line = candidate if candidate.positive?
+          end
+
+          next_resume_line = [ next_resume_line - resume_overlap, 1 ].max
+
+          puts "Chunk #{iteration}: resume_from_line=#{next_resume_line}, max_records=#{max_records}"
+
+          previous_env = {
+            "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE" => ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"],
+            "FLAT_BUNDLE_IMPORT_MAX_RECORDS" => ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"],
+            "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE" => ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"],
+            "REPORT_FILE" => ENV["REPORT_FILE"],
+            "DIR" => ENV["DIR"],
+            "BUNDLE_FILE" => ENV["BUNDLE_FILE"]
+          }
+
+          begin
+            ENV["DIR"] = dir.to_s
+            ENV["BUNDLE_FILE"] = bundle_file
+            ENV["REPORT_FILE"] = report_path.to_s
+            ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"] = next_resume_line.to_s
+            ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"] = max_records.to_s
+            ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"] = checkpoint_path.to_s
+
+            task = Rake::Task["migration:flat_bundle:import_from_dir"]
+            task.reenable
+            task.invoke
+          ensure
+            previous_env.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+          end
+
+          unless checkpoint_path.file?
+            raise "checkpoint file not written: #{checkpoint_path}"
+          end
+
+          checkpoint = JSON.parse(File.read(checkpoint_path))
+          next_resume = checkpoint["next_resume_from_line"].to_i
+          stopped_early = checkpoint["stopped_early"]
+          last_summary = checkpoint["summary"] || {}
+
+          if next_resume <= 0
+            raise "invalid checkpoint next_resume_from_line: #{next_resume.inspect}"
+          end
+
+          if previous_next_resume.present? && next_resume <= previous_next_resume
+            stalled_runs += 1
+            warn "No checkpoint progress detected (#{stalled_runs}/#{max_stalled_runs})"
+          else
+            stalled_runs = 0
+          end
+          previous_next_resume = next_resume
+
+          if last_summary["validation_error"].present?
+            consecutive_failures += 1
+            warn "Chunk #{iteration} validation error (#{consecutive_failures}/#{max_consecutive_failures}): #{last_summary['validation_error']}"
+          else
+            consecutive_failures = 0
+          end
+
+          if stalled_runs >= max_stalled_runs
+            warn "Stopping due to stalled checkpoint progress"
+            break
+          end
+
+          if consecutive_failures >= max_consecutive_failures
+            warn "Stopping due to consecutive validation errors"
+            break
+          end
+
+          unless stopped_early
+            completed = true
+            puts "Chunk loop complete: end-of-file reached"
+            break
+          end
+
+          if consecutive_failures.positive?
+            sleep_seconds = backoff_base_seconds * (2**(consecutive_failures - 1))
+            puts "Backing off for #{sleep_seconds}s before next chunk"
+            sleep(sleep_seconds)
+          end
+        end
+
+        if Time.current > deadline
+          warn "Stopping due to MAX_MINUTES ceiling"
+        elsif iteration >= max_iterations && !completed
+          warn "Stopping due to MAX_ITERATIONS ceiling"
+        end
+
+        puts "Chunk loop summary: completed=#{completed}, iterations=#{iteration}, consecutive_failures=#{consecutive_failures}, stalled_runs=#{stalled_runs}"
+        if last_summary.is_a?(Hash)
+          puts "Last chunk: failed=#{last_summary['failed']}, datasets=#{last_summary['datasets']}, datafiles=#{last_summary['datafiles']}, nested_items=#{last_summary['nested_items']}"
+        end
+      ensure
+        lock_handle.flock(File::LOCK_UN)
+        lock_handle.close
+      end
+    end
   end
 
   namespace :audits do

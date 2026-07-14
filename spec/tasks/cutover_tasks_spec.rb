@@ -24,7 +24,8 @@ RSpec.describe "cutover tasks" do
     # CUTOVER_IMPORT_STEPS is a top-level constant defined inside the Rake namespace block.
     step_dirs = {}
     CUTOVER_IMPORT_STEPS.each do |step|
-      subdir = bundle_root.join("#{step[:dir_prefix]}20260605T120000Z")
+      prefixes = Array(step[:dir_prefixes]).presence || Array(step[:dir_prefix])
+      subdir = bundle_root.join("#{prefixes.first}20260605T120000Z")
       FileUtils.mkdir_p(subdir)
       step_dirs[step[:key]] = subdir.to_s
     end
