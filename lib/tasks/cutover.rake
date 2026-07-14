@@ -146,6 +146,16 @@ namespace :cutover do
     candidates.first
   end
 
+  def chunked_dataset_import?
+    ENV.fetch("CHUNKED_DATASET_IMPORT", "false").casecmp("true").zero?
+  end
+
+  def step_task_name(step)
+    return "migration:flat_bundle:import_in_chunks" if step[:key] == "datasets" && chunked_dataset_import?
+
+    step[:task]
+  end
+
   desc "Run all cutover bundle imports in required order (fails fast)"
   task import_all: :environment do
     bundle_root = ENV["BUNDLE_ROOT"].presence
@@ -174,8 +184,9 @@ namespace :cutover do
         ENV.delete("DRY_RUN")
       end
 
-      puts "Running #{step[:task]} DIR=#{step_dir} BUNDLE_FILE=#{bundle_file}"
-      rake_task = Rake::Task[step[:task]]
+      task_name = step_task_name(step)
+      puts "Running #{task_name} DIR=#{step_dir} BUNDLE_FILE=#{bundle_file}"
+      rake_task = Rake::Task[task_name]
       rake_task.reenable
       rake_task.invoke
     ensure
