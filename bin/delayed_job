@@ -4,8 +4,50 @@ set -euo pipefail
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$APP_ROOT"
 
-command="${1:-}"
-shift || true
+original_args=("$@")
+
+command=""
+worker_count=""
+remaining_args=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -n|--number_of_workers)
+      shift
+      worker_count="${1:-}"
+      [[ -n "$worker_count" ]] || {
+        echo "Missing value for -n/--number_of_workers"
+        exit 1
+      }
+      shift
+      ;;
+    start|stop|restart|status|run)
+      command="$1"
+      shift
+      remaining_args=("$@")
+      break
+      ;;
+    --)
+      shift
+      if [[ $# -gt 0 ]]; then
+        command="$1"
+        shift
+        remaining_args=("$@")
+      fi
+      break
+      ;;
+    -*)
+      # Accept delayed_job-style flags for compatibility even when not used by Solid Queue fallback.
+      shift
+      ;;
+    *)
+      command="$1"
+      shift
+      remaining_args=("$@")
+      break
+      ;;
+  esac
+done
 
 usage() {
   echo "Usage: bin/delayed_job <start|stop|restart|status|run>"
@@ -68,8 +110,12 @@ stop_solid_queue() {
   rm -f "$pid_file"
 }
 
-if ruby -e 'require "delayed/command"' >/dev/null 2>&1; then
-  exec ruby -e 'require File.expand_path("config/environment", Dir.pwd); require "delayed/command"; Delayed::Command.new(ARGV).daemonize' "$command" "$@"
+if [[ "${USE_LEGACY_DELAYED_JOB:-false}" == "true" ]]; then
+  exec ruby -e 'require File.expand_path("config/environment", Dir.pwd); require "delayed/command"; Delayed::Command.new(ARGV).daemonize' "${original_args[@]}"
+fi
+
+if [[ -n "$worker_count" ]]; then
+  echo "Compatibility note: ignoring -n $worker_count for Solid Queue fallback"
 fi
 
 case "$command" in
@@ -92,7 +138,7 @@ case "$command" in
     exit 1
     ;;
   run)
-    exec "$APP_ROOT/bin/jobs" start "$@"
+    exec "$APP_ROOT/bin/jobs" start "${remaining_args[@]}"
     ;;
   ""|help|-h|--help)
     usage
