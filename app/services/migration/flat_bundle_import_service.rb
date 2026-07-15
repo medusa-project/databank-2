@@ -329,9 +329,12 @@ module Migration
         return
       end
 
+      dataset_keys = records.map { |record| record["dataset_id"] }.compact.uniq
+      datasets_by_key = Dataset.where(key: dataset_keys).index_by(&:key)
+
       records.each do |record|
         dataset_key = record["dataset_id"]
-        dataset = Dataset.find_by(key: dataset_key)
+        dataset = datasets_by_key[dataset_key]
         next unless dataset
 
         web_id = normalized_datafile_web_id(dataset_key: dataset_key, source_id: record["datafile_id"])
@@ -363,51 +366,68 @@ module Migration
         return
       end
 
-      # Group by datafile for efficient processing
-      by_datafile = records.group_by { |r| "#{r['dataset_id']}:#{r['datafile_id']}" }
+      dataset_keys = records.map { |record| record["dataset_id"] }.compact.uniq
+      datasets_by_key = Dataset.where(key: dataset_keys).index_by(&:key)
+
+      datafile_lookup_pairs = records.filter_map do |record|
+        dataset = datasets_by_key[record["dataset_id"]]
+        next unless dataset
+
+        web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
+        [ dataset.id, web_id ]
+      end.uniq
+
+      datafile_ids_by_lookup = if datafile_lookup_pairs.any?
+        scope = Datafile.where(dataset_id: datafile_lookup_pairs.map(&:first).uniq, web_id: datafile_lookup_pairs.map(&:last).uniq)
+        scope.each_with_object({}) do |datafile, acc|
+          acc[[ datafile.dataset_id, datafile.web_id ]] = datafile.id
+        end
+      else
+        {}
+      end
 
       NestedItem.transaction do
-        by_datafile.each do |_key, items|
-          items.each do |record|
-            dataset = Dataset.find_by(key: record["dataset_id"])
-            web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
-            datafile = dataset&.datafiles&.find_by(web_id: web_id)
-            next unless datafile
+        records.each do |record|
+          dataset = datasets_by_key[record["dataset_id"]]
+          next unless dataset
 
-            # Parse item_id to get database ID (format: "ni-123")
-            db_id = record["item_id"].sub(/^ni-/, "").to_i
+          web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
+          datafile_id = datafile_ids_by_lookup[[ dataset.id, web_id ]]
+          next unless datafile_id
 
-            # Parse parent_item_id if present
-            parent_db_id = nil
-            if record["parent_item_id"].present?
-              parent_db_id = record["parent_item_id"].sub(/^ni-/, "").to_i
-            end
+          # Parse item_id to get database ID (format: "ni-123")
+          db_id = record["item_id"].sub(/^ni-/, "").to_i
 
-            nested_item = NestedItem.find_or_create_by(
-              id: db_id,
-              datafile_id: datafile.id,
-              item_name: record["item_name"]
-            ) do |item|
-              item.parent_id = parent_db_id
-            end
-
-            # Update attributes if needed
-            if nested_item.media_type != record["media_type"] ||
-               nested_item.size != record["size"] ||
-               nested_item.item_path != record["item_path"] ||
-               nested_item.is_directory != record["is_directory"]
-
-              nested_item.update!(
-                parent_id: parent_db_id,
-                media_type: record["media_type"],
-                size: record["size"],
-                item_path: record["item_path"],
-                is_directory: record["is_directory"]
-              )
-            end
-
-            summary[:record_counts][:nested_items] += 1
+          # Parse parent_item_id if present
+          parent_db_id = nil
+          if record["parent_item_id"].present?
+            parent_db_id = record["parent_item_id"].sub(/^ni-/, "").to_i
           end
+
+          nested_item = NestedItem.find_or_create_by(
+            id: db_id,
+            datafile_id: datafile_id,
+            item_name: record["item_name"]
+          ) do |item|
+            item.parent_id = parent_db_id
+          end
+
+          # Update attributes if needed
+          if nested_item.media_type != record["media_type"] ||
+             nested_item.size != record["size"] ||
+             nested_item.item_path != record["item_path"] ||
+             nested_item.is_directory != record["is_directory"]
+
+            nested_item.update!(
+              parent_id: parent_db_id,
+              media_type: record["media_type"],
+              size: record["size"],
+              item_path: record["item_path"],
+              is_directory: record["is_directory"]
+            )
+          end
+
+          summary[:record_counts][:nested_items] += 1
         end
       end
     end
