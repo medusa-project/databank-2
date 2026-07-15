@@ -11,7 +11,12 @@ module Migration
     CHECKPOINT_FILE_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"
     RESUME_FROM_LINE_ENV = "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"
     MAX_RECORDS_ENV = "FLAT_BUNDLE_IMPORT_MAX_RECORDS"
+    PROGRESS_EVERY_ENV = "FLAT_BUNDLE_IMPORT_PROGRESS_EVERY"
+    SLOW_BATCH_WARN_SECONDS_ENV = "FLAT_BUNDLE_IMPORT_SLOW_BATCH_WARN_SECONDS"
+    DIAGNOSTIC_LOGGING_ENV = "FLAT_BUNDLE_IMPORT_DIAGNOSTIC_LOGGING"
     DEFAULT_CHECKPOINT_EVERY = 5_000
+    DEFAULT_PROGRESS_EVERY = 500
+    DEFAULT_SLOW_BATCH_WARN_SECONDS = 5.0
 
     attr_reader :bundle_path, :overwrite, :dry_run, :checksum_path, :manifest_path, :report_path
 
@@ -29,6 +34,9 @@ module Migration
       @checkpoint_path = configured_checkpoint_path
       @resume_from_line = configured_resume_from_line
       @max_records = configured_max_records
+      @progress_every = configured_progress_every
+      @slow_batch_warn_seconds = configured_slow_batch_warn_seconds
+      @diagnostic_logging = configured_diagnostic_logging
     end
 
     def call
@@ -58,16 +66,23 @@ module Migration
       last_source_line = nil
       stopped_early = false
       start_time = Time.current
+      start_monotonic = monotonic_time
+      last_progress_time = start_monotonic
+      last_progress_count = 0
 
       # Batch processing
       batches = { datasets: [], datafiles: [], nested_items: [] }
       dataset_map = {} # Track created datasets for relationships
+      batch_counts = { datasets: 0, datafiles: 0, nested_items: 0 }
 
       if batch_size != DEFAULT_BATCH_SIZE || batch_pause_seconds.positive?
         puts "Flat import config: batch_size=#{batch_size}, batch_pause_seconds=#{batch_pause_seconds}"
       end
       if resume_from_line > 1 || max_records.present?
         puts "Flat import window: resume_from_line=#{resume_from_line}, max_records=#{max_records || 'all'}"
+      end
+      if diagnostic_logging
+        puts "Flat import diagnostics: progress_every=#{progress_every}, slow_batch_warn_seconds=#{slow_batch_warn_seconds}"
       end
 
       File.foreach(bundle_path).with_index(1) do |line, line_number|
@@ -87,7 +102,10 @@ module Migration
           when "dataset"
             batches[:datasets] << record
             if batches[:datasets].size >= batch_size
-              flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+              batch_counts[:datasets] += 1
+              timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
+                flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+              end
               batches[:datasets] = []
               pause_between_batches!
             end
@@ -95,7 +113,10 @@ module Migration
           when "datafile"
             batches[:datafiles] << record
             if batches[:datafiles].size >= batch_size
-              flush_datafiles_batch(batches[:datafiles], summary, dry_run)
+              batch_counts[:datafiles] += 1
+              timed_flush(phase: :datafiles, batch_index: batch_counts[:datafiles], record_count: batches[:datafiles].size) do
+                flush_datafiles_batch(batches[:datafiles], summary, dry_run)
+              end
               batches[:datafiles] = []
               pause_between_batches!
             end
@@ -107,10 +128,22 @@ module Migration
           processed_count += 1
           last_source_line = line_number
 
-          # Progress every 500 records
-          if processed_count % 500 == 0
-            elapsed = (Time.current - start_time).to_i
-            puts "[#{processed_count}] records processed (#{elapsed}s)"
+          # Progress every N records
+          if progress_every.positive? && (processed_count % progress_every).zero?
+            if diagnostic_logging
+              now = monotonic_time
+              elapsed_total = now - start_monotonic
+              interval_elapsed = [ now - last_progress_time, 0.001 ].max
+              interval_records = processed_count - last_progress_count
+              interval_rate = interval_records / interval_elapsed
+              average_rate = processed_count / [ elapsed_total, 0.001 ].max
+              puts "[#{processed_count}] records processed (#{format('%.2f', elapsed_total)}s total, #{format('%.0f', interval_rate)} rec/s window, #{format('%.0f', average_rate)} rec/s avg)"
+              last_progress_time = now
+              last_progress_count = processed_count
+            else
+              elapsed = (Time.current - start_time).to_i
+              puts "[#{processed_count}] records processed (#{elapsed}s)"
+            end
           end
 
           write_checkpoint_artifact!(summary: summary, processed_count: processed_count, last_source_line: last_source_line, stopped_early: stopped_early) if checkpoint_every.positive? && (processed_count % checkpoint_every).zero?
@@ -126,18 +159,37 @@ module Migration
 
       # Flush remaining batches
       if batches[:datasets].any?
-        flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+        batch_counts[:datasets] += 1
+        timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
+          flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+        end
         pause_between_batches!
       end
 
       if batches[:datafiles].any?
-        flush_datafiles_batch(batches[:datafiles], summary, dry_run)
+        batch_counts[:datafiles] += 1
+        timed_flush(phase: :datafiles, batch_index: batch_counts[:datafiles], record_count: batches[:datafiles].size) do
+          flush_datafiles_batch(batches[:datafiles], summary, dry_run)
+        end
         pause_between_batches!
       end
 
       # Nested items depend on datafiles, so process these only after all datafiles are created.
+      if batches[:nested_items].any?
+        puts "Starting nested item flush: pending=#{batches[:nested_items].size}, batch_size=#{batch_size}"
+      end
       batches[:nested_items].each_slice(batch_size) do |slice|
-        flush_nested_items_batch(slice, summary, dry_run)
+        batch_counts[:nested_items] += 1
+        timed_flush(phase: :nested_items, batch_index: batch_counts[:nested_items], record_count: slice.size) do
+          flush_nested_items_batch(slice, summary, dry_run)
+        end
+        nested_count = summary.dig(:record_counts, :nested_items).to_i
+        if progress_every.positive? && nested_count.positive? && (nested_count % progress_every).zero?
+          puts "[nested_items=#{nested_count}] processed during deferred flush (batch #{batch_counts[:nested_items]})"
+        end
+        if checkpoint_every.positive? && nested_count.positive? && (nested_count % checkpoint_every).zero?
+          write_checkpoint_artifact!(summary: summary, processed_count: processed_count, last_source_line: last_source_line, stopped_early: stopped_early)
+        end
         pause_between_batches!
       end
 
@@ -189,7 +241,8 @@ module Migration
 
     private
 
-  attr_reader :batch_size, :batch_pause_seconds, :checkpoint_every, :checkpoint_path, :resume_from_line, :max_records
+    attr_reader :batch_size, :batch_pause_seconds, :checkpoint_every, :checkpoint_path, :resume_from_line, :max_records,
+      :progress_every, :slow_batch_warn_seconds, :diagnostic_logging
 
     def configured_batch_size
       raw = ENV[BATCH_SIZE_ENV]
@@ -245,6 +298,42 @@ module Migration
       return nil if parsed.nil? || parsed <= 0
 
       parsed
+    end
+
+    def configured_progress_every
+      raw = ENV[PROGRESS_EVERY_ENV]
+      parsed = Integer(raw, exception: false)
+      return DEFAULT_PROGRESS_EVERY if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
+    def configured_slow_batch_warn_seconds
+      raw = ENV[SLOW_BATCH_WARN_SECONDS_ENV]
+      return DEFAULT_SLOW_BATCH_WARN_SECONDS if raw.blank?
+
+      parsed = Float(raw, exception: false)
+      return DEFAULT_SLOW_BATCH_WARN_SECONDS if parsed.nil? || parsed.negative?
+
+      parsed
+    end
+
+    def configured_diagnostic_logging
+      ActiveModel::Type::Boolean.new.cast(ENV[DIAGNOSTIC_LOGGING_ENV]) || false
+    end
+
+    def monotonic_time
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
+    def timed_flush(phase:, batch_index:, record_count:)
+      started_at = monotonic_time
+      yield
+      elapsed = monotonic_time - started_at
+      return unless diagnostic_logging || elapsed >= slow_batch_warn_seconds
+
+      slow_suffix = elapsed >= slow_batch_warn_seconds ? " SLOW" : ""
+      puts "[#{phase} batch #{batch_index}] size=#{record_count} flush=#{format('%.3f', elapsed)}s#{slow_suffix}"
     end
 
     def flush_datasets_batch(records, dataset_map, summary, dry_run)

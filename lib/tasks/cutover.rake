@@ -23,6 +23,9 @@ require "json"
 #
 # To run with dry-run (no database changes):
 #   BUNDLE_ROOT=/tmp/databank_exports DRY_RUN=true bundle exec rails cutover:import_all
+#
+# For large dataset bundles or unstable environments, prefer resumable chunk mode:
+#   BUNDLE_ROOT=/tmp/databank_exports CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
 
 
 namespace :cutover do
@@ -186,6 +189,9 @@ namespace :cutover do
 
       task_name = step_task_name(step)
       puts "Running #{task_name} DIR=#{step_dir} BUNDLE_FILE=#{bundle_file}"
+      if step[:key] == "datasets" && !chunked_dataset_import?
+        puts "Tip: set CHUNKED_DATASET_IMPORT=true for resumable dataset import windows on large bundles"
+      end
       rake_task = Rake::Task[task_name]
       rake_task.reenable
       rake_task.invoke
