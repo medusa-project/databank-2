@@ -143,6 +143,69 @@ RSpec.describe "cutover tasks" do
     FileUtils.rm_rf(bundle_root)
   end
 
+  it "skips requested cutover steps when SKIP_STEPS is provided" do
+    bundle_root = Rails.root.join("tmp", "cutover_orchestration_skip_steps")
+    FileUtils.mkdir_p(bundle_root)
+
+    step_dirs = {}
+    CUTOVER_IMPORT_STEPS.each do |step|
+      prefixes = Array(step[:dir_prefixes]).presence || Array(step[:dir_prefix])
+      subdir = bundle_root.join("#{prefixes.first}20260605T120000Z")
+      FileUtils.mkdir_p(subdir)
+      step_dirs[step[:key]] = subdir.to_s
+    end
+
+    expected_order = [
+      "migration:permissions:import_from_dir",
+      "migration:dataset_access_grants:import_from_dir",
+      "migration:guides:import_from_dir",
+      "migration:spotlights:import_from_dir",
+      "migration:medusa_ingests:import_from_dir",
+      "migration:download_metrics:import_from_dir",
+      "migration:audits:import_from_dir"
+    ]
+
+    expected_steps = CUTOVER_IMPORT_STEPS.reject { |step| %w[users datasets].include?(step[:key]) }
+
+    invocations = []
+    fake_tasks = {}
+
+    expected_order.each do |task_name|
+      task_double = instance_double(Rake::Task)
+      allow(task_double).to receive(:reenable)
+      allow(task_double).to receive(:invoke) do
+        invocations << {
+          task: task_name,
+          dir: ENV["DIR"],
+          bundle_file: ENV["BUNDLE_FILE"],
+          dry_run: ENV["DRY_RUN"]
+        }
+      end
+      fake_tasks[task_name] = task_double
+    end
+
+    allow(Rake::Task).to receive(:[]).and_wrap_original do |original, task_name|
+      fake_tasks.fetch(task_name) { original.call(task_name) }
+    end
+
+    ENV["BUNDLE_ROOT"] = bundle_root.to_s
+    ENV["DRY_RUN"] = "true"
+    ENV["SKIP_STEPS"] = "users,datasets"
+
+    import_all_task.invoke
+
+    expect(invocations.map { |call| call[:task] }).to eq(expected_order)
+    expected_steps.each_with_index do |step, index|
+      expect(invocations[index][:dir]).to eq(step_dirs[step[:key]])
+    end
+    expect(invocations).to all(include(dry_run: "true"))
+  ensure
+    ENV.delete("BUNDLE_ROOT")
+    ENV.delete("DRY_RUN")
+    ENV.delete("SKIP_STEPS")
+    FileUtils.rm_rf(bundle_root)
+  end
+
   it "writes reconciliation report when required runs are present" do
     required_run_types = %w[
       users_bundle_import

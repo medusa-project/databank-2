@@ -26,6 +26,41 @@ require "json"
 #
 # For large dataset bundles or unstable environments, prefer resumable chunk mode:
 #   BUNDLE_ROOT=/tmp/databank_exports CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
+#
+# Preferred two-phase protocol for very large nested_items imports:
+#   NOTE: This only changes how dataset records are imported.
+#   Users, permissions, grants, guides, spotlights, medusa ingests, download metrics,
+#   and audits remain separate required cutover steps.
+#   1) Structure pass (datasets + datafiles only)
+#      BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
+#   2) Nested-items pass (separate command if needed)
+#      DIR=/tmp/databank_exports/dataset_flat_<timestamp> BUNDLE_FILE=legacy_nested_items.ndjson bundle exec rails migration:flat_bundle:import_nested_items_in_chunks
+#
+# Runbook (import side, demo-safe defaults):
+#   1) Structure import in chunks
+#      RAILS_ENV=demo DIR=/tmp/databank_exports/dataset_flat_<timestamp> BUNDLE_FILE=legacy_datasets.ndjson MAX_RECORDS=10000 FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 bundle exec rails migration:flat_bundle:import_structure_in_chunks
+#   2) Nested-items import in chunks
+#      RAILS_ENV=demo DIR=/tmp/databank_exports/dataset_nested_items_<timestamp> BUNDLE_FILE=legacy_nested_items.ndjson MAX_RECORDS=10000 FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 bundle exec rails migration:flat_bundle:import_nested_items_in_chunks
+#   3) Remaining bundles (permissions, grants, guides, spotlights, medusa, metrics, audits)
+#      RAILS_ENV=demo BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true SKIP_STEPS=users,datasets,nested_items bundle exec rails cutover:import_all
+#   4) Reconcile and smoke
+#      RAILS_ENV=demo bundle exec rails cutover:reconcile
+#      RAILS_ENV=demo bundle exec rails cutover:smoke ALLOW_ISSUES=true
+#
+# For long-running dataset chunk imports over SSH, run detached with line-buffered logs:
+#   cd /home/databank/current && nohup stdbuf -oL -eL env \
+#     RAILS_ENV=demo \
+#     DIR=/tmp/databank_exports/dataset_flat_<timestamp> \
+#     BUNDLE_FILE=legacy_datasets.ndjson \
+#     CHECKPOINT_FILE=flat_bundle_import.checkpoint.json \
+#     REPORT_FILE=cutover_datasets_report.json \
+#     FLAT_BUNDLE_IMPORT_DIAGNOSTIC_LOGGING=true \
+#     FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 \
+#     MAX_RECORDS=10000 \
+#     bundle exec rails migration:flat_bundle:import_in_chunks \
+#     > /tmp/flat_bundle_import.log 2>&1 < /dev/null &
+#   tail -n 100 -F /tmp/flat_bundle_import.log
+#
 
 
 namespace :cutover do
@@ -98,9 +133,30 @@ namespace :cutover do
     }
   ].freeze
 
-  CUTOVER_REQUIRED_RUN_TYPES = %w[
+  CUTOVER_NESTED_ITEMS_STEP = {
+    key: "nested_items",
+    task: "migration:flat_bundle:import_nested_items_from_dir",
+    default_bundle_file: "legacy_nested_items.ndjson",
+    dir_env: "NESTED_ITEMS_DIR",
+    dir_prefixes: [ "dataset_nested_items_", "dataset_flat_", "dataset_" ]
+  }.freeze
+
+  CUTOVER_REQUIRED_RUN_TYPES_DEFAULT = %w[
     users_bundle_import
     flat_bundle_import
+    permissions_bundle_import
+    dataset_access_grants_bundle_import
+    guides_bundle_import
+    featured_researchers_bundle_import
+    medusa_ingests_bundle_import
+    download_metrics_bundle_import
+    audits_bundle_import
+  ].freeze
+
+  CUTOVER_REQUIRED_RUN_TYPES_TWO_PHASE = %w[
+    users_bundle_import
+    flat_bundle_structure_import
+    flat_bundle_nested_items_import
     permissions_bundle_import
     dataset_access_grants_bundle_import
     guides_bundle_import
@@ -153,8 +209,41 @@ namespace :cutover do
     ENV.fetch("CHUNKED_DATASET_IMPORT", "false").casecmp("true").zero?
   end
 
+  def separate_nested_items_import?
+    ENV.fetch("SEPARATE_NESTED_ITEMS_IMPORT", "false").casecmp("true").zero?
+  end
+
+  def cutover_required_run_types
+    separate_nested_items_import? ? CUTOVER_REQUIRED_RUN_TYPES_TWO_PHASE : CUTOVER_REQUIRED_RUN_TYPES_DEFAULT
+  end
+
+  def cutover_import_steps
+    steps = CUTOVER_IMPORT_STEPS.dup
+    return steps unless separate_nested_items_import?
+
+    dataset_index = steps.index { |step| step[:key] == "datasets" }
+    return steps << CUTOVER_NESTED_ITEMS_STEP if dataset_index.nil?
+
+    steps.insert(dataset_index + 1, CUTOVER_NESTED_ITEMS_STEP)
+  end
+
+  def skipped_cutover_step_keys
+    raw = ENV["SKIP_STEPS"].to_s
+    return [] if raw.blank?
+
+    raw.split(",").map { |value| value.to_s.strip.downcase }.reject(&:blank?)
+  end
+
   def step_task_name(step)
-    return "migration:flat_bundle:import_in_chunks" if step[:key] == "datasets" && chunked_dataset_import?
+    if step[:key] == "datasets"
+      return "migration:flat_bundle:import_structure_in_chunks" if separate_nested_items_import? && chunked_dataset_import?
+      return "migration:flat_bundle:import_structure_from_dir" if separate_nested_items_import?
+      return "migration:flat_bundle:import_in_chunks" if chunked_dataset_import?
+    end
+
+    if step[:key] == "nested_items"
+      return "migration:flat_bundle:import_nested_items_in_chunks" if chunked_dataset_import?
+    end
 
     step[:task]
   end
@@ -163,8 +252,15 @@ namespace :cutover do
   task import_all: :environment do
     bundle_root = ENV["BUNDLE_ROOT"].presence
     dry_run_enabled = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+    skipped_steps = skipped_cutover_step_keys
 
-    CUTOVER_IMPORT_STEPS.each do |step|
+    if skipped_steps.any?
+      puts "Skipping cutover steps: #{skipped_steps.join(', ')}"
+    end
+
+    cutover_import_steps.each do |step|
+      next if skipped_steps.include?(step[:key])
+
       step_dir = resolve_step_dir(step, bundle_root)
       raise ArgumentError, "missing #{step[:dir_env]} or BUNDLE_ROOT for #{step[:key]}" if step_dir.blank?
 
@@ -192,6 +288,9 @@ namespace :cutover do
       if step[:key] == "datasets" && !chunked_dataset_import?
         puts "Tip: set CHUNKED_DATASET_IMPORT=true for resumable dataset import windows on large bundles"
       end
+      if step[:key] == "datasets" && !separate_nested_items_import?
+        puts "Tip: set SEPARATE_NESTED_ITEMS_IMPORT=true to split structure and nested item pipelines"
+      end
       rake_task = Rake::Task[task_name]
       rake_task.reenable
       rake_task.invoke
@@ -214,7 +313,7 @@ namespace :cutover do
     issues = []
     runs = {}
 
-    CUTOVER_REQUIRED_RUN_TYPES.each do |run_type|
+    cutover_required_run_types.each do |run_type|
       run = latest_run_for(run_type)
       if run.nil?
         issues << "missing migration run for #{run_type}"
@@ -244,7 +343,7 @@ namespace :cutover do
 
     output = {
       generated_at: Time.current.utc.iso8601,
-      required_run_types: CUTOVER_REQUIRED_RUN_TYPES,
+      required_run_types: cutover_required_run_types,
       issues: issues,
       runs: runs
     }
@@ -266,7 +365,7 @@ namespace :cutover do
     runs = {}
     allow_issues = ENV.fetch("ALLOW_ISSUES", "false").casecmp("true").zero?
 
-    CUTOVER_REQUIRED_RUN_TYPES.each do |run_type|
+    cutover_required_run_types.each do |run_type|
       run = latest_run_for(run_type)
       if run.nil?
         issues << "missing migration run for #{run_type}"

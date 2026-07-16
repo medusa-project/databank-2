@@ -1209,8 +1209,10 @@ namespace :migration do
   end
 
   namespace :bundle do
-    desc "Import a secure NDJSON migration bundle exported from legacy databank"
+    # Deprecated: legacy non-flat bundle import path. Prefer migration:flat_bundle:* tasks.
+    desc "[DEPRECATED] Import a secure NDJSON migration bundle exported from legacy databank"
     task import: :environment do
+      warn "DEPRECATED: migration:bundle:import is non-flat. Prefer migration:flat_bundle:import_from_dir or migration:flat_bundle:import_in_chunks."
       bundle_path = ENV.fetch("BUNDLE")
       checksum_path = ENV["CHECKSUM"]
       manifest_path = ENV["MANIFEST"]
@@ -1255,8 +1257,9 @@ namespace :migration do
       end
     end
 
-    desc "Import copied legacy export artifacts from a directory"
+    desc "[DEPRECATED] Import copied legacy export artifacts from a directory"
     task import_from_dir: :environment do
+      warn "DEPRECATED: migration:bundle:import_from_dir is non-flat. Prefer migration:flat_bundle:import_from_dir or migration:flat_bundle:import_in_chunks."
       dir = Pathname(ENV.fetch("DIR"))
       bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
       bundle_path = dir.join(bundle_file)
@@ -1327,6 +1330,7 @@ namespace :migration do
     desc "Import flat NDJSON bundle (format_version: 2) with separate entity records"
     task import_from_dir: :environment do
       dir = Pathname(ENV.fetch("DIR"))
+      import_mode = ENV.fetch("IMPORT_MODE", Migration::FlatBundleImportService::IMPORT_MODE_ALL)
       bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
       bundle_path = dir.join(bundle_file)
       report_path = ENV["REPORT_FILE"].presence
@@ -1352,25 +1356,39 @@ namespace :migration do
 
       overwrite = ENV.fetch("OVERWRITE", "false").casecmp("true").zero?
       dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+      run_type = case import_mode
+      when Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+        "flat_bundle_structure_import"
+      when Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+        "flat_bundle_nested_items_import"
+      else
+        "flat_bundle_import"
+      end
 
       summary = record_migration_run(
-        run_type: "flat_bundle_import",
+        run_type: run_type,
         bundle_path: bundle_path.to_s,
         checksum_path: checksum_path,
         manifest_path: manifest_path,
         report_path: resolved_report_path.to_s,
         details: {
           dry_run: dry_run,
-          overwrite: overwrite
+          overwrite: overwrite,
+          import_mode: import_mode
         }
       ) do
-        Migration::FlatBundleImportService.new(
+        service_kwargs = {
           bundle_path: bundle_path.to_s,
           overwrite: overwrite,
           dry_run: dry_run,
           checksum_path: checksum_path,
           manifest_path: manifest_path,
           report_path: resolved_report_path.to_s
+        }
+        service_kwargs[:import_mode] = import_mode unless import_mode == Migration::FlatBundleImportService::IMPORT_MODE_ALL
+
+        Migration::FlatBundleImportService.new(
+          **service_kwargs
         ).call
       end
 
@@ -1388,11 +1406,42 @@ namespace :migration do
       puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
     end
 
+    desc "Import only dataset/datafile records from a flat NDJSON bundle"
+    task import_structure_from_dir: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+      task = Rake::Task["migration:flat_bundle:import_from_dir"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
+    desc "Import only nested_item records from a flat NDJSON bundle"
+    task import_nested_items_from_dir: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+      task = Rake::Task["migration:flat_bundle:import_from_dir"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
     desc "Run flat bundle import in bounded resumable windows using checkpoint state"
     task import_in_chunks: :environment do
       dir = Pathname(ENV.fetch("DIR"))
+      import_mode = ENV.fetch("IMPORT_MODE", Migration::FlatBundleImportService::IMPORT_MODE_ALL)
       bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
-      checkpoint_file = ENV.fetch("CHECKPOINT_FILE", "flat_bundle_import.checkpoint.json")
+      default_checkpoint_file = case import_mode
+      when Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+        "flat_bundle_structure_import.checkpoint.json"
+      when Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+        "flat_bundle_nested_items_import.checkpoint.json"
+      else
+        "flat_bundle_import.checkpoint.json"
+      end
+      checkpoint_file = ENV.fetch("CHECKPOINT_FILE", default_checkpoint_file)
       report_file = ENV.fetch("REPORT_FILE", "import_report.json")
       max_records = ENV.fetch("MAX_RECORDS", "50000")
       max_iterations = ENV.fetch("MAX_ITERATIONS", "100").to_i
@@ -1458,6 +1507,7 @@ namespace :migration do
             "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE" => ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"],
             "FLAT_BUNDLE_IMPORT_MAX_RECORDS" => ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"],
             "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE" => ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"],
+            "IMPORT_MODE" => ENV["IMPORT_MODE"],
             "REPORT_FILE" => ENV["REPORT_FILE"],
             "DIR" => ENV["DIR"],
             "BUNDLE_FILE" => ENV["BUNDLE_FILE"]
@@ -1470,6 +1520,7 @@ namespace :migration do
             ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"] = next_resume_line.to_s
             ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"] = max_records.to_s
             ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"] = checkpoint_path.to_s
+            ENV["IMPORT_MODE"] = import_mode
 
             task = Rake::Task["migration:flat_bundle:import_from_dir"]
             task.reenable
@@ -1543,6 +1594,28 @@ namespace :migration do
         lock_handle.flock(File::LOCK_UN)
         lock_handle.close
       end
+    end
+
+    desc "Run dataset/datafile-only import in bounded resumable windows"
+    task import_structure_in_chunks: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+      task = Rake::Task["migration:flat_bundle:import_in_chunks"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
+    desc "Run nested-items-only import in bounded resumable windows"
+    task import_nested_items_in_chunks: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+      task = Rake::Task["migration:flat_bundle:import_in_chunks"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
     end
   end
 

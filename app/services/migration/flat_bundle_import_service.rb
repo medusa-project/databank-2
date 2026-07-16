@@ -11,19 +11,25 @@ module Migration
     CHECKPOINT_FILE_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"
     RESUME_FROM_LINE_ENV = "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"
     MAX_RECORDS_ENV = "FLAT_BUNDLE_IMPORT_MAX_RECORDS"
+    IMPORT_MODE_ENV = "FLAT_BUNDLE_IMPORT_MODE"
     PROGRESS_EVERY_ENV = "FLAT_BUNDLE_IMPORT_PROGRESS_EVERY"
     SLOW_BATCH_WARN_SECONDS_ENV = "FLAT_BUNDLE_IMPORT_SLOW_BATCH_WARN_SECONDS"
     DIAGNOSTIC_LOGGING_ENV = "FLAT_BUNDLE_IMPORT_DIAGNOSTIC_LOGGING"
+    IMPORT_MODE_ALL = "all"
+    IMPORT_MODE_STRUCTURE_ONLY = "structure_only"
+    IMPORT_MODE_NESTED_ITEMS_ONLY = "nested_items_only"
+    IMPORT_MODES = [ IMPORT_MODE_ALL, IMPORT_MODE_STRUCTURE_ONLY, IMPORT_MODE_NESTED_ITEMS_ONLY ].freeze
     DEFAULT_CHECKPOINT_EVERY = 5_000
     DEFAULT_PROGRESS_EVERY = 500
     DEFAULT_SLOW_BATCH_WARN_SECONDS = 5.0
 
     attr_reader :bundle_path, :overwrite, :dry_run, :checksum_path, :manifest_path, :report_path
 
-    def initialize(bundle_path:, overwrite: false, dry_run: false, checksum_path: nil, manifest_path: nil, report_path: nil)
+    def initialize(bundle_path:, overwrite: false, dry_run: false, checksum_path: nil, manifest_path: nil, report_path: nil, import_mode: nil)
       @bundle_path = Pathname(bundle_path)
       @overwrite = overwrite
       @dry_run = dry_run
+      @import_mode = normalize_import_mode(import_mode)
       @checksum_path = checksum_path.present? ? Pathname(checksum_path) : nil
       @manifest_path = manifest_path.present? ? Pathname(manifest_path) : nil
       @report_path = resolve_report_path(report_path)
@@ -42,6 +48,7 @@ module Migration
     def call
       summary = {
         bundle_path: bundle_path.to_s,
+        import_mode: import_mode,
         resume_from_line: resume_from_line,
         max_records: max_records,
         created: 0,
@@ -82,7 +89,7 @@ module Migration
         puts "Flat import window: resume_from_line=#{resume_from_line}, max_records=#{max_records || 'all'}"
       end
       if diagnostic_logging
-        puts "Flat import diagnostics: progress_every=#{progress_every}, slow_batch_warn_seconds=#{slow_batch_warn_seconds}"
+        puts "Flat import diagnostics: import_mode=#{import_mode}, progress_every=#{progress_every}, slow_batch_warn_seconds=#{slow_batch_warn_seconds}"
       end
 
       File.foreach(bundle_path).with_index(1) do |line, line_number|
@@ -97,6 +104,10 @@ module Migration
           record = JSON.parse(line)
           record_type = record.delete("type")
           record["_source_line"] = line_number
+          unless import_record_type?(record_type)
+            last_source_line = line_number
+            next
+          end
 
           case record_type
           when "dataset"
@@ -197,7 +208,7 @@ module Migration
       summary[:last_source_line] = last_source_line
       summary[:stopped_early] = stopped_early
       summary[:next_resume_from_line] = last_source_line.present? ? last_source_line + 1 : resume_from_line
-      summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_counts", "datasets") }
+      summary[:expected_record_count] = expected_record_count_from_manifest
       summary[:checksum] = safe_expected_checksum
       write_report_artifact!(summary)
       write_checkpoint_artifact!(summary: summary, processed_count: processed_count, last_source_line: last_source_line, stopped_early: stopped_early)
@@ -222,7 +233,7 @@ module Migration
           resume_from_line
         end
       end
-      summary[:expected_record_count] = safe_manifest_value { manifest_data&.dig("record_counts", "datasets") } if defined?(summary)
+      summary[:expected_record_count] = expected_record_count_from_manifest if defined?(summary)
       summary[:checksum] = safe_expected_checksum if defined?(summary)
       write_report_artifact!(summary) if defined?(summary)
       write_checkpoint_artifact!(summary: summary, processed_count: processed_count || 0, last_source_line: defined?(last_source_line) ? last_source_line : nil, stopped_early: defined?(stopped_early) ? stopped_early : false) if defined?(summary)
@@ -242,7 +253,7 @@ module Migration
     private
 
     attr_reader :batch_size, :batch_pause_seconds, :checkpoint_every, :checkpoint_path, :resume_from_line, :max_records,
-      :progress_every, :slow_batch_warn_seconds, :diagnostic_logging
+      :progress_every, :slow_batch_warn_seconds, :diagnostic_logging, :import_mode
 
     def configured_batch_size
       raw = ENV[BATCH_SIZE_ENV]
@@ -298,6 +309,42 @@ module Migration
       return nil if parsed.nil? || parsed <= 0
 
       parsed
+    end
+
+    def normalize_import_mode(value)
+      normalized = value.to_s.strip
+      normalized = ENV.fetch(IMPORT_MODE_ENV, IMPORT_MODE_ALL) if normalized.blank?
+      normalized = normalized.downcase
+      return normalized if IMPORT_MODES.include?(normalized)
+
+      IMPORT_MODE_ALL
+    end
+
+    def import_record_type?(record_type)
+      case import_mode
+      when IMPORT_MODE_ALL
+        %w[dataset datafile nested_item].include?(record_type)
+      when IMPORT_MODE_STRUCTURE_ONLY
+        %w[dataset datafile].include?(record_type)
+      when IMPORT_MODE_NESTED_ITEMS_ONLY
+        record_type == "nested_item"
+      else
+        false
+      end
+    end
+
+    def expected_record_count_from_manifest
+      safe_manifest_value do
+        counts = manifest_data&.dig("record_counts")
+        case import_mode
+        when IMPORT_MODE_STRUCTURE_ONLY
+          counts&.dig("datasets").to_i + counts&.dig("datafiles").to_i
+        when IMPORT_MODE_NESTED_ITEMS_ONLY
+          counts&.dig("nested_items")
+        else
+          counts&.dig("datasets")
+        end
+      end
     end
 
     def configured_progress_every
@@ -475,50 +522,61 @@ module Migration
         {}
       end
 
-      NestedItem.transaction do
-        records.each do |record|
-          dataset = datasets_by_key[record["dataset_id"]]
-          next unless dataset
+      rows = []
+      now = Time.current
 
-          web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
-          datafile_id = datafile_ids_by_lookup[[ dataset.id, web_id ]]
-          next unless datafile_id
+      records.each do |record|
+        dataset = datasets_by_key[record["dataset_id"]]
+        next unless dataset
 
-          # Parse item_id to get database ID (format: "ni-123")
-          db_id = record["item_id"].sub(/^ni-/, "").to_i
+        web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
+        datafile_id = datafile_ids_by_lookup[[ dataset.id, web_id ]]
+        next unless datafile_id
 
-          # Parse parent_item_id if present
-          parent_db_id = nil
-          if record["parent_item_id"].present?
-            parent_db_id = record["parent_item_id"].sub(/^ni-/, "").to_i
-          end
-
-          nested_item = NestedItem.find_or_create_by(
-            id: db_id,
-            datafile_id: datafile_id,
-            item_name: record["item_name"]
-          ) do |item|
-            item.parent_id = parent_db_id
-          end
-
-          # Update attributes if needed
-          if nested_item.media_type != record["media_type"] ||
-             nested_item.size != record["size"] ||
-             nested_item.item_path != record["item_path"] ||
-             nested_item.is_directory != record["is_directory"]
-
-            nested_item.update!(
-              parent_id: parent_db_id,
-              media_type: record["media_type"],
-              size: record["size"],
-              item_path: record["item_path"],
-              is_directory: record["is_directory"]
-            )
-          end
-
-          summary[:record_counts][:nested_items] += 1
+        db_id = parse_nested_item_id(record["item_id"])
+        parent_db_id = parse_nested_item_id(record["parent_item_id"])
+        if db_id.nil?
+          summary[:failed] += 1
+          summary[:records] << {
+            line: record["_source_line"],
+            status: :failed,
+            message: "invalid nested item id: #{record['item_id'].inspect}"
+          }
+          next
         end
+
+        rows << {
+          id: db_id,
+          datafile_id: datafile_id,
+          parent_id: parent_db_id,
+          item_name: record["item_name"],
+          media_type: record["media_type"],
+          size: record["size"],
+          item_path: record["item_path"],
+          is_directory: boolean_or_false(record["is_directory"]),
+          created_at: now,
+          updated_at: now
+        }
       end
+
+      return if rows.empty?
+
+      NestedItem.upsert_all(
+        rows,
+        unique_by: :id,
+        update_only: %i[datafile_id parent_id item_name media_type size item_path is_directory]
+      )
+
+      summary[:record_counts][:nested_items] += rows.size
+    end
+
+    def parse_nested_item_id(raw_value)
+      value = raw_value.to_s.strip
+      return nil if value.blank?
+      return value.to_i if value.match?(/\A\d+\z/)
+
+      match = value.match(/\Ani-(\d+)\z/)
+      match ? match[1].to_i : nil
     end
 
     def sync_flat_collections!(dataset, dataset_record)
