@@ -193,7 +193,7 @@ namespace :cutover do
   # When BUNDLE_ROOT is used (no per-step DIR override), find the most recently
   # modified subdirectory matching the step's dir_prefix within bundle_root.
   # This matches the timestamped subdir layout created by legacy export tasks.
-  def resolve_step_dir(step, bundle_root)
+  def resolve_step_dir(step, bundle_root, bundle_file: nil)
     explicit = ENV[step[:dir_env]].presence
     return explicit if explicit.present?
     return bundle_root unless bundle_root.present?
@@ -212,6 +212,13 @@ namespace :cutover do
     if candidates.empty?
       prefix_description = prefixes.map { |prefix| "'#{prefix}*'" }.join(" or ")
       raise ArgumentError, "no subdirectory matching #{prefix_description} found in #{bundle_root}"
+    end
+
+    if bundle_file.present?
+      bundle_candidates = candidates.select do |path|
+        File.exist?(File.join(path, bundle_file))
+      end
+      return bundle_candidates.first if bundle_candidates.any?
     end
 
     candidates.first
@@ -273,10 +280,10 @@ namespace :cutover do
     cutover_import_steps.each do |step|
       next if skipped_steps.include?(step[:key])
 
-      step_dir = resolve_step_dir(step, bundle_root)
+      bundle_file = ENV["#{step[:key].upcase}_BUNDLE_FILE"].presence || step[:default_bundle_file]
+      step_dir = resolve_step_dir(step, bundle_root, bundle_file: bundle_file)
       raise ArgumentError, "missing #{step[:dir_env]} or BUNDLE_ROOT for #{step[:key]}" if step_dir.blank?
 
-      bundle_file = ENV["#{step[:key].upcase}_BUNDLE_FILE"].presence || step[:default_bundle_file]
       report_file = ENV["#{step[:key].upcase}_REPORT_FILE"].presence || "cutover_#{step[:key]}_report.json"
 
       old_env = {
