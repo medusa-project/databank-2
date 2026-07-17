@@ -1,6 +1,7 @@
 require "json"
 require "digest"
 require "fileutils"
+require "uri"
 
 module Migration
   class FlatBundleImportService
@@ -406,11 +407,18 @@ module Migration
           dataset = existing || Dataset.new(key: dataset_id)
 
           normalized_publication_state = normalize_publication_state(record["publication_state"])
+          normalized_identifier = normalize_identifier(record["identifier"])
+          if normalized_identifier.present?
+            identifier_owner = Dataset.find_by(identifier: normalized_identifier)
+            if identifier_owner.present? && identifier_owner.key != dataset_id
+              normalized_identifier = nil
+            end
+          end
 
           # Assign attributes from flat record
           attributes = {
-            title: record["title"],
-            identifier: normalize_identifier(record["identifier"]),
+            title: record["title"].presence || "Untitled Dataset",
+            identifier: normalized_identifier,
             publisher: record["publisher"],
             publication_year: record["publication_year"],
             description: record["description"],
@@ -597,16 +605,19 @@ module Migration
           position = idx + 1
           title = attrs["title"].presence || attrs["citation"].presence || attrs["link"].presence || attrs["uri"].presence || "material"
           material = dataset.related_materials.find_or_create_by(title: title)
+          uri = normalized_material_uri(attrs)
+          relation_types = normalized_relation_types(material: attrs, uri: uri)
           material.update!(
             citation: attrs["citation"],
             link: attrs["link"],
-            uri: attrs["uri"],
+            uri: uri,
             uri_type: attrs["uri_type"],
             material_type: attrs["material_type"],
             selected_type: attrs["selected_type"],
             availability: attrs["availability"],
             note: attrs["note"],
-            datacite_list: attrs["datacite_list"],
+            relation_type: relation_types.first,
+            datacite_list: relation_types.join(","),
             position: position,
             row_position: position
           )
@@ -705,6 +716,45 @@ module Migration
     def normalize_identifier(value)
       normalized = value.to_s.strip
       normalized.presence
+    end
+
+    def normalized_material_uri(material)
+      candidates = [ material["uri"], material["link"] ]
+      candidates.each do |value|
+        normalized = normalize_http_uri(value)
+        return normalized if normalized.present?
+      end
+      nil
+    end
+
+    def normalized_relation_types(material:, uri:)
+      candidates = []
+      candidates.concat(Array(material["relation_types"]))
+      candidates.concat(material["datacite_list"].to_s.split(","))
+      candidates << material["relation_type"]
+      candidates << material["material_type"]
+
+      normalized = candidates
+        .map { |value| value.to_s.strip }
+        .reject(&:blank?)
+        .select { |value| RelatedMaterial::RELATION_TYPE_OPTIONS.include?(value) }
+        .uniq
+
+      return [ "IsSupplementTo" ] if normalized.empty? && uri.present?
+
+      normalized
+    end
+
+    def normalize_http_uri(value)
+      raw = value.to_s.strip
+      return nil if raw.blank?
+
+      uri = URI.parse(raw)
+      return nil unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+
+      uri.to_s
+    rescue URI::InvalidURIError
+      nil
     end
 
     def normalize_embargo(value)
