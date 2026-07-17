@@ -3,6 +3,8 @@ class MigrationRun < ApplicationRecord
     users_bundle_import
     bundle_import
     flat_bundle_import
+    flat_bundle_structure_import
+    flat_bundle_nested_items_import
     guides_bundle_import
     featured_researchers_bundle_import
     permissions_bundle_import
