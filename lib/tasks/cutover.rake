@@ -47,6 +47,18 @@ require "json"
 #      RAILS_ENV=demo bundle exec rails cutover:reconcile
 #      RAILS_ENV=demo bundle exec rails cutover:smoke ALLOW_ISSUES=true
 #
+# Detached full cutover (SSH-safe, line-buffered logging):
+#   cd /home/databank/current && nohup stdbuf -oL -eL env \
+#     RAILS_ENV=demo \
+#     BUNDLE_ROOT=/tmp/databank_exports \
+#     SEPARATE_NESTED_ITEMS_IMPORT=true \
+#     CHUNKED_DATASET_IMPORT=true \
+#     MAX_RECORDS=10000 \
+#     FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 \
+#     bundle exec rails cutover:import_all \
+#     > /tmp/cutover_import_all.log 2>&1 < /dev/null &
+#   tail -n 100 -F /tmp/cutover_import_all.log
+#
 # For long-running dataset chunk imports over SSH, run detached with line-buffered logs:
 #   cd /home/databank/current && nohup stdbuf -oL -eL env \
 #     RAILS_ENV=demo \
