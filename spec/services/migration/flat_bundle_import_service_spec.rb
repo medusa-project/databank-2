@@ -284,14 +284,14 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(dataset.embargo).to eq("metadata")
   end
 
-  it "continues processing datasets when one record in a batch is invalid" do
-    invalid_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+  it "defaults blank dataset titles and continues processing the batch" do
+    untitled_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
     valid_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
 
     records = [
       {
         type: "dataset",
-        dataset_id: invalid_key,
+        dataset_id: untitled_key,
         title: nil,
         owner_uid: "legacy-owner",
         depositor_name: "Legacy User",
@@ -315,10 +315,9 @@ RSpec.describe Migration::FlatBundleImportService do
 
     summary = described_class.new(bundle_path: bundle_path.to_s).call
 
-    expect(summary[:failed]).to eq(1)
-    expect(summary[:created]).to eq(1)
-    expect(summary[:records].map { |row| row[:status] || row["status"] }).to include(:failed)
-    expect(Dataset.find_by(key: invalid_key)).to be_nil
+    expect(summary[:failed]).to eq(0)
+    expect(summary[:created]).to eq(2)
+    expect(Dataset.find_by(key: untitled_key)&.title).to eq("Untitled Dataset")
     expect(Dataset.find_by(key: valid_key)).to be_present
   end
 

@@ -7,6 +7,7 @@ module Migration
   class FlatBundleImportService
     DEFAULT_BATCH_SIZE = 100
     BATCH_SIZE_ENV = "FLAT_BUNDLE_IMPORT_BATCH_SIZE"
+    NESTED_BATCH_SIZE_ENV = "FLAT_BUNDLE_IMPORT_NESTED_BATCH_SIZE"
     BATCH_PAUSE_ENV = "FLAT_BUNDLE_IMPORT_BATCH_PAUSE_SECONDS"
     CHECKPOINT_EVERY_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_EVERY"
     CHECKPOINT_FILE_ENV = "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"
@@ -36,6 +37,7 @@ module Migration
       @report_path = resolve_report_path(report_path)
       @normalized_datafile_ids = {}
       @batch_size = configured_batch_size
+      @nested_batch_size = configured_nested_batch_size
       @batch_pause_seconds = configured_batch_pause_seconds
       @checkpoint_every = configured_checkpoint_every
       @checkpoint_path = configured_checkpoint_path
@@ -85,6 +87,9 @@ module Migration
 
       if batch_size != DEFAULT_BATCH_SIZE || batch_pause_seconds.positive?
         puts "Flat import config: batch_size=#{batch_size}, batch_pause_seconds=#{batch_pause_seconds}"
+      end
+      if nested_batch_size != batch_size
+        puts "Flat import nested config: nested_batch_size=#{nested_batch_size}"
       end
       if resume_from_line > 1 || max_records.present?
         puts "Flat import window: resume_from_line=#{resume_from_line}, max_records=#{max_records || 'all'}"
@@ -187,13 +192,14 @@ module Migration
       end
 
       # Nested items depend on datafiles, so process these only after all datafiles are created.
+      nested_item_lookup = build_nested_item_lookup(batches[:nested_items], dry_run: dry_run)
       if batches[:nested_items].any?
-        puts "Starting nested item flush: pending=#{batches[:nested_items].size}, batch_size=#{batch_size}"
+        puts "Starting nested item flush: pending=#{batches[:nested_items].size}, batch_size=#{nested_batch_size}"
       end
-      batches[:nested_items].each_slice(batch_size) do |slice|
+      batches[:nested_items].each_slice(nested_batch_size) do |slice|
         batch_counts[:nested_items] += 1
         timed_flush(phase: :nested_items, batch_index: batch_counts[:nested_items], record_count: slice.size) do
-          flush_nested_items_batch(slice, summary, dry_run)
+          flush_nested_items_batch(slice, summary, dry_run, nested_item_lookup: nested_item_lookup)
         end
         nested_count = summary.dig(:record_counts, :nested_items).to_i
         if progress_every.positive? && nested_count.positive? && (nested_count % progress_every).zero?
@@ -254,12 +260,20 @@ module Migration
     private
 
     attr_reader :batch_size, :batch_pause_seconds, :checkpoint_every, :checkpoint_path, :resume_from_line, :max_records,
-      :progress_every, :slow_batch_warn_seconds, :diagnostic_logging, :import_mode
+      :nested_batch_size, :progress_every, :slow_batch_warn_seconds, :diagnostic_logging, :import_mode
 
     def configured_batch_size
       raw = ENV[BATCH_SIZE_ENV]
       parsed = Integer(raw, exception: false)
       return DEFAULT_BATCH_SIZE if parsed.nil? || parsed <= 0
+
+      parsed
+    end
+
+    def configured_nested_batch_size
+      raw = ENV[NESTED_BATCH_SIZE_ENV]
+      parsed = Integer(raw, exception: false)
+      return batch_size if parsed.nil? || parsed <= 0
 
       parsed
     end
@@ -475,13 +489,20 @@ module Migration
 
       dataset_keys = records.map { |record| record["dataset_id"] }.compact.uniq
       datasets_by_key = Dataset.where(key: dataset_keys).index_by(&:key)
+      existing_datafile_owner_by_web_id = fetch_datafile_owner_keys_by_web_id(
+        records.map { |record| record["datafile_id"] }
+      )
 
       records.each do |record|
         dataset_key = record["dataset_id"]
         dataset = datasets_by_key[dataset_key]
         next unless dataset
 
-        web_id = normalized_datafile_web_id(dataset_key: dataset_key, source_id: record["datafile_id"])
+        web_id = normalized_datafile_web_id(
+          dataset_key: dataset_key,
+          source_id: record["datafile_id"],
+          existing_datafile_owner_by_web_id: existing_datafile_owner_by_web_id
+        )
         datafile = dataset.datafiles.find_or_create_by(web_id: web_id)
 
         datafile_attributes = {
@@ -502,7 +523,7 @@ module Migration
       end
     end
 
-    def flush_nested_items_batch(records, summary, dry_run)
+    def flush_nested_items_batch(records, summary, dry_run, nested_item_lookup: nil)
       return if records.empty?
 
       if dry_run
@@ -510,25 +531,9 @@ module Migration
         return
       end
 
-      dataset_keys = records.map { |record| record["dataset_id"] }.compact.uniq
-      datasets_by_key = Dataset.where(key: dataset_keys).index_by(&:key)
-
-      datafile_lookup_pairs = records.filter_map do |record|
-        dataset = datasets_by_key[record["dataset_id"]]
-        next unless dataset
-
-        web_id = normalized_datafile_web_id(dataset_key: record["dataset_id"], source_id: record["datafile_id"])
-        [ dataset.id, web_id ]
-      end.uniq
-
-      datafile_ids_by_lookup = if datafile_lookup_pairs.any?
-        scope = Datafile.where(dataset_id: datafile_lookup_pairs.map(&:first).uniq, web_id: datafile_lookup_pairs.map(&:last).uniq)
-        scope.each_with_object({}) do |datafile, acc|
-          acc[[ datafile.dataset_id, datafile.web_id ]] = datafile.id
-        end
-      else
-        {}
-      end
+      lookup = nested_item_lookup || build_nested_item_lookup(records, dry_run: dry_run)
+      datasets_by_key = lookup[:datasets_by_key]
+      datafile_ids_by_lookup = lookup[:datafile_ids_by_lookup]
 
       rows = []
       now = Time.current
@@ -576,6 +581,42 @@ module Migration
       )
 
       summary[:record_counts][:nested_items] += rows.size
+    end
+
+    def build_nested_item_lookup(records, dry_run:)
+      return { datasets_by_key: {}, datafile_ids_by_lookup: {} } if dry_run || records.empty?
+
+      dataset_keys = records.map { |record| record["dataset_id"] }.compact.uniq
+      datasets_by_key = Dataset.where(key: dataset_keys).index_by(&:key)
+      existing_datafile_owner_by_web_id = fetch_datafile_owner_keys_by_web_id(
+        records.map { |record| record["datafile_id"] }
+      )
+
+      datafile_lookup_pairs = records.filter_map do |record|
+        dataset = datasets_by_key[record["dataset_id"]]
+        next unless dataset
+
+        web_id = normalized_datafile_web_id(
+          dataset_key: record["dataset_id"],
+          source_id: record["datafile_id"],
+          existing_datafile_owner_by_web_id: existing_datafile_owner_by_web_id
+        )
+        [ dataset.id, web_id ]
+      end.uniq
+
+      datafile_ids_by_lookup = if datafile_lookup_pairs.any?
+        scope = Datafile.where(dataset_id: datafile_lookup_pairs.map(&:first).uniq, web_id: datafile_lookup_pairs.map(&:last).uniq)
+        scope.each_with_object({}) do |datafile, acc|
+          acc[[ datafile.dataset_id, datafile.web_id ]] = datafile.id
+        end
+      else
+        {}
+      end
+
+      {
+        datasets_by_key: datasets_by_key,
+        datafile_ids_by_lookup: datafile_ids_by_lookup
+      }
     end
 
     def parse_nested_item_id(raw_value)
@@ -774,17 +815,20 @@ module Migration
       normalized.presence
     end
 
-    def normalized_datafile_web_id(dataset_key:, source_id:)
+    def normalized_datafile_web_id(dataset_key:, source_id:, existing_datafile_owner_by_web_id: nil)
       raw_value = source_id.to_s.strip
       downcased_value = raw_value.downcase
-
-      if downcased_value.match?(web_id_format_regex)
-        existing = Datafile.find_by(web_id: downcased_value)
-        return downcased_value if existing.blank? || existing.dataset&.key == dataset_key
-      end
-
       cache_key = "#{dataset_key}:#{raw_value}"
       return @normalized_datafile_ids[cache_key] if @normalized_datafile_ids.key?(cache_key)
+
+      if downcased_value.match?(web_id_format_regex)
+        owner_key = existing_datafile_owner_by_web_id&.[](downcased_value)
+        owner_key ||= Datafile.joins(:dataset).where(web_id: downcased_value).pick("datasets.key")
+        if owner_key.blank? || owner_key == dataset_key
+          @normalized_datafile_ids[cache_key] = downcased_value
+          return downcased_value
+        end
+      end
 
       attempt = 0
       begin
@@ -795,6 +839,19 @@ module Migration
       end while existing.present? && existing.dataset&.key != dataset_key
 
       @normalized_datafile_ids[cache_key] = candidate
+    end
+
+    def fetch_datafile_owner_keys_by_web_id(source_ids)
+      candidate_web_ids = Array(source_ids)
+        .map { |value| value.to_s.strip.downcase }
+        .select { |value| value.match?(web_id_format_regex) }
+        .uniq
+      return {} if candidate_web_ids.empty?
+
+      Datafile.joins(:dataset)
+              .where(web_id: candidate_web_ids)
+              .pluck(:web_id, "datasets.key")
+              .each_with_object({}) { |(web_id, key), acc| acc[web_id] = key }
     end
 
     def web_id_format_regex
