@@ -50,6 +50,10 @@ gem "net-imap", ">= 0.6.4.1"
 gem "concurrent-ruby", ">= 1.3.7"
 # Fix Denial of service via malformed Host header in websocket-driver
 gem "websocket-driver", ">= 0.8.2"
+# Fix JSON generator heap buffer overflow when streaming to an IO
+gem "json", ">= 2.19.9"
+# Fix Use-After-Free in MessagePack::Buffer#clear
+gem "msgpack", ">= 1.8.2"
 # HTTP client with digest auth support
 gem "curb", "~> 1.0"
 # Use Passenger standalone on deployed Rocky hosts

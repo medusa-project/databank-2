@@ -218,7 +218,7 @@ GEM
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
     jmespath (1.6.2)
-    json (2.19.8)
+    json (2.21.1)
     kamal (2.11.0)
       activesupport (>= 7.0)
       base64 (~> 0.2)
@@ -250,7 +250,7 @@ GEM
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
-    msgpack (1.8.1)
+    msgpack (1.8.3)
     net-imap (0.6.4.1)
       date
       net-protocol
@@ -515,8 +515,10 @@ DEPENDENCIES
   image_processing (~> 1.2)
   importmap-rails
   jbuilder
+  json (>= 2.19.9)
   kamal
   medusa_storage!
+  msgpack (>= 1.8.2)
   net-imap (>= 0.6.4.1)
   nokogiri (>= 1.19.4)
   omniauth (~> 2.1)
