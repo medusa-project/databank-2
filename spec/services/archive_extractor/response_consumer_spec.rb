@@ -33,7 +33,7 @@ RSpec.describe ArchiveExtractor::ResponseConsumer, type: :service do
       envelope = archive_envelope(web_id: datafile.web_id)
       payload = archive_payload(
         web_id: datafile.web_id,
-        peek_type: "listing",
+        peek_type: Datafile::PeekType::LISTING,
         nested_items: [
           {
             "item_name" => "folder",
@@ -84,7 +84,7 @@ RSpec.describe ArchiveExtractor::ResponseConsumer, type: :service do
       expect(request.archive_extract_response).to be_present
       expect(request.archive_extract_response.status).to eq("success")
       expect(request.archive_extract_errors.count).to eq(1)
-      expect(datafile.reload.peek_type).to eq("archive")
+      expect(datafile.reload.peek_type).to eq(Datafile::PeekType::LISTING)
       expect(datafile.peek_content).to eq("peek result")
 
       expect(datafile.nested_items.where(id: stale_item.id)).to be_empty

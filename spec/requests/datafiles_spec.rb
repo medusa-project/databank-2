@@ -209,7 +209,7 @@ RSpec.describe "Datafiles", type: :request do
       :datafile,
       dataset: dataset,
       attach_binary: false,
-      peek_type: "all_text",
+      peek_type: Datafile::PeekType::ALL_TEXT,
       peek_content: "cached preview text"
     )
 
@@ -228,7 +228,7 @@ RSpec.describe "Datafiles", type: :request do
       :datafile,
       dataset: dataset,
       attach_binary: false,
-      peek_type: "markdown",
+      peek_type: Datafile::PeekType::MARKDOWN,
       peek_content: "<h2>Overview</h2><script>alert('x')</script><p>Paragraph</p>"
     )
 
@@ -251,7 +251,7 @@ RSpec.describe "Datafiles", type: :request do
       :datafile,
       dataset: dataset,
       attach_binary: false,
-      peek_type: "part_text",
+      peek_type: Datafile::PeekType::PART_TEXT,
       peek_content: "truncated preview lines"
     )
 
@@ -261,33 +261,46 @@ RSpec.describe "Datafiles", type: :request do
     expect(response.body).to include("truncated preview lines")
   end
 
-  it "renders archive preview page with nested items" do
+  it "renders archive preview page from peek_content" do
     sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
-    datafile = create(:datafile, dataset: dataset, attach_binary: false, peek_type: "archive")
-    root = datafile.nested_items.create!(
+    datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: Datafile::PeekType::LISTING,
+      peek_content: "<div class='indent'>archive/from-peek.txt</div>"
+    )
+
+    datafile.nested_items.create!(
       item_name: "folder",
       item_path: "folder",
       media_type: "inode/directory",
       is_directory: true
-    )
-    datafile.nested_items.create!(
-      item_name: "file.txt",
-      item_path: "folder/file.txt",
-      media_type: "text/plain",
-      size: 25,
-      parent: root,
-      is_directory: false
     )
 
     get view_dataset_datafile_path(dataset, datafile)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Archive Contents")
-    expect(response.body).to include("folder")
-    expect(response.body).to include("file.txt")
-    expect(response.body).to include("idb-archive-depth-0")
-    expect(response.body).to include("idb-archive-depth-1")
-    expect(response.body).to include("idb-archive-branch")
+    expect(response.body).to include("archive/from-peek.txt")
+  end
+
+  it "renders archive preview from peek_content when nested items are absent" do
+    sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+    datafile = create(
+      :datafile,
+      dataset: dataset,
+      attach_binary: false,
+      peek_type: Datafile::PeekType::LISTING,
+      peek_content: "<div class='indent'>legacy-entry.txt</div>"
+    )
+
+    get view_dataset_datafile_path(dataset, datafile)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Archive Contents")
+    expect(response.body).to include("legacy-entry.txt")
+    expect(response.body).not_to include("No items to display")
   end
 
   it "renders PDF preview inline" do
@@ -298,7 +311,7 @@ RSpec.describe "Datafiles", type: :request do
       depositor_email: owner_email,
       identifier: "10.5555/pdf-view-count"
     )
-    datafile = create(:datafile, dataset: published_dataset, peek_type: "pdf")
+    datafile = create(:datafile, dataset: published_dataset, peek_type: Datafile::PeekType::PDF)
 
     get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.12" }
 
@@ -316,7 +329,7 @@ RSpec.describe "Datafiles", type: :request do
       depositor_email: owner_email,
       identifier: "10.5555/image-view-count"
     )
-    datafile = create(:datafile, dataset: published_dataset, peek_type: "image")
+    datafile = create(:datafile, dataset: published_dataset, peek_type: Datafile::PeekType::IMAGE)
 
     get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.13" }
 
@@ -334,7 +347,7 @@ RSpec.describe "Datafiles", type: :request do
       depositor_email: owner_email,
       identifier: "10.5555/microsoft-view-count"
     )
-    datafile = create(:datafile, dataset: published_dataset, peek_type: "microsoft")
+    datafile = create(:datafile, dataset: published_dataset, peek_type: Datafile::PeekType::MICROSOFT)
 
     get view_dataset_datafile_path(published_dataset, datafile), headers: { "REMOTE_ADDR" => "203.0.113.14" }
 
@@ -355,7 +368,7 @@ RSpec.describe "Datafiles", type: :request do
       :datafile,
       dataset: published_dataset,
       attach_binary: false,
-      peek_type: "all_text",
+      peek_type: Datafile::PeekType::ALL_TEXT,
       peek_content: "cached preview text"
     )
 
@@ -377,7 +390,7 @@ RSpec.describe "Datafiles", type: :request do
       :datafile,
       dataset: published_dataset,
       attach_binary: false,
-      peek_type: "archive",
+      peek_type: Datafile::PeekType::LISTING,
       peek_content: "archive listing"
     )
     datafile.nested_items.create!(
@@ -395,7 +408,7 @@ RSpec.describe "Datafiles", type: :request do
 
   it "falls back to download for unsupported peek types" do
     sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
-    datafile = create(:datafile, dataset: dataset, peek_type: "none")
+    datafile = create(:datafile, dataset: dataset, peek_type: Datafile::PeekType::NONE)
 
     get view_dataset_datafile_path(dataset, datafile)
 

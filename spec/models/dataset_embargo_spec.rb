@@ -23,6 +23,12 @@ RSpec.describe Dataset, type: :model do
       expect(dataset.errors[:release_date]).to include("is required when embargo is file or metadata")
     end
 
+    it "allows draft datasets with metadata embargo and no release_date" do
+      dataset = build(:dataset, publication_state: :draft, embargo: Dataset::EMBARGO_METADATA, release_date: nil)
+
+      expect(dataset).to be_valid
+    end
+
     it "allows none embargo without release_date" do
       dataset = build(:dataset, :published, embargo: Dataset::EMBARGO_NONE, release_date: nil)
 
@@ -65,6 +71,18 @@ RSpec.describe Dataset, type: :model do
       expect(dataset.files_publicly_readable_now?).to be(true)
     end
 
+    it "returns false for publicly_readable_now? when dataset is marked test" do
+      dataset = create(:dataset, :published, embargo: Dataset::EMBARGO_NONE, is_test: true)
+
+      expect(dataset.publicly_readable_now?).to be(false)
+    end
+
+    it "returns false for files_publicly_readable_now? when dataset is marked test" do
+      dataset = create(:dataset, :published, embargo: Dataset::EMBARGO_NONE, is_test: true)
+
+      expect(dataset.files_publicly_readable_now?).to be(false)
+    end
+
     it "scope publicly_readable_now includes released metadata embargo and excludes unreleased metadata embargo" do
       released_metadata = create(:dataset, :published,
         title: "Released Metadata",
@@ -86,6 +104,12 @@ RSpec.describe Dataset, type: :model do
         publication_state: :draft,
         embargo: Dataset::EMBARGO_NONE
       )
+      test_dataset = create(:dataset, :published,
+        title: "Test Dataset",
+        embargo: Dataset::EMBARGO_NONE,
+        release_date: nil,
+        is_test: true
+      )
 
       scope_ids = Dataset.publicly_readable_now.pluck(:id)
 
@@ -93,6 +117,7 @@ RSpec.describe Dataset, type: :model do
       expect(scope_ids).to include(public_none.id)
       expect(scope_ids).not_to include(unreleased_metadata.id)
       expect(scope_ids).not_to include(draft_dataset.id)
+      expect(scope_ids).not_to include(test_dataset.id)
     end
 
     it "adds release date publish requirement when file embargo is set without release date" do

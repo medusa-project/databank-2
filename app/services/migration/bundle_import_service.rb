@@ -47,6 +47,9 @@ module Migration
           require_sensitive_fields: true
         ).call
 
+        # Clear payload to free memory
+        payload.clear
+
         increment_summary(summary: summary, status: result.status)
         accumulate_exported_relationship_metrics!(summary: summary, metrics: exported_relation_metrics)
 
@@ -73,6 +76,9 @@ module Migration
           related_material_relationships_imported: imported_relation_metrics&.dig(:total)
         }
         processed_count += 1
+
+        # Force garbage collection every 10 datasets to keep memory in check
+        GC.collect if (processed_count % 10).zero?
       end
 
       verify_expected_record_count!(processed_count)
@@ -249,7 +255,9 @@ module Migration
 
       by_type = Hash.new(0)
 
-      dataset.related_materials.includes(:related_material_relationships).find_each do |material|
+      dataset.related_materials.includes(:related_material_relationships)
+             .reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC"))
+             .find_each do |material|
         material.relation_types.each do |relation_type|
           by_type[relation_type] += 1
         end

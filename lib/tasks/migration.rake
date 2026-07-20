@@ -620,6 +620,10 @@ namespace :migration do
         raise ArgumentError, "manifest file not found: #{manifest_path}" if manifest_path.present? && !File.file?(manifest_path)
 
         manifest_data = manifest_path.present? ? JSON.parse(File.read(manifest_path)) : nil
+        if manifest_data&.dig("format_version").present? && manifest_data["format_version"].to_i != 1
+          raise ArgumentError, "unsupported download metrics bundle format_version"
+        end
+
         expected_checksum = manifest_data&.dig("sha256").to_s.strip.presence
         if expected_checksum.blank? && checksum_path.present?
           expected_checksum = File.read(checksum_path).strip.split.first.to_s.strip.presence
@@ -808,6 +812,10 @@ namespace :migration do
         summary[:processed_count] = line_count
         summary[:expected_record_count] = manifest_data&.dig("record_count")
         summary[:checksum] = expected_checksum
+        summary[:manifest_format_version] = manifest_data&.dig("format_version")
+        summary[:include_tests] = manifest_data&.dig("include_tests") unless manifest_data.nil?
+        summary[:since] = manifest_data&.dig("since")
+        summary[:until] = manifest_data&.dig("until")
         summary[:counts] = {
           "DatasetDownloadTally" => type_counts["DatasetDownloadTally"].to_i,
           "FileDownloadTally" => type_counts["FileDownloadTally"].to_i,
@@ -1201,8 +1209,10 @@ namespace :migration do
   end
 
   namespace :bundle do
-    desc "Import a secure NDJSON migration bundle exported from legacy databank"
+    # Deprecated: legacy non-flat bundle import path. Prefer migration:flat_bundle:* tasks.
+    desc "[DEPRECATED] Import a secure NDJSON migration bundle exported from legacy databank"
     task import: :environment do
+      warn "DEPRECATED: migration:bundle:import is non-flat. Prefer migration:flat_bundle:import_from_dir or migration:flat_bundle:import_in_chunks."
       bundle_path = ENV.fetch("BUNDLE")
       checksum_path = ENV["CHECKSUM"]
       manifest_path = ENV["MANIFEST"]
@@ -1247,8 +1257,9 @@ namespace :migration do
       end
     end
 
-    desc "Import copied legacy export artifacts from a directory"
+    desc "[DEPRECATED] Import copied legacy export artifacts from a directory"
     task import_from_dir: :environment do
+      warn "DEPRECATED: migration:bundle:import_from_dir is non-flat. Prefer migration:flat_bundle:import_from_dir or migration:flat_bundle:import_in_chunks."
       dir = Pathname(ENV.fetch("DIR"))
       bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
       bundle_path = dir.join(bundle_file)
@@ -1312,6 +1323,299 @@ namespace :migration do
         puts "Relationship assertion strict match: #{metrics[:strict_match]}" if metrics[:enabled]
         puts "Relationship assertion mismatched datasets: #{metrics[:mismatched_dataset_count]}" if metrics[:enabled]
       end
+    end
+  end
+
+  namespace :flat_bundle do
+    desc "Import flat NDJSON bundle (format_version: 2) with separate entity records"
+    task import_from_dir: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      import_mode = ENV.fetch("IMPORT_MODE", Migration::FlatBundleImportService::IMPORT_MODE_ALL)
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
+      bundle_path = dir.join(bundle_file)
+      report_path = ENV["REPORT_FILE"].presence
+      resolved_report_path = migration_report_path(dir, report_path)
+
+      checksum_path = if ENV.key?("CHECKSUM")
+        ENV["CHECKSUM"]
+      elsif ENV.key?("CHECKSUM_FILE")
+        dir.join(ENV.fetch("CHECKSUM_FILE")).to_s
+      else
+        candidate = dir.join("#{bundle_file}.sha256")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      manifest_path = if ENV.key?("MANIFEST")
+        ENV["MANIFEST"]
+      elsif ENV.key?("MANIFEST_FILE")
+        dir.join(ENV.fetch("MANIFEST_FILE")).to_s
+      else
+        candidate = dir.join("manifest.json")
+        candidate.file? ? candidate.to_s : nil
+      end
+
+      overwrite = ENV.fetch("OVERWRITE", "false").casecmp("true").zero?
+      dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+      run_type = case import_mode
+      when Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+        "flat_bundle_structure_import"
+      when Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+        "flat_bundle_nested_items_import"
+      else
+        "flat_bundle_import"
+      end
+
+      summary = record_migration_run(
+        run_type: run_type,
+        bundle_path: bundle_path.to_s,
+        checksum_path: checksum_path,
+        manifest_path: manifest_path,
+        report_path: resolved_report_path.to_s,
+        details: {
+          dry_run: dry_run,
+          overwrite: overwrite,
+          import_mode: import_mode
+        }
+      ) do
+        service_kwargs = {
+          bundle_path: bundle_path.to_s,
+          overwrite: overwrite,
+          dry_run: dry_run,
+          checksum_path: checksum_path,
+          manifest_path: manifest_path,
+          report_path: resolved_report_path.to_s
+        }
+        service_kwargs[:import_mode] = import_mode unless import_mode == Migration::FlatBundleImportService::IMPORT_MODE_ALL
+
+        Migration::FlatBundleImportService.new(
+          **service_kwargs
+        ).call
+      end
+
+      puts "Bundle: #{bundle_path}"
+      puts "Checksum: #{checksum_path || 'none'}"
+      puts "Manifest: #{manifest_path || 'none'}"
+      puts "Report: #{resolved_report_path}"
+      puts "Created: #{summary[:created]}, Updated: #{summary[:updated]}, Skipped: #{summary[:skipped_existing]}, Failed: #{summary[:failed]}"
+      if dry_run
+        puts "Dry run only - Would create: #{summary[:would_create]}, Would update: #{summary[:would_update]}"
+      end
+      puts "Datasets: #{summary[:record_counts][:datasets]}" if summary[:record_counts]
+      puts "Datafiles: #{summary[:record_counts][:datafiles]}" if summary[:record_counts]
+      puts "Nested items: #{summary[:record_counts][:nested_items]}" if summary[:record_counts]
+      puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+
+    desc "Import only dataset/datafile records from a flat NDJSON bundle"
+    task import_structure_from_dir: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+      task = Rake::Task["migration:flat_bundle:import_from_dir"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
+    desc "Import only nested_item records from a flat NDJSON bundle"
+    task import_nested_items_from_dir: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+      task = Rake::Task["migration:flat_bundle:import_from_dir"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
+    desc "Run flat bundle import in bounded resumable windows using checkpoint state"
+    task import_in_chunks: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      import_mode = ENV.fetch("IMPORT_MODE", Migration::FlatBundleImportService::IMPORT_MODE_ALL)
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_datasets.ndjson")
+      default_checkpoint_file = case import_mode
+      when Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+        "flat_bundle_structure_import.checkpoint.json"
+      when Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+        "flat_bundle_nested_items_import.checkpoint.json"
+      else
+        "flat_bundle_import.checkpoint.json"
+      end
+      checkpoint_file = ENV.fetch("CHECKPOINT_FILE", default_checkpoint_file)
+      report_file = ENV.fetch("REPORT_FILE", "import_report.json")
+      max_records = ENV.fetch("MAX_RECORDS", "50000")
+      max_iterations = ENV.fetch("MAX_ITERATIONS", "100").to_i
+      max_minutes = ENV.fetch("MAX_MINUTES", "240").to_i
+      max_consecutive_failures = ENV.fetch("MAX_CONSECUTIVE_FAILURES", "5").to_i
+      max_stalled_runs = ENV.fetch("MAX_STALLED_RUNS", "2").to_i
+      resume_overlap = ENV.fetch("RESUME_OVERLAP_LINES", "200").to_i
+      backoff_base_seconds = ENV.fetch("BACKOFF_BASE_SECONDS", "10").to_i
+      lock_file = ENV.fetch("LOCK_FILE", "flat_bundle_import.lock")
+
+      checkpoint_path = Pathname(checkpoint_file)
+      checkpoint_path = dir.join(checkpoint_path) unless checkpoint_path.absolute?
+      report_path = Pathname(report_file)
+      report_path = dir.join(report_path) unless report_path.absolute?
+      lock_path = Pathname(lock_file)
+      lock_path = dir.join(lock_path) unless lock_path.absolute?
+
+      if max_iterations <= 0
+        raise ArgumentError, "MAX_ITERATIONS must be positive"
+      end
+      if max_minutes <= 0
+        raise ArgumentError, "MAX_MINUTES must be positive"
+      end
+      if max_consecutive_failures <= 0
+        raise ArgumentError, "MAX_CONSECUTIVE_FAILURES must be positive"
+      end
+      if max_stalled_runs <= 0
+        raise ArgumentError, "MAX_STALLED_RUNS must be positive"
+      end
+
+      FileUtils.mkdir_p(dir)
+
+      lock_handle = File.open(lock_path, File::RDWR | File::CREAT, 0o644)
+      unless lock_handle.flock(File::LOCK_EX | File::LOCK_NB)
+        raise "Chunked flat import is already running (lock: #{lock_path})"
+      end
+
+      started_at = Time.current
+      deadline = started_at + max_minutes.minutes
+      iteration = 0
+      consecutive_failures = 0
+      stalled_runs = 0
+      previous_next_resume = nil
+      completed = false
+      last_summary = nil
+
+      begin
+        while Time.current <= deadline && iteration < max_iterations
+          iteration += 1
+
+          next_resume_line = 1
+          if checkpoint_path.file?
+            checkpoint = JSON.parse(File.read(checkpoint_path))
+            candidate = checkpoint["next_resume_from_line"].to_i
+            next_resume_line = candidate if candidate.positive?
+          end
+
+          next_resume_line = [ next_resume_line - resume_overlap, 1 ].max
+
+          puts "Chunk #{iteration}: resume_from_line=#{next_resume_line}, max_records=#{max_records}"
+
+          previous_env = {
+            "FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE" => ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"],
+            "FLAT_BUNDLE_IMPORT_MAX_RECORDS" => ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"],
+            "FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE" => ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"],
+            "IMPORT_MODE" => ENV["IMPORT_MODE"],
+            "REPORT_FILE" => ENV["REPORT_FILE"],
+            "DIR" => ENV["DIR"],
+            "BUNDLE_FILE" => ENV["BUNDLE_FILE"]
+          }
+
+          begin
+            ENV["DIR"] = dir.to_s
+            ENV["BUNDLE_FILE"] = bundle_file
+            ENV["REPORT_FILE"] = report_path.to_s
+            ENV["FLAT_BUNDLE_IMPORT_RESUME_FROM_LINE"] = next_resume_line.to_s
+            ENV["FLAT_BUNDLE_IMPORT_MAX_RECORDS"] = max_records.to_s
+            ENV["FLAT_BUNDLE_IMPORT_CHECKPOINT_FILE"] = checkpoint_path.to_s
+            ENV["IMPORT_MODE"] = import_mode
+
+            task = Rake::Task["migration:flat_bundle:import_from_dir"]
+            task.reenable
+            task.invoke
+          ensure
+            previous_env.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+          end
+
+          unless checkpoint_path.file?
+            raise "checkpoint file not written: #{checkpoint_path}"
+          end
+
+          checkpoint = JSON.parse(File.read(checkpoint_path))
+          next_resume = checkpoint["next_resume_from_line"].to_i
+          stopped_early = checkpoint["stopped_early"]
+          last_summary = checkpoint["summary"] || {}
+
+          if next_resume <= 0
+            raise "invalid checkpoint next_resume_from_line: #{next_resume.inspect}"
+          end
+
+          if previous_next_resume.present? && next_resume <= previous_next_resume
+            stalled_runs += 1
+            warn "No checkpoint progress detected (#{stalled_runs}/#{max_stalled_runs})"
+          else
+            stalled_runs = 0
+          end
+          previous_next_resume = next_resume
+
+          if last_summary["validation_error"].present?
+            consecutive_failures += 1
+            warn "Chunk #{iteration} validation error (#{consecutive_failures}/#{max_consecutive_failures}): #{last_summary['validation_error']}"
+          else
+            consecutive_failures = 0
+          end
+
+          if stalled_runs >= max_stalled_runs
+            warn "Stopping due to stalled checkpoint progress"
+            break
+          end
+
+          if consecutive_failures >= max_consecutive_failures
+            warn "Stopping due to consecutive validation errors"
+            break
+          end
+
+          unless stopped_early
+            completed = true
+            puts "Chunk loop complete: end-of-file reached"
+            break
+          end
+
+          if consecutive_failures.positive?
+            sleep_seconds = backoff_base_seconds * (2**(consecutive_failures - 1))
+            puts "Backing off for #{sleep_seconds}s before next chunk"
+            sleep(sleep_seconds)
+          end
+        end
+
+        if Time.current > deadline
+          warn "Stopping due to MAX_MINUTES ceiling"
+        elsif iteration >= max_iterations && !completed
+          warn "Stopping due to MAX_ITERATIONS ceiling"
+        end
+
+        puts "Chunk loop summary: completed=#{completed}, iterations=#{iteration}, consecutive_failures=#{consecutive_failures}, stalled_runs=#{stalled_runs}"
+        if last_summary.is_a?(Hash)
+          puts "Last chunk: failed=#{last_summary['failed']}, datasets=#{last_summary['datasets']}, datafiles=#{last_summary['datafiles']}, nested_items=#{last_summary['nested_items']}"
+        end
+      ensure
+        lock_handle.flock(File::LOCK_UN)
+        lock_handle.close
+      end
+    end
+
+    desc "Run dataset/datafile-only import in bounded resumable windows"
+    task import_structure_in_chunks: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_STRUCTURE_ONLY
+      task = Rake::Task["migration:flat_bundle:import_in_chunks"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
+    end
+
+    desc "Run nested-items-only import in bounded resumable windows"
+    task import_nested_items_in_chunks: :environment do
+      old_mode = ENV["IMPORT_MODE"]
+      ENV["IMPORT_MODE"] = Migration::FlatBundleImportService::IMPORT_MODE_NESTED_ITEMS_ONLY
+      task = Rake::Task["migration:flat_bundle:import_in_chunks"]
+      task.reenable
+      task.invoke
+    ensure
+      old_mode.nil? ? ENV.delete("IMPORT_MODE") : ENV["IMPORT_MODE"] = old_mode
     end
   end
 

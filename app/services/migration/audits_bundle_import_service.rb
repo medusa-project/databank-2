@@ -273,11 +273,11 @@ module Migration
     end
 
     def find_creator(dataset:, locator:)
-      dataset.creators.detect { |record| person_record_matches?(record: record, locator: locator) }
+      dataset.creators.reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC")).detect { |record| person_record_matches?(record: record, locator: locator) }
     end
 
     def find_contributor(dataset:, locator:)
-      dataset.contributors.detect { |record| person_record_matches?(record: record, locator: locator) }
+      dataset.contributors.reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC")).detect { |record| person_record_matches?(record: record, locator: locator) }
     end
 
     def person_record_matches?(record:, locator:)
@@ -303,7 +303,7 @@ module Migration
     end
 
     def find_funder(dataset:, locator:)
-      dataset.funders.detect do |record|
+      dataset.funders.reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC")).detect do |record|
         fields_match?(record.name, locator["name"] || locator[:name]) &&
           fields_match?(record.identifier, locator["identifier"] || locator[:identifier]) &&
           fields_match?(record.grant, locator["grant"] || locator[:grant])
@@ -311,7 +311,7 @@ module Migration
     end
 
     def find_related_material(dataset:, locator:)
-      dataset.related_materials.detect do |record|
+      dataset.related_materials.reorder(Arel.sql("COALESCE(row_position, position) ASC, id ASC")).detect do |record|
         next false unless fields_match?(record.uri, locator["uri"] || locator[:uri])
         next false unless fields_match?(record.citation, locator["citation"] || locator[:citation])
         next false unless fields_match?(record.link, locator["link"] || locator[:link])

@@ -27,68 +27,18 @@ class MetricsController < ApplicationController
   end
 
   def admin_metrics
+    @metric_definitions = Metric.admin_definitions
     @modified_times = Metric.modified_times
     @refresh_status = Metric.refresh_status
-    @metrics_rows = [
-      {
-        key: :dataset_downloads_json,
-        title: "Dataset downloads JSON",
-        href: "/dataset_downloads.json",
-        refresh_path: "/metrics/refresh_dataset_downloads",
-        description: "Downloads calculated per dataset per day."
-      },
-      {
-        key: :datafile_downloads_json,
-        title: "Datafile downloads JSON",
-        href: "/datafile_downloads.json",
-        refresh_path: "/metrics/refresh_datafile_downloads",
-        description: "Downloads calculated per datafile per day."
-      },
-      {
-        key: :datasets_tsv,
-        title: "Datasets TSV",
-        href: "/datasets.tsv",
-        refresh_path: "/metrics/refresh_datasets_tsv",
-        description: "Tab-separated dataset-level metrics report."
-      },
-      {
-        key: :datafiles_csv,
-        title: "Datafiles CSV",
-        href: "/datafiles.csv",
-        refresh_path: "/metrics/refresh_datafiles_csv",
-        description: "CSV of datafile metadata and download totals."
-      },
-      {
-        key: :container_contents_csv,
-        title: "Container Contents CSV",
-        href: "/archive_file_contents.csv",
-        refresh_path: "/metrics/refresh_container_contents_csv",
-        description: "CSV of archive container file contents."
-      },
-      {
-        key: :related_materials_csv,
-        title: "Related Materials CSV",
-        href: "/related_materials.csv",
-        refresh_path: "/metrics/refresh_related_materials_csv",
-        description: "CSV of related material identifiers and relation types."
-      },
-      {
-        key: :funders_csv,
-        title: "Funders CSV",
-        href: "/funders.csv",
-        refresh_path: "/metrics/refresh_funders_csv",
-        description: "CSV of funder and grant information."
-      }
-    ]
     @title = "Admin metrics"
   end
 
   def dataset_downloads
-    serve_metrics_file(Rails.root.join("public/dataset_downloads.json"), type: "application/json")
+    serve_configured_metric_file(:dataset_downloads_json)
   end
 
   def file_downloads
-    serve_metrics_file(Rails.root.join("public/datafile_downloads.json"), type: "application/json")
+    serve_configured_metric_file(:datafile_downloads_json)
   end
 
   def datafiles_simple_list
@@ -101,11 +51,11 @@ class MetricsController < ApplicationController
   end
 
   def datafiles_csv
-    serve_metrics_file(METRICS_CONFIG[:datafiles_csv][:relative_path], type: "text/csv")
+    serve_configured_metric_file(:datafiles_csv)
   end
 
   def funders_csv
-    serve_metrics_file(METRICS_CONFIG[:funders_csv][:relative_path], type: "text/csv")
+    serve_configured_metric_file(:funders_csv)
   end
 
   def archived_content_csv
@@ -113,7 +63,7 @@ class MetricsController < ApplicationController
   end
 
   def related_materials_csv
-    serve_metrics_file(METRICS_CONFIG[:related_materials_csv][:relative_path], type: "text/csv")
+    serve_configured_metric_file(:related_materials_csv)
   end
 
   def refresh_dataset_downloads
@@ -150,6 +100,20 @@ class MetricsController < ApplicationController
 
   private
 
+  def refresh_path_for(metric_key)
+    {
+      dataset_downloads_json: refresh_dataset_downloads_metrics_path,
+      datafile_downloads_json: refresh_datafile_downloads_metrics_path,
+      datasets_tsv: refresh_datasets_tsv_metrics_path,
+      datafiles_csv: refresh_datafiles_csv_metrics_path,
+      container_contents_csv: refresh_container_contents_csv_metrics_path,
+      funders_csv: refresh_funders_csv_metrics_path,
+      related_materials_csv: refresh_related_materials_csv_metrics_path
+    }.fetch(metric_key.to_sym)
+  end
+
+  helper_method :refresh_path_for
+
   def enqueue_metric_refresh(metric_key:, label:)
     if Metric.in_progress?(metric_key)
       redirect_to metrics_path, alert: "#{label} refresh is already in progress. Please refresh the page to check status."
@@ -172,6 +136,11 @@ class MetricsController < ApplicationController
     return head :not_found unless File.file?(file_path)
 
     send_file file_path, type: type, disposition: "inline"
+  end
+
+  def serve_configured_metric_file(metric_key)
+    definition = Metric.definition_for(metric_key)
+    serve_metrics_file(definition.relative_path, type: definition.content_type)
   end
 
   def require_admin_or_curator!

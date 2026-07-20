@@ -181,7 +181,7 @@ RSpec.describe "Datasets workflow", type: :request do
       binary_size: 128,
       storage_root: nil,
       storage_key: nil,
-      peek_type: "none",
+      peek_type: Datafile::PeekType::NONE,
       peek_content: nil
     )
 
@@ -3615,14 +3615,14 @@ RSpec.describe "Datasets workflow", type: :request do
       identifier: "10.5555/IDB-9100001"
     )
 
-    create(:datafile, dataset: dataset, peek_type: "all_text", peek_content: "full")
-    create(:datafile, dataset: dataset, peek_type: "part_text", peek_content: "truncated")
+    create(:datafile, dataset: dataset, peek_type: Datafile::PeekType::ALL_TEXT, peek_content: "full")
+    create(:datafile, dataset: dataset, peek_type: Datafile::PeekType::PART_TEXT, peek_content: "truncated")
 
     archive_datafile = create(
       :datafile,
       dataset: dataset,
       attach_binary: false,
-      peek_type: "archive",
+      peek_type: Datafile::PeekType::LISTING,
       peek_content: "archive summary"
     )
     archive_datafile.nested_items.create!(

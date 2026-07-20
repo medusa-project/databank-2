@@ -10,7 +10,7 @@ module ArchiveExtractorPayloadHelper
   def archive_payload(
     web_id:,
     status: "success",
-    peek_type: "listing",
+    peek_type: Datafile::PeekType::LISTING,
     peek_text: "peek result",
     nested_items: nil,
     error: []

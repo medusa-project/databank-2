@@ -215,7 +215,7 @@ RSpec.describe Migration::SampleImportService do
     expect(dataset.release_date).to eq(Date.new(2026, 8, 1))
   end
 
-  it "maps listing peek type to archive and replaces nested items on overwrite" do
+  it "keeps listing peek type and replaces nested items on overwrite" do
     identifier = "10.13012/B2IDB-9099904_V1"
     url = "https://databank.illinois.edu/datasets/IDB-9099904.json"
 
@@ -262,7 +262,7 @@ RSpec.describe Migration::SampleImportService do
     dataset = Dataset.find_by!(identifier: identifier)
     datafile = dataset.datafiles.find_by!(web_id: "arc11")
 
-    expect(datafile.peek_type).to eq("archive")
+    expect(datafile.peek_type).to eq(Datafile::PeekType::LISTING)
     expect(datafile.nested_items.count).to eq(2)
     folder = datafile.nested_items.find_by!(item_name: "folder")
     child = datafile.nested_items.find_by!(item_name: "child.txt")
@@ -289,7 +289,7 @@ RSpec.describe Migration::SampleImportService do
     expect(overwrite_summary[:updated]).to eq(1)
 
     updated_datafile = dataset.reload.datafiles.find_by!(web_id: "arc11")
-    expect(updated_datafile.peek_type).to eq("archive")
+    expect(updated_datafile.peek_type).to eq(Datafile::PeekType::LISTING)
     expect(updated_datafile.nested_items.pluck(:item_name)).to eq([ "new_root.txt" ])
   end
 end

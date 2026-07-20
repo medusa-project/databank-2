@@ -200,19 +200,22 @@ module Migration
         record.assign_attributes(attrs)
       end
 
-      # Save datafiles first WITHOUT nested_items, then sync nested_items after save
-      datafiles_data = normalized_datafiles
-      sync_collection!(dataset.datafiles, datafiles_data) do |record, attrs|
-        nested_items = attrs.delete(:nested_items)
-        record.assign_attributes(attrs)
-        # Don't sync nested_items here - do it after save
-      end
+      # Only sync datafiles when payload explicitly includes them.
+      if datafiles_payload_provided?
+        # Save datafiles first WITHOUT nested_items, then sync nested_items after save
+        datafiles_data = normalized_datafiles
+        sync_collection!(dataset.datafiles, datafiles_data) do |record, attrs|
+          nested_items = attrs.delete(:nested_items)
+          record.assign_attributes(attrs)
+          # Don't sync nested_items here - do it after save
+        end
 
-      # Now sync nested_items for all datafiles
-      dataset.datafiles.each do |datafile|
-        datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
-        if datafile_data&.dig(:nested_items).present?
-          sync_nested_items!(datafile, datafile_data[:nested_items])
+        # Now sync nested_items for all datafiles
+        dataset.datafiles.reorder(:id).each do |datafile|
+          datafile_data = datafiles_data.find { |d| d[:web_id] == datafile.web_id }
+          if datafile_data&.dig(:nested_items).present?
+            sync_nested_items!(datafile, datafile_data[:nested_items])
+          end
         end
       end
 
@@ -225,23 +228,37 @@ module Migration
       datafile.nested_items.delete_all if overwrite
       return if nested_items_data.blank?
 
-      build_nested_items_tree(parent_datafile: datafile, items_data: nested_items_data, parent_item: nil)
+      # Wrap entire tree build in a transaction for efficiency
+      NestedItem.transaction do
+        build_nested_items_tree(parent_datafile: datafile, items_data: nested_items_data, parent_item: nil)
+      end
     end
 
     def build_nested_items_tree(parent_datafile:, items_data:, parent_item:)
+      datafile_id = parent_datafile.id
+      parent_id = parent_item&.id
+
       Array(items_data).each do |item_data|
+        # Use find_or_create_by
         nested_item = NestedItem.find_or_create_by(
-          datafile_id: parent_datafile.id,
-          parent_id: parent_item&.id,
+          datafile_id: datafile_id,
+          parent_id: parent_id,
           item_name: item_data["item_name"]
         )
 
-        nested_item.update!(
-          media_type: item_data["media_type"],
-          size: item_data["size"] || item_data["item_size"],
-          item_path: item_data["item_path"],
-          is_directory: cast_boolean(item_data["is_directory"])
-        )
+        # Only update if needed to reduce database writes
+        if nested_item.media_type != item_data["media_type"] ||
+           nested_item.size != (item_data["size"] || item_data["item_size"]) ||
+           nested_item.item_path != item_data["item_path"] ||
+           nested_item.is_directory != cast_boolean(item_data["is_directory"])
+
+          nested_item.update!(
+            media_type: item_data["media_type"],
+            size: item_data["size"] || item_data["item_size"],
+            item_path: item_data["item_path"],
+            is_directory: cast_boolean(item_data["is_directory"])
+          )
+        end
 
         if item_data["children"].present?
           build_nested_items_tree(
@@ -258,7 +275,10 @@ module Migration
     end
 
     def sync_collection!(association, rows)
-      association.destroy_all if overwrite
+      if overwrite
+        # Use reorder to explicitly specify order for cursor-based pagination
+        association.reorder(:id).destroy_all
+      end
       return if rows.empty?
 
       rows.each do |attrs|
@@ -395,10 +415,10 @@ module Migration
     end
 
     def normalized_datafiles
-      Array(payload["datafiles"]).filter_map do |datafile|
-        # Convert legacy "listing" peek_type to "archive" for databank-2
+      Array(datafiles_payload).filter_map do |datafile|
+        # Keep canonical listing terminology for archive previews.
         peek_type = datafile["peek_type"]
-        peek_type = "archive" if peek_type == "listing"
+        peek_type = Datafile::PeekType::LISTING if peek_type == Datafile::PeekType::LISTING
 
         {
           web_id: datafile["web_id"].presence,
@@ -415,6 +435,17 @@ module Migration
           nested_items: datafile["nested_items"]
         }
       end
+    end
+
+    def datafiles_payload
+      return payload["datafiles"] if payload.respond_to?(:key?) && payload.key?("datafiles")
+      return payload[:datafiles] if payload.respond_to?(:key?) && payload.key?(:datafiles)
+
+      nil
+    end
+
+    def datafiles_payload_provided?
+      !datafiles_payload.nil?
     end
 
     def normalized_notes

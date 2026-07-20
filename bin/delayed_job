@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$APP_ROOT"
+
+original_args=("$@")
+
+command=""
+worker_count=""
+remaining_args=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -n|--number_of_workers)
+      shift
+      worker_count="${1:-}"
+      [[ -n "$worker_count" ]] || {
+        echo "Missing value for -n/--number_of_workers"
+        exit 1
+      }
+      shift
+      ;;
+    start|stop|restart|status|run)
+      command="$1"
+      shift
+      remaining_args=("$@")
+      break
+      ;;
+    --)
+      shift
+      if [[ $# -gt 0 ]]; then
+        command="$1"
+        shift
+        remaining_args=("$@")
+      fi
+      break
+      ;;
+    -*)
+      # Accept delayed_job-style flags for compatibility even when not used by Solid Queue fallback.
+      shift
+      ;;
+    *)
+      command="$1"
+      shift
+      remaining_args=("$@")
+      break
+      ;;
+  esac
+done
+
+usage() {
+  echo "Usage: bin/delayed_job <start|stop|restart|status|run>"
+}
+
+pid_dir="${SOLID_QUEUE_PID_DIR:-tmp/pids}"
+pid_file="${SOLID_QUEUE_PID_FILE:-$pid_dir/solid_queue.pid}"
+log_file="${SOLID_QUEUE_LOG_FILE:-log/solid_queue.log}"
+
+start_solid_queue() {
+  mkdir -p "$pid_dir" "$(dirname "$log_file")"
+
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid
+    existing_pid="$(cat "$pid_file")"
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      echo "Solid Queue already running (pid $existing_pid)"
+      return 0
+    fi
+    rm -f "$pid_file"
+  fi
+
+  nohup "$APP_ROOT/bin/jobs" start >>"$log_file" 2>&1 &
+  local new_pid=$!
+  echo "$new_pid" >"$pid_file"
+  echo "Started Solid Queue compatibility worker (pid $new_pid)"
+}
+
+stop_solid_queue() {
+  if [[ ! -f "$pid_file" ]]; then
+    echo "Solid Queue compatibility worker not running"
+    return 0
+  fi
+
+  local pid
+  pid="$(cat "$pid_file")"
+
+  if [[ -z "$pid" ]]; then
+    rm -f "$pid_file"
+    echo "Solid Queue compatibility worker not running"
+    return 0
+  fi
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" || true
+    for _ in {1..20}; do
+      if ! kill -0 "$pid" 2>/dev/null; then
+        break
+      fi
+      sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -9 "$pid" || true
+    fi
+    echo "Stopped Solid Queue compatibility worker (pid $pid)"
+  else
+    echo "Solid Queue compatibility worker not running"
+  fi
+
+  rm -f "$pid_file"
+}
+
+if [[ "${USE_LEGACY_DELAYED_JOB:-false}" == "true" ]]; then
+  exec ruby -e 'require File.expand_path("config/environment", Dir.pwd); require "delayed/command"; Delayed::Command.new(ARGV).daemonize' "${original_args[@]}"
+fi
+
+if [[ -n "$worker_count" ]]; then
+  echo "Compatibility note: ignoring -n $worker_count for Solid Queue fallback"
+fi
+
+case "$command" in
+  start)
+    start_solid_queue
+    ;;
+  stop)
+    stop_solid_queue
+    ;;
+  restart)
+    stop_solid_queue
+    start_solid_queue
+    ;;
+  status)
+    if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+      echo "Solid Queue compatibility worker running (pid $(cat "$pid_file"))"
+      exit 0
+    fi
+    echo "Solid Queue compatibility worker not running"
+    exit 1
+    ;;
+  run)
+    exec "$APP_ROOT/bin/jobs" start "${remaining_args[@]}"
+    ;;
+  ""|help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $command"
+    usage
+    exit 1
+    ;;
+esac

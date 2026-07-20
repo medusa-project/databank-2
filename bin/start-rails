@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$APP_ROOT"
+
+export RAILS_ENV="${RAILS_ENV:-production}"
+export PORT="${PORT:-3000}"
+
+bundle exec rails "databank:rails_cache:clear"
+bin/delayed_job start
+
+exec bundle exec passenger start \
+  --daemonize \
+  --environment "$RAILS_ENV" \
+  --port "$PORT" \
+  --pid-file "tmp/pids/passenger.$PORT.pid" \
+  --log-file "log/passenger.$PORT.log"
