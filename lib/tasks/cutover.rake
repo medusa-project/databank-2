@@ -73,6 +73,18 @@ require "json"
 #     > /tmp/flat_bundle_import.log 2>&1 < /dev/null &
 #   tail -n 100 -F /tmp/flat_bundle_import.log
 #
+# Before a fresh import run, clear checkpoint and lock files left by previous runs:
+#   script/clear_import_checkpoints.sh /tmp/databank_exports
+#
+# This removes the following files from every subdirectory of BUNDLE_ROOT:
+#   flat_bundle_import.checkpoint.json
+#   flat_bundle_structure_import.checkpoint.json
+#   flat_bundle_nested_items_import.checkpoint.json
+#   flat_bundle_import.lock
+#
+# Without clearing these, chunked importers will resume from the last checkpoint
+# rather than starting fresh.
+#
 
 
 namespace :cutover do
