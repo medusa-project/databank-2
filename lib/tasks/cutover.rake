@@ -1,77 +1,78 @@
 require "json"
 
 # Orchestrates full cutover import sequence from legacy databank exports.
-# Expected directory structure from migration:legacy:export_all:
+# Expected directory structure created by migration:legacy:export_all with SEPARATE_NESTED_ITEMS_BUNDLE=true:
 #   /tmp/databank_exports/
-#   ├── users_20260618T220000Z/                 (migration:legacy:export_users_bundle)
-#   ├── dataset_flat_20260605T212924Z/          (migration:legacy:export_bundle - flat NDJSON format)
-#   ├── permissions_20260605T213042Z/           (migration:legacy:export_permissions_bundle)
-#   ├── dataset_access_grants_20260605T213119Z/ (migration:legacy:export_dataset_access_grants_bundle)
-#   ├── guide_20260605T213946Z/                 (migration:legacy:export_guides_bundle)
-#   ├── spotlight_20260605T214012Z/             (migration:legacy:export_featured_researchers_bundle)
-#   ├── medusa_ingests_20260605T214056Z/        (migration:legacy:export_medusa_ingests_bundle)
-#   ├── download_metrics_20260605T214133Z/      (migration:legacy:export_download_metrics_bundle)
-#   └── audit_20260618T221000Z/                 (migration:legacy:export_audits_bundle)
+#   ├── users_20260618T220000Z/                      (migration:legacy:export_users_bundle)
+#   ├── dataset_flat_20260605T212924Z/               (migration:legacy:export_bundle - structure only)
+#   │   └── legacy_datasets.ndjson                   (datasets + datafiles, NO nested items)
+#   ├── dataset_nested_items_20260605T212924Z/       (migration:legacy:export_nested_items_bundle)
+#   │   └── legacy_nested_items.ndjson               (nested items only)
+#   ├── permissions_20260605T213042Z/
+#   ├── dataset_access_grants_20260605T213119Z/
+#   ├── guide_20260605T213946Z/
+#   ├── spotlight_20260605T214012Z/
+#   ├── medusa_ingests_20260605T214056Z/
+#   ├── download_metrics_20260605T214133Z/
+#   └── audit_20260618T221000Z/
 #
-# Dataset imports use flat NDJSON format (format_version: 2):
-#   - Separate records for datasets, datafiles, nested_items
-#   - Streaming batch import (100 records per flush)
-#   - Memory-efficient for large exports
+# Recommended import command (matches the export command structure):
+#   After exporting with: RAILS_ENV=demo SEPARATE_NESTED_ITEMS_BUNDLE=true bin/rails migration:legacy:export_all OUTPUT_ROOT=/tmp/databank_exports
+#   Import with:         BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
 #
-# To run the full cutover import:
+# This two-phase protocol:
+#   - Phase 1: Imports all users, then dataset structure (datasets + datafiles only)
+#   - Phase 2: Imports nested items separately
+#   - Phase 3: Imports all remaining bundles (permissions, grants, guides, spotlights, medusa, metrics, audits)
+#   - Allows resumable chunked import windows for large datasets
+#   - Memory-efficient for very large nested_items imports
+#
+# Other import options:
+#
+# For dry-run (no database changes):
+#   BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true DRY_RUN=true bundle exec rails cutover:import_all
+#
+# For simpler single-phase import (all data in one pass, less resumable):
 #   BUNDLE_ROOT=/tmp/databank_exports bundle exec rails cutover:import_all
+#   (Only use if export was WITHOUT SEPARATE_NESTED_ITEMS_BUNDLE=true)
 #
-# To run with dry-run (no database changes):
-#   BUNDLE_ROOT=/tmp/databank_exports DRY_RUN=true bundle exec rails cutover:import_all
+# Runbook (typical demo scenario using two-phase import):
+#   Preconditions:
+#     - Export completed: RAILS_ENV=demo SEPARATE_NESTED_ITEMS_BUNDLE=true bin/rails migration:legacy:export_all OUTPUT_ROOT=/tmp/databank_exports
+#     - Fresh databank-2 deploy ready
+#     - Checkpoint files cleared: script/clear_import_checkpoints.sh /tmp/databank_exports
 #
-# For large dataset bundles or unstable environments, prefer resumable chunk mode:
-#   BUNDLE_ROOT=/tmp/databank_exports CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
+#   Steps:
+#     1) Full chunked import (all bundles, two-phase dataset handling, resumable):
+#        RAILS_ENV=demo BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
+#     2) Verify outcomes:
+#        RAILS_ENV=demo bundle exec rails cutover:reconcile
+#        RAILS_ENV=demo bundle exec rails cutover:smoke ALLOW_ISSUES=true
 #
-# Preferred two-phase protocol for very large nested_items imports:
-#   NOTE: This only changes how dataset records are imported.
-#   Users, permissions, grants, guides, spotlights, medusa ingests, download metrics,
-#   and audits remain separate required cutover steps.
-#   1) Structure pass (datasets + datafiles only)
-#      BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
-#   2) Nested-items pass (separate command if needed)
-#      DIR=/tmp/databank_exports/dataset_flat_<timestamp> BUNDLE_FILE=legacy_nested_items.ndjson bundle exec rails migration:flat_bundle:import_nested_items_in_chunks
+#   Detached (SSH-safe with line-buffered logs, recommended for remote/long-running):
+#     cd /home/databank/current && nohup stdbuf -oL -eL env \
+#       RAILS_ENV=demo \
+#       BUNDLE_ROOT=/tmp/databank_exports \
+#       SEPARATE_NESTED_ITEMS_IMPORT=true \
+#       CHUNKED_DATASET_IMPORT=true \
+#       bundle exec rails cutover:import_all \
+#       > /tmp/cutover_import_all.log 2>&1 < /dev/null &
+#     tail -n 100 -F /tmp/cutover_import_all.log
+#     (Use this for SSH sessions; survives connection drops and shows real-time progress)
 #
-# Runbook (import side, demo-safe defaults):
-#   1) Structure import in chunks
-#      RAILS_ENV=demo DIR=/tmp/databank_exports/dataset_flat_<timestamp> BUNDLE_FILE=legacy_datasets.ndjson MAX_RECORDS=10000 FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 bundle exec rails migration:flat_bundle:import_structure_in_chunks
-#   2) Nested-items import in chunks
-#      RAILS_ENV=demo DIR=/tmp/databank_exports/dataset_nested_items_<timestamp> BUNDLE_FILE=legacy_nested_items.ndjson MAX_RECORDS=10000 FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 bundle exec rails migration:flat_bundle:import_nested_items_in_chunks
-#   3) Remaining bundles (permissions, grants, guides, spotlights, medusa, metrics, audits)
-#      RAILS_ENV=demo BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true SKIP_STEPS=users,datasets,nested_items bundle exec rails cutover:import_all
-#   4) Reconcile and smoke
-#      RAILS_ENV=demo bundle exec rails cutover:reconcile
-#      RAILS_ENV=demo bundle exec rails cutover:smoke ALLOW_ISSUES=true
-#
-# Detached full cutover (SSH-safe, line-buffered logging):
-#   cd /home/databank/current && nohup stdbuf -oL -eL env \
-#     RAILS_ENV=demo \
-#     BUNDLE_ROOT=/tmp/databank_exports \
-#     SEPARATE_NESTED_ITEMS_IMPORT=true \
-#     CHUNKED_DATASET_IMPORT=true \
-#     MAX_RECORDS=10000 \
-#     FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 \
-#     bundle exec rails cutover:import_all \
-#     > /tmp/cutover_import_all.log 2>&1 < /dev/null &
-#   tail -n 100 -F /tmp/cutover_import_all.log
-#
-# For long-running dataset chunk imports over SSH, run detached with line-buffered logs:
+# For large individual dataset chunk imports (resume capability over SSH):
 #   cd /home/databank/current && nohup stdbuf -oL -eL env \
 #     RAILS_ENV=demo \
 #     DIR=/tmp/databank_exports/dataset_flat_<timestamp> \
 #     BUNDLE_FILE=legacy_datasets.ndjson \
-#     CHECKPOINT_FILE=flat_bundle_import.checkpoint.json \
+#     CHECKPOINT_FILE=flat_bundle_structure_import.checkpoint.json \
 #     REPORT_FILE=cutover_datasets_report.json \
 #     FLAT_BUNDLE_IMPORT_DIAGNOSTIC_LOGGING=true \
 #     FLAT_BUNDLE_IMPORT_BATCH_SIZE=25 \
 #     MAX_RECORDS=10000 \
-#     bundle exec rails migration:flat_bundle:import_in_chunks \
-#     > /tmp/flat_bundle_import.log 2>&1 < /dev/null &
-#   tail -n 100 -F /tmp/flat_bundle_import.log
+#     bundle exec rails migration:flat_bundle:import_structure_in_chunks \
+#     > /tmp/flat_bundle_structure_import.log 2>&1 < /dev/null &
+#   tail -n 100 -F /tmp/flat_bundle_structure_import.log
 #
 # Before a fresh import run, clear checkpoint and lock files left by previous runs:
 #   script/clear_import_checkpoints.sh /tmp/databank_exports
