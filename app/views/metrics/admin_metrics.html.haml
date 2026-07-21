@@ -18,28 +18,33 @@
         - metric_key = definition.key
         - refresh_in_progress = refresh_status[metric_key]
         - is_json_metric = definition.content_type == "application/json"
+        - download_filename = File.basename(definition.download_path.to_s)
         %li{data: {testid: "metric-card-#{metric_key}"}}
-          %span.dataset-show-list-primary
-            - if refresh_in_progress
-              = "#{definition.label} refresh in progress"
-            - elsif modified_times[metric_key].to_s == "not found"
-              = "#{definition.label} not currently available"
-            - elsif definition.download_path.present?
-              = link_to definition.label, definition.download_path,
-                        data: {testid: "metric-download-#{metric_key}"},
-                        download: (is_json_metric ? File.basename(definition.download_path.to_s) : nil)
+          %h3.metric-header
+            = definition.label
+            - if !refresh_in_progress && definition.download_path.present?
+              = semantic_action_button(action: :download, url: definition.download_path, icon_only: true, aria_label: "Download #{definition.label}", title: "Download #{definition.label}", data: {testid: "metric-download-#{metric_key}"}, download: (is_json_metric ? download_filename : nil))
 
-          %span.dataset-show-list-secondary
+          %div.dataset-show-list-secondary.inline-block
             Modified:
             = modified_times[metric_key].presence || "not found"
+
+            - if current_user&.admin? && definition.refreshable?
+              - if refresh_in_progress
+                %span.metric-status-inline{data: {testid: "metric-refresh-status-#{metric_key}"}}
+                  = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
+                  Refresh in progress
+              - else
+                = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post,
+                            form_class: "inline-block",
+                            data: {testid: "metric-refresh-#{metric_key}"}
 
           - if definition.summary.present?
             %span.dataset-show-list-tertiary= definition.summary
 
           - if refresh_in_progress
-            %p.idb-workflow-note{data: {testid: "metric-refresh-status-#{metric_key}"}}
-              = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
-              Refresh this page manually to check status.
+            %p.idb-workflow-note
+              Please refresh this page manually to check status.
 
           - description_blocks = definition.description_blocks || []
           - if description_blocks.any?
@@ -58,16 +63,6 @@
                   %li
                     %strong= "#{column_name}:"
                     = column_description
-
-          - if current_user&.admin?
-            .idb-workflow-strip
-              %nav.idb-workflow-actions-right{aria: { label: "#{definition.label} actions" }}
-                - if refresh_in_progress
-                  %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
-                - else
-                  = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post,
-                              class: "idb-button-success",
-                              data: {testid: "metric-refresh-#{metric_key}"}
 
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing

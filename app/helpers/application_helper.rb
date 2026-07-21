@@ -146,6 +146,12 @@ module ApplicationHelper
       variant: "primary",
       icon: "circle-down",
       icon_style: :solid
+    },
+    download: {
+      label: "Download",
+      variant: "primary",
+      icon: "download",
+      icon_style: :solid
     }
   }.freeze
 

@@ -1,0 +1,37 @@
+/* Metrics admin page styling */
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.metric-header .idb-button-primary {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+/* Override datasets_index.css display: block to show inline like legacy databank */
+.dataset-show-list-secondary.inline-block {
+  display: inline-block;
+}
+
+.metric-status-inline {
+  display: inline-block;
+  margin-left: 1rem;
+  vertical-align: middle;
+}
+
+/* button_to generates a form; make it inline-block to stay on same line */
+form.inline-block {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.75rem;
+}
+
+form.inline-block button {
+  margin: 0;
+  padding: 0;
+}
