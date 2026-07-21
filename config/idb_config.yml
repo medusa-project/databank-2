@@ -1,4 +1,6 @@
 default: &default
+  admin:
+    netids: <%= Rails.application.credentials.dig(:admin, :netids) || ENV.fetch("ADMIN_NETIDS", "") %>
   app:
     root_url_text: <%= ENV.fetch("ROOT_URL_TEXT", "http://localhost:3000") %>
     url: <%= ENV.fetch("APP_URL", "http://127.0.0.1:3000") %>

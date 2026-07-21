@@ -23,7 +23,7 @@ class User < ApplicationRecord
   end
 
   def admin?
-    role == "admin"
+    role == "admin" || config_admin?
   end
 
   def curator?
@@ -78,5 +78,47 @@ class User < ApplicationRecord
     "no_deposit"
   rescue StandardError
     "no_deposit"
+  end
+
+  def config_admin?
+    self.class.config_admin?(uid: uid, email: email, username: username)
+  end
+
+  def self.config_admin?(uid:, email:, username: nil)
+    identifiers = normalized_admin_identifiers(uid: uid, email: email, username: username)
+    return false if identifiers.empty?
+
+    (configured_admin_netids + configured_admin_emails).any? do |configured_identifier|
+      identifiers.include?(configured_identifier)
+    end
+  end
+
+  def self.configured_admin_netids
+    raw_netids = IdbConfig.fetch(:admin, :netids, default: "")
+
+    raw_netids.to_s.split(",").map { |value| normalize_admin_identifier(value) }.reject(&:blank?).uniq
+  end
+
+  def self.configured_admin_emails
+    configured_admin_netids.map { |netid| illinois_email_for(netid) }
+  end
+
+  def self.normalized_admin_identifiers(uid:, email:, username: nil)
+    [ uid, email, username, illinois_email_for(username) ]
+      .map { |value| normalize_admin_identifier(value) }
+      .reject(&:blank?)
+      .uniq
+  end
+
+  def self.normalize_admin_identifier(value)
+    value.to_s.strip.downcase
+  end
+
+  def self.illinois_email_for(netid)
+    normalized_netid = normalize_admin_identifier(netid)
+    return "" if normalized_netid.blank?
+    return normalized_netid if normalized_netid.include?("@")
+
+    "#{normalized_netid}@illinois.edu"
   end
 end

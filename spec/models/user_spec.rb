@@ -31,9 +31,22 @@ RSpec.describe User, type: :model do
     expect(build(:user, role: "curator")).not_to be_admin
   end
 
+  it "treats configured legacy admin netids as admin users" do
+    allow(IdbConfig).to receive(:fetch).with(:admin, :netids, default: "").and_return("alpha, beta")
+
+    expect(build(:user, role: "depositor", uid: "alpha", email: "alpha@illinois.edu")).to be_admin
+    expect(build(:user, role: "depositor", uid: "gamma", email: "beta@illinois.edu")).to be_admin
+  end
+
   it "treats admin and curator roles as curator-capable" do
     expect(build(:user, role: "admin")).to be_curator
     expect(build(:user, role: "curator")).to be_curator
+  end
+
+  it "treats configured legacy admin netids as curator-capable" do
+    allow(IdbConfig).to receive(:fetch).with(:admin, :netids, default: "").and_return("alpha")
+
+    expect(build(:user, role: "depositor", uid: "alpha", email: "alpha@illinois.edu")).to be_curator
   end
 
   it "checks curator access by email when role alone is insufficient" do
