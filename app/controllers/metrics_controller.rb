@@ -12,6 +12,9 @@ class MetricsController < ApplicationController
 
   before_action :require_admin_or_curator!, only: %i[
     admin_metrics
+  ]
+
+  before_action :require_admin!, only: %i[
     refresh_dataset_downloads
     refresh_datafile_downloads
     refresh_datasets_tsv
@@ -30,7 +33,7 @@ class MetricsController < ApplicationController
     @metric_definitions = Metric.admin_definitions
     @modified_times = Metric.modified_times
     @refresh_status = Metric.refresh_status
-    @title = "Admin metrics"
+    @title = "Curator Metrics"
   end
 
   def dataset_downloads
@@ -145,6 +148,12 @@ class MetricsController < ApplicationController
 
   def require_admin_or_curator!
     return if current_user&.admin? || current_user&.curator?
+
+    redirect_to metrics_path, alert: "You are not authorized to perform this action."
+  end
+
+  def require_admin!
+    return if current_user&.admin?
 
     redirect_to metrics_path, alert: "You are not authorized to perform this action."
   end

@@ -1,11 +1,11 @@
-- content_for :title, "Admin metrics"
+- content_for :title, "Curator Metrics"
 - modified_times = @modified_times || {}
 - refresh_status = @refresh_status || {}
 - metric_definitions = @metric_definitions || []
 
 %ilw-content.dataset-show-page
   %section.dataset-show-panel.idb-rounded-section{aria: { label: "Metrics exports" }}
-    %h1.dataset-show-section-title Metrics
+    %h1.dataset-show-section-title Curator Metrics
 
     %p
       = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
@@ -17,12 +17,17 @@
       - metric_definitions.each do |definition|
         - metric_key = definition.key
         - refresh_in_progress = refresh_status[metric_key]
-        %li
+        - is_json_metric = definition.content_type == "application/json"
+        %li{data: {testid: "metric-card-#{metric_key}"}}
           %span.dataset-show-list-primary
-            - if modified_times[metric_key].to_s == "not found"
+            - if refresh_in_progress
+              = "#{definition.label} refresh in progress"
+            - elsif modified_times[metric_key].to_s == "not found"
               = "#{definition.label} not currently available"
-            - else
-              = link_to definition.label, definition.download_path
+            - elsif definition.download_path.present?
+              = link_to definition.label, definition.download_path,
+                        data: {testid: "metric-download-#{metric_key}"},
+                        download: (is_json_metric ? File.basename(definition.download_path.to_s) : nil)
 
           %span.dataset-show-list-secondary
             Modified:
@@ -32,7 +37,7 @@
             %span.dataset-show-list-tertiary= definition.summary
 
           - if refresh_in_progress
-            %p.idb-workflow-note
+            %p.idb-workflow-note{data: {testid: "metric-refresh-status-#{metric_key}"}}
               = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
               Refresh this page manually to check status.
 
@@ -54,13 +59,15 @@
                     %strong= "#{column_name}:"
                     = column_description
 
-          - if current_user&.admin? || current_user&.curator?
+          - if current_user&.admin?
             .idb-workflow-strip
               %nav.idb-workflow-actions-right{aria: { label: "#{definition.label} actions" }}
                 - if refresh_in_progress
                   %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
                 - else
-                  = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post, class: "idb-button-success"
+                  = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post,
+                              class: "idb-button-success",
+                              data: {testid: "metric-refresh-#{metric_key}"}
 
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing

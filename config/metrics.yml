@@ -3,6 +3,8 @@
   :download_path: /dataset_downloads.json
   :content_type: application/json
   :label: Dataset downloads JSON
+  :refreshable: false
+  :show_in_admin: false
   :summary: Daily download tallies grouped at the dataset level.
   :description_blocks:
     - A JSON export detailing downloads calculated per dataset per day.
@@ -18,6 +20,8 @@
   :download_path: /datafile_downloads.json
   :content_type: application/json
   :label: Datafile downloads JSON
+  :refreshable: false
+  :show_in_admin: false
   :summary: Daily download tallies grouped at the datafile level.
   :description_blocks:
     - A JSON export detailing downloads calculated per datafile per day.
@@ -56,6 +60,8 @@
   :download_path: /archive_file_contents.csv
   :content_type: text/csv
   :label: Container contents CSV
+  :refreshable: false
+  :show_in_admin: false
   :summary: Contents extracted from complex container files such as zip archives.
   :description_blocks:
     - CSV export of file contents discovered inside archive-style uploads.
