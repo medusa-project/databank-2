@@ -96,7 +96,7 @@ class Metric
     private
 
     def config_value(name)
-      config[name] || config[name.to_s]
+      config.key?(name) ? config[name] : config[name.to_s]
     end
   end
 
