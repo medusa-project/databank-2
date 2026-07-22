@@ -26,6 +26,21 @@ class User < ApplicationRecord
     role == "admin" || config_admin?
   end
 
+  def system_admin?
+    admin_netids_str = IDB_CONFIG[:admin][:netids].to_s.strip
+    return false if admin_netids_str.blank?
+
+    admin_netids = admin_netids_str.split(",").map { |x| x.strip }
+    admin_uids = admin_netids.map { |x| "#{x}@illinois.edu" }
+    return true if admin_uids.include?(uid)
+
+    # In development/test only: allow users with the admin role (via role switcher)
+    # to be treated as system admins for testing. In demo/production, system admin
+    # status is ONLY determined by the configured admin netids list.
+    allow_role_based_admin = Rails.env.development? || Rails.env.test?
+    admin? && allow_role_based_admin
+  end
+
   def curator?
     return true if admin? || role == "curator"
     return false if email.blank?

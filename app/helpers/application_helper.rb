@@ -152,6 +152,24 @@ module ApplicationHelper
       variant: "primary",
       icon: "download",
       icon_style: :solid
+    },
+    regenerate: {
+      label: "Regenerate",
+      variant: "primary",
+      icon: "arrow-rotate-right",
+      icon_style: :solid
+    },
+    admin_tools: {
+      label: "Admin Tools",
+      variant: "primary",
+      icon: "wrench",
+      icon_style: :solid
+    },
+    metrics: {
+      label: "Metrics",
+      variant: "primary",
+      icon: "chart-simple",
+      icon_style: :solid
     }
   }.freeze
 
@@ -257,7 +275,7 @@ module ApplicationHelper
     link_to(content, url, html_options)
   end
 
-  def semantic_action_button(action:, url: nil, label: nil, icon: nil, icon_style: nil, icon_position: :left, icon_only: false, aria_label: nil, style: :legacy, type: "button", **html_options)
+  def semantic_action_button(action:, url: nil, label: nil, icon: nil, icon_style: nil, icon_position: :left, icon_only: false, aria_label: nil, style: :legacy, type: "button", method: :get, **html_options)
     action_key = action.to_sym
     defaults = IDB_SEMANTIC_BUTTONS.fetch(action_key)
 
@@ -295,7 +313,11 @@ module ApplicationHelper
     content = safe_join(ordered_content.compact, " ")
 
     if url.present?
-      link_to(content, url, html_options)
+      if method.to_sym == :post
+        button_to(content, url, method: :post, **html_options)
+      else
+        link_to(content, url, html_options)
+      end
     else
       button_tag(content, { type: type }.merge(html_options))
     end

@@ -66,10 +66,9 @@
 
   - if logged_in? && (current_user.admin? || current_user.curator?)
     .welcome-staff-row
-      - if current_user.admin?
-        .welcome-main
-          %h2 Curator and Admin Tools
-          %p
-            = link_to "Curator and Admin Page", admin_path, class: "idb-button-primary"
-      - else
-        = render "role_switch_form"
+      .welcome-staff-controls
+        - if current_user.admin?
+          = semantic_action_button(action: :admin_tools, label: "Curator and Admin Tools", url: admin_path, icon_position: :right, style: :legacy)
+        - elsif current_user.curator?
+          = render "role_switch_form"
+        = semantic_action_button(action: :metrics, label: "Curator Metrics", url: curator_metrics_path, icon_position: :right, style: :legacy)

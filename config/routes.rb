@@ -98,6 +98,7 @@ Rails.application.routes.draw do
 
   get "/metric", to: "metrics#index"
   get "/admin_metrics", to: "metrics#admin_metrics"
+  get "/curator_metrics", to: "metrics#admin_metrics", as: :curator_metrics
   resources :metrics, only: :index do
     collection do
       get :archived_content_csv

@@ -35,9 +35,7 @@
                   = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
                   Refresh in progress
               - else
-                = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post,
-                            form_class: "inline-block",
-                            data: {testid: "metric-refresh-#{metric_key}"}
+                = semantic_action_button(action: :regenerate, label: "Regenerate #{definition.label}", url: refresh_path_for(metric_key), method: :post, data: {testid: "metric-refresh-#{metric_key}"})
 
           - if definition.summary.present?
             %span.dataset-show-list-tertiary= definition.summary

@@ -1,12 +1,7 @@
-%section.welcome-main
-  %h2 Switch Role
-  - if Rails.env.development? || Rails.env.test?
-    %p
-      As a curator, you can switch roles to validate depositor behavior and other user journeys.
-    = form_with url: role_switch_path, method: :post, local: true, class: "welcome-role-switch-form" do |f|
-      %label{for: "welcome-role-switch"} Change role
-      .welcome-role-switch-controls
-        = f.select :role, options_for_select(["depositor", "curator", "admin"], current_user.role), id: "welcome-role-switch"
-        = f.submit "Switch role", class: "idb-button-secondary"
-  - else
-    %p Role switching is available only in development and test environments.
+- if Rails.env.development? || Rails.env.test?
+  = form_with url: role_switch_path, method: :post, local: true, class: "welcome-role-switch-form" do |f|
+    %label{for: "welcome-role-switch", class: "sr-only"} Change role
+    = f.select :role, options_for_select(["depositor", "curator", "admin"], current_user.role), id: "welcome-role-switch", class: "welcome-role-switch-select"
+    = f.submit "Switch role", class: "idb-button-secondary"
+- else
+  %p Role switching is available only in development and test environments.
