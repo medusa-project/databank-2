@@ -21,13 +21,13 @@ RSpec.describe "Admin page", type: :request do
 
     get root_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Curator and Admin Page")
+    expect(response.body).to include("Curator and Admin Tools")
 
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     get root_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Curator and Admin Page")
+    expect(response.body).not_to include("Curator and Admin Tools")
     expect(response.body).to include("Change role")
   end
 

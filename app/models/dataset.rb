@@ -108,6 +108,23 @@ class Dataset < ApplicationRecord
     )
   }
 
+  scope :files_publicly_readable_now_scope, lambda {
+    published.where(is_test: false).where(
+      <<~SQL.squish,
+        COALESCE(NULLIF(embargo, ''), :none) NOT IN (:file, :metadata)
+        OR (
+          COALESCE(NULLIF(embargo, ''), :none) IN (:file, :metadata)
+          AND release_date IS NOT NULL
+          AND release_date <= :today
+        )
+      SQL
+      none: EMBARGO_NONE,
+      file: EMBARGO_FILE,
+      metadata: EMBARGO_METADATA,
+      today: Date.current
+    )
+  }
+
   validates :key,             presence: true, uniqueness: true
   validates :title,           presence: true, unless: :draft?
   validates :owner_uid,       presence: true

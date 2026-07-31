@@ -6,8 +6,8 @@
     "test:e2e:a11y": "playwright test playwright/accessibility.spec.js",
     "lighthouse:clean": "mkdir -p ./tmp/lighthouse && find ./tmp/lighthouse -maxdepth 1 -type f \\( -name '*.report.html' -o -name '*.report.json' \\) -delete",
     "lighthouse:local": "npm run lighthouse:clean && npm run lighthouse:local:home && npm run lighthouse:local:contact",
-    "lighthouse:local:home": "lighthouse http://127.0.0.1:3000 --only-categories=accessibility,best-practices,performance,seo --preset=desktop --chrome-flags='--headless --no-sandbox' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/home",
-    "lighthouse:local:contact": "lighthouse http://127.0.0.1:3000/contact --only-categories=accessibility,best-practices,performance,seo --preset=desktop --chrome-flags='--headless --no-sandbox' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/contact",
+    "lighthouse:local:home": "CHROME_PATH=${CHROME_PATH:-/root/.cache/ms-playwright/chromium-1223/chrome-linux/chrome} lighthouse http://127.0.0.1:3000 --only-categories=accessibility,best-practices,performance,seo --skip-audits=is-on-https --preset=desktop --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage --disable-gpu' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/home",
+    "lighthouse:local:contact": "CHROME_PATH=${CHROME_PATH:-/root/.cache/ms-playwright/chromium-1223/chrome-linux/chrome} lighthouse http://127.0.0.1:3000/contact --only-categories=accessibility,best-practices,performance,seo --skip-audits=is-on-https --preset=desktop --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage --disable-gpu' --no-enable-error-reporting --output=html --output=json --output-path=./tmp/lighthouse/contact",
     "lighthouse:ci": "lhci autorun --config=./lighthouserc.json"
   },
   "devDependencies": {

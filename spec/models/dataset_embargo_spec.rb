@@ -1,6 +1,26 @@
 require "rails_helper"
 
 RSpec.describe Dataset, type: :model do
+  describe "external files" do
+    it "returns false when both external files note and link are blank" do
+      dataset = create(:dataset, external_files_note: "", external_files_link: nil)
+
+      expect(dataset.external_files?).to be(false)
+    end
+
+    it "returns true when external files note is present" do
+      dataset = create(:dataset, external_files_note: "See external repository", external_files_link: nil)
+
+      expect(dataset.external_files?).to be(true)
+    end
+
+    it "returns true when external files link is present" do
+      dataset = create(:dataset, external_files_note: "", external_files_link: "https://example.org/large-files")
+
+      expect(dataset.external_files?).to be(true)
+    end
+  end
+
   describe "embargo behavior" do
     it "normalizes blank embargo to none" do
       dataset = create(:dataset, :published, embargo: nil)

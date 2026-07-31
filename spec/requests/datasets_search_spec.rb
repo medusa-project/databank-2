@@ -128,6 +128,108 @@ RSpec.describe "Datasets search", type: :request do
     expect(response.body).to include("Depositor")
   end
 
+  it "shows external files facet only for admin role" do
+    Dataset.create!(
+      title: "External Files Facet Dataset",
+      description: "Facet visibility dataset",
+      keywords: "external-facet-visible",
+      subject: "Engineering",
+      owner_uid: "owner-external-facet-visible",
+      depositor_name: "Owner External Facet",
+      depositor_email: "owner-external-facet-visible@example.edu",
+      publication_state: :published,
+      external_files_link: "https://example.org/external-visible"
+    )
+
+    get datasets_path, params: { q: "external-facet-visible" }
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("external_files_has_external_files")
+
+    login_as(email: "admin-external-facet@example.edu", name: "Admin External Facet", role: "admin")
+    get datasets_path, params: { q: "external-facet-visible" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("External Files")
+    expect(response.body).to include("Has External Files")
+    expect(response.body).to include("external_files_has_external_files")
+  end
+
+  it "filters by has external files for admins" do
+    login_as(email: "admin-external-filter@example.edu", name: "Admin External Filter", role: "admin")
+
+    Dataset.create!(
+      title: "Dataset With External Files",
+      description: "Has external files",
+      keywords: "external-files-filter",
+      subject: "Engineering",
+      owner_uid: "owner-has-external-files",
+      depositor_name: "Owner Has External Files",
+      depositor_email: "owner-has-external-files@example.edu",
+      publication_state: :published,
+      external_files_note: "External repository"
+    )
+
+    Dataset.create!(
+      title: "Dataset Without External Files",
+      description: "No external files",
+      keywords: "external-files-filter",
+      subject: "Engineering",
+      owner_uid: "owner-no-external-files",
+      depositor_name: "Owner No External Files",
+      depositor_email: "owner-no-external-files@example.edu",
+      publication_state: :published,
+      external_files_note: "",
+      external_files_link: nil
+    )
+
+    get datasets_path, params: {
+      q: "external-files-filter",
+      external_files: [ Search::DatasetSearch::EXTERNAL_FILES_HAS_VALUE ]
+    }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Dataset With External Files")
+    expect(response.body).not_to include("Dataset Without External Files")
+  end
+
+  it "filters by no external files for admins" do
+    login_as(email: "admin-no-external-filter@example.edu", name: "Admin No External Filter", role: "admin")
+
+    Dataset.create!(
+      title: "Has External Repo Dataset",
+      description: "Has external files",
+      keywords: "no-external-files-filter",
+      subject: "Engineering",
+      owner_uid: "owner-external-included",
+      depositor_name: "Owner External Included",
+      depositor_email: "owner-external-included@example.edu",
+      publication_state: :published,
+      external_files_link: "https://example.org/external-included"
+    )
+
+    Dataset.create!(
+      title: "No External Files Included Dataset",
+      description: "No external files",
+      keywords: "no-external-files-filter",
+      subject: "Engineering",
+      owner_uid: "owner-no-external-included",
+      depositor_name: "Owner No External Included",
+      depositor_email: "owner-no-external-included@example.edu",
+      publication_state: :published,
+      external_files_note: "",
+      external_files_link: nil
+    )
+
+    get datasets_path, params: {
+      q: "no-external-files-filter",
+      external_files: [ Search::DatasetSearch::EXTERNAL_FILES_NONE_VALUE ]
+    }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("No External Files Included Dataset")
+    expect(response.body).not_to include("Has External Repo Dataset")
+  end
+
   it "shows accurate publication state facet labels for curator roles" do
     login_as(email: "admin-publication-state@example.edu", name: "Admin Publication State", role: "admin")
 

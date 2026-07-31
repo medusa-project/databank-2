@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
-  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link]
+  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -131,6 +131,22 @@ class DatasetsController < ApplicationController
        render json: return_hash, content_type: request.format
      end
    end
+
+  def open_in_granite
+    authorize! :view_files, @dataset
+
+    if @dataset.external_files_link.blank?
+      redirect_to dataset_path(@dataset), alert: "No external files link is available for this dataset."
+      return
+    end
+
+    @dataset.datafiles.find_each do |datafile|
+      datafile.record_download(request.remote_ip)
+    end
+
+    redirect_to @dataset.external_files_link, allow_other_host: true
+  end
+
   def pre_version
     authorize! :update, @dataset
 
@@ -700,7 +716,8 @@ class DatasetsController < ApplicationController
       funders: params[:funders],
       publication_years: params[:publication_years],
       publication_states: params[:publication_states],
-      depositors: params[:depositors]
+      depositors: params[:depositors],
+      external_files: params[:external_files]
     }
   end
 
@@ -726,6 +743,7 @@ class DatasetsController < ApplicationController
       publication_years: params[:publication_years],
       publication_states: params[:publication_states],
       depositors: params[:depositors],
+      external_files: params[:external_files],
       page: @page
     }.merge(overrides)
   end

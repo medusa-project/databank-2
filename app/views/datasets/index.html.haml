@@ -117,6 +117,17 @@
                   = check_box_tag "depositors[]", row[:value], checked, id: depositor_id, class: "facet-checkbox"
                   = label_tag depositor_id, "#{row[:label]} (#{row[:count]})", class: "facet-label"
 
+          - if @available_facets.include?(:external_files)
+            %fieldset.search-facet
+              %legend.panel-title
+                %h3.filter-heading External Files
+              - @facet_options.fetch(:external_files, []).each do |row|
+                - checked = Array(params[:external_files]).include?(row[:value])
+                - external_files_id = "external_files_#{row[:value].to_s.parameterize}"
+                .facet-row
+                  = check_box_tag "external_files[]", row[:value], checked, id: external_files_id, class: "facet-checkbox"
+                  = label_tag external_files_id, "#{row[:label]} (#{row[:count]})", class: "facet-label"
+
         %section.datasets-results-panel{aria: { labelledby: "datasets-results-heading" }}
           %h2#datasets-results-heading.datasets-section-heading Results
 

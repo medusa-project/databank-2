@@ -233,11 +233,12 @@ class Metric
       begin
         first_record = true
         totals = Hash.new(0)
+        public_dataset_keys = download_metrics_public_dataset_keys
 
         File.open(metric_path(metric_key), "w") do |file|
           file.puts(%({"dataset_downloads":[))
 
-          DatasetDownloadTally.order(:download_date, :id).find_each do |row|
+          DatasetDownloadTally.where(dataset_key: public_dataset_keys).order(:download_date, :id).find_each do |row|
             row_json = { doi: row.doi, date: row.download_date, tally: row.tally }.to_json
             file.puts(first_record ? row_json : ",#{row_json}")
             first_record = false
@@ -263,11 +264,12 @@ class Metric
 
       begin
         first_record = true
+        public_dataset_keys = download_metrics_public_dataset_keys
 
         File.open(metric_path(metric_key), "w") do |file|
           file.puts(%({"datafile_downloads":[))
 
-          FileDownloadTally.order(:download_date, :id).find_each do |row|
+          FileDownloadTally.where(dataset_key: public_dataset_keys).order(:download_date, :id).find_each do |row|
             row_json = {
               doi: row.doi,
               file: row.filename,
@@ -489,6 +491,10 @@ class Metric
       end
     rescue StandardError
       "application/octet-stream"
+    end
+
+    def download_metrics_public_dataset_keys
+      Dataset.files_publicly_readable_now_scope.pluck(:key)
     end
   end
 end
