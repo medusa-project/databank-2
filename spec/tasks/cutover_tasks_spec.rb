@@ -143,6 +143,69 @@ RSpec.describe "cutover tasks" do
     FileUtils.rm_rf(bundle_root)
   end
 
+  it "uses chunked download metrics import task when CHUNKED_DOWNLOAD_METRICS_IMPORT is enabled" do
+    bundle_root = Rails.root.join("tmp", "cutover_orchestration_download_metrics_chunked")
+    FileUtils.mkdir_p(bundle_root)
+
+    step_dirs = {}
+    CUTOVER_IMPORT_STEPS.each do |step|
+      prefixes = Array(step[:dir_prefixes]).presence || Array(step[:dir_prefix])
+      subdir = bundle_root.join("#{prefixes.first}20260605T120000Z")
+      FileUtils.mkdir_p(subdir)
+      step_dirs[step[:key]] = subdir.to_s
+    end
+
+    expected_order = [
+      "migration:users:import_from_dir",
+      "migration:flat_bundle:import_from_dir",
+      "migration:permissions:import_from_dir",
+      "migration:dataset_access_grants:import_from_dir",
+      "migration:guides:import_from_dir",
+      "migration:spotlights:import_from_dir",
+      "migration:medusa_ingests:import_from_dir",
+      "migration:download_metrics:import_in_chunks",
+      "migration:audits:import_from_dir"
+    ]
+
+    invocations = []
+    fake_tasks = {}
+
+    expected_order.each do |task_name|
+      task_double = instance_double(Rake::Task)
+      allow(task_double).to receive(:reenable)
+      allow(task_double).to receive(:invoke) do
+        invocations << {
+          task: task_name,
+          dir: ENV["DIR"],
+          bundle_file: ENV["BUNDLE_FILE"],
+          dry_run: ENV["DRY_RUN"]
+        }
+      end
+      fake_tasks[task_name] = task_double
+    end
+
+    allow(Rake::Task).to receive(:[]).and_wrap_original do |original, task_name|
+      fake_tasks.fetch(task_name) { original.call(task_name) }
+    end
+
+    ENV["BUNDLE_ROOT"] = bundle_root.to_s
+    ENV["DRY_RUN"] = "true"
+    ENV["CHUNKED_DOWNLOAD_METRICS_IMPORT"] = "true"
+
+    import_all_task.invoke
+
+    expect(invocations.map { |call| call[:task] }).to eq(expected_order)
+    CUTOVER_IMPORT_STEPS.each_with_index do |step, index|
+      expect(invocations[index][:dir]).to eq(step_dirs[step[:key]])
+    end
+    expect(invocations).to all(include(dry_run: "true"))
+  ensure
+    ENV.delete("BUNDLE_ROOT")
+    ENV.delete("DRY_RUN")
+    ENV.delete("CHUNKED_DOWNLOAD_METRICS_IMPORT")
+    FileUtils.rm_rf(bundle_root)
+  end
+
   it "skips requested cutover steps when SKIP_STEPS is provided" do
     bundle_root = Rails.root.join("tmp", "cutover_orchestration_skip_steps")
     FileUtils.mkdir_p(bundle_root)

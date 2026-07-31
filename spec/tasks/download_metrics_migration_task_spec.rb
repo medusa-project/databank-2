@@ -7,9 +7,11 @@ RSpec.describe "migration:download_metrics tasks" do
   end
 
   let(:import_from_dir_task) { Rake::Task["migration:download_metrics:import_from_dir"] }
+  let(:import_in_chunks_task) { Rake::Task["migration:download_metrics:import_in_chunks"] }
 
   before do
     import_from_dir_task.reenable
+    import_in_chunks_task.reenable
   end
 
   def write_bundle_files(dir:, lines:, manifest_overrides: {})
@@ -169,6 +171,163 @@ RSpec.describe "migration:download_metrics tasks" do
   ensure
     ENV.delete("DIR")
     ENV.delete("DRY_RUN")
+    FileUtils.rm_rf(dir)
+  end
+
+  it "imports download metrics in resumable chunks until completion" do
+    dir = Rails.root.join("tmp", "download_metrics_chunk_spec")
+    FileUtils.mkdir_p(dir)
+
+    lines = 5.times.map do |index|
+      {
+        type: "DatasetDownloadTally",
+        attributes: {
+          dataset_key: "IDB-CHUNK-#{index + 1}",
+          doi: "10.5555/IDB-CHUNK-#{index + 1}",
+          download_date: "2026-01-#{format('%02d', index + 1)}",
+          tally: index + 1,
+          created_at: "2026-01-01T10:00:00Z",
+          updated_at: "2026-01-01T10:00:00Z"
+        }
+      }
+    end
+
+    write_bundle_files(dir: dir, lines: lines)
+
+    checkpoint_path = dir.join("download_metrics_import.checkpoint.json")
+    report_path = dir.join("download_metrics_chunk.report.json")
+
+    ENV["DIR"] = dir.to_s
+    ENV["MAX_RECORDS"] = "2"
+    ENV["MAX_ITERATIONS"] = "10"
+    ENV["MAX_MINUTES"] = "10"
+    ENV["CHECKPOINT_FILE"] = checkpoint_path.to_s
+    ENV["REPORT_FILE"] = report_path.to_s
+    ENV["RESUME_OVERLAP_LINES"] = "0"
+    ENV["LOCK_FILE"] = dir.join("download_metrics_import.lock").to_s
+    ENV.delete("DRY_RUN")
+
+    expect {
+      import_in_chunks_task.invoke
+    }.to change(DatasetDownloadTally, :count).by(5)
+
+    checkpoint = JSON.parse(File.read(checkpoint_path))
+    expect(checkpoint["stopped_early"]).to eq(false)
+    expect(checkpoint["next_resume_from_line"]).to be >= 6
+  ensure
+    %w[
+      DIR
+      MAX_RECORDS
+      MAX_ITERATIONS
+      MAX_MINUTES
+      CHECKPOINT_FILE
+      REPORT_FILE
+      RESUME_OVERLAP_LINES
+      LOCK_FILE
+      DRY_RUN
+    ].each { |key| ENV.delete(key) }
+    FileUtils.rm_rf(dir)
+  end
+
+  it "respects max iteration ceiling and can stop before full completion" do
+    dir = Rails.root.join("tmp", "download_metrics_chunk_ceiling_spec")
+    FileUtils.mkdir_p(dir)
+
+    lines = 6.times.map do |index|
+      {
+        type: "DatasetDownloadTally",
+        attributes: {
+          dataset_key: "IDB-CEIL-#{index + 1}",
+          doi: "10.5555/IDB-CEIL-#{index + 1}",
+          download_date: "2026-02-#{format('%02d', index + 1)}",
+          tally: 1,
+          created_at: "2026-02-01T10:00:00Z",
+          updated_at: "2026-02-01T10:00:00Z"
+        }
+      }
+    end
+
+    write_bundle_files(dir: dir, lines: lines)
+
+    checkpoint_path = dir.join("download_metrics_import.checkpoint.json")
+
+    ENV["DIR"] = dir.to_s
+    ENV["MAX_RECORDS"] = "2"
+    ENV["MAX_ITERATIONS"] = "1"
+    ENV["MAX_MINUTES"] = "10"
+    ENV["CHECKPOINT_FILE"] = checkpoint_path.to_s
+    ENV["RESUME_OVERLAP_LINES"] = "0"
+    ENV["LOCK_FILE"] = dir.join("download_metrics_import.lock").to_s
+    ENV.delete("DRY_RUN")
+
+    expect {
+      import_in_chunks_task.invoke
+    }.to change(DatasetDownloadTally, :count).by(2)
+
+    checkpoint = JSON.parse(File.read(checkpoint_path))
+    expect(checkpoint["stopped_early"]).to eq(true)
+    expect(checkpoint["next_resume_from_line"]).to eq(3)
+  ensure
+    %w[
+      DIR
+      MAX_RECORDS
+      MAX_ITERATIONS
+      MAX_MINUTES
+      CHECKPOINT_FILE
+      REPORT_FILE
+      RESUME_OVERLAP_LINES
+      LOCK_FILE
+      DRY_RUN
+    ].each { |key| ENV.delete(key) }
+    FileUtils.rm_rf(dir)
+  end
+
+  it "fails fast when chunked import lock is already held" do
+    dir = Rails.root.join("tmp", "download_metrics_chunk_lock_spec")
+    FileUtils.mkdir_p(dir)
+
+    lines = [
+      {
+        type: "DatasetDownloadTally",
+        attributes: {
+          dataset_key: "IDB-LOCK-1",
+          doi: "10.5555/IDB-LOCK-1",
+          download_date: "2026-03-01",
+          tally: 1,
+          created_at: "2026-03-01T10:00:00Z",
+          updated_at: "2026-03-01T10:00:00Z"
+        }
+      }
+    ]
+    write_bundle_files(dir: dir, lines: lines)
+
+    lock_path = dir.join("download_metrics_import.lock")
+    held_lock = File.open(lock_path, File::RDWR | File::CREAT, 0o644)
+    expect(held_lock.flock(File::LOCK_EX | File::LOCK_NB)).to eq(0)
+
+    ENV["DIR"] = dir.to_s
+    ENV["LOCK_FILE"] = lock_path.to_s
+    ENV.delete("DRY_RUN")
+
+    expect {
+      import_in_chunks_task.invoke
+    }.to raise_error(/already running/)
+  ensure
+    %w[
+      DIR
+      MAX_RECORDS
+      MAX_ITERATIONS
+      MAX_MINUTES
+      CHECKPOINT_FILE
+      REPORT_FILE
+      RESUME_OVERLAP_LINES
+      LOCK_FILE
+      DRY_RUN
+    ].each { |key| ENV.delete(key) }
+    if defined?(held_lock) && held_lock
+      held_lock.flock(File::LOCK_UN)
+      held_lock.close
+    end
     FileUtils.rm_rf(dir)
   end
 end

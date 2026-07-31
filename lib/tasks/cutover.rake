@@ -241,6 +241,10 @@ namespace :cutover do
     ENV.fetch("CHUNKED_DATASET_IMPORT", "false").casecmp("true").zero?
   end
 
+  def chunked_download_metrics_import?
+    ENV.fetch("CHUNKED_DOWNLOAD_METRICS_IMPORT", "false").casecmp("true").zero?
+  end
+
   def separate_nested_items_import?
     ENV.fetch("SEPARATE_NESTED_ITEMS_IMPORT", "false").casecmp("true").zero?
   end
@@ -271,6 +275,10 @@ namespace :cutover do
       return "migration:flat_bundle:import_structure_in_chunks" if separate_nested_items_import? && chunked_dataset_import?
       return "migration:flat_bundle:import_structure_from_dir" if separate_nested_items_import?
       return "migration:flat_bundle:import_in_chunks" if chunked_dataset_import?
+    end
+
+    if step[:key] == "download_metrics"
+      return "migration:download_metrics:import_in_chunks" if chunked_download_metrics_import?
     end
 
     if step[:key] == "nested_items"
@@ -322,6 +330,9 @@ namespace :cutover do
       end
       if step[:key] == "datasets" && !separate_nested_items_import?
         puts "Tip: set SEPARATE_NESTED_ITEMS_IMPORT=true to split structure and nested item pipelines"
+      end
+      if step[:key] == "download_metrics" && !chunked_download_metrics_import?
+        puts "Tip: set CHUNKED_DOWNLOAD_METRICS_IMPORT=true for resumable download metrics imports on large bundles"
       end
       rake_task = Rake::Task[task_name]
       rake_task.reenable
