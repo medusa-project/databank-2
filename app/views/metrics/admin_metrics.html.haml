@@ -1,40 +1,56 @@
-- content_for :title, "Admin metrics"
+- content_for :title, "Curator Metrics"
 - modified_times = @modified_times || {}
 - refresh_status = @refresh_status || {}
 - metric_definitions = @metric_definitions || []
+- download_metrics_summary = @download_metrics_summary || {}
+- dataset_downloads_summary = download_metrics_summary[:dataset] || {}
+- datafile_downloads_summary = download_metrics_summary[:datafile] || {}
+- current_calendar_year = download_metrics_summary[:current_calendar_year] || Date.current.year
+- current_fiscal_year_label = download_metrics_summary[:current_fiscal_year_label] || "FY#{format('%02d', Date.current.year % 100)}"
 
 %ilw-content.dataset-show-page
   %section.dataset-show-panel.idb-rounded-section{aria: { label: "Metrics exports" }}
-    %h1.dataset-show-section-title Metrics
+    %h1.dataset-show-section-title Curator Metrics
 
     %p
       = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
+      = link_to "Download Metrics Details", curator_download_metrics_path, class: "idb-button-secondary"
 
     - if metric_definitions.empty?
       %p.idb-workflow-note No metric exports are currently configured.
+
+    %h2.dataset-show-section-subtitle Metrics Exports
 
     %ul.dataset-show-list
       - metric_definitions.each do |definition|
         - metric_key = definition.key
         - refresh_in_progress = refresh_status[metric_key]
-        %li
-          %span.dataset-show-list-primary
-            - if modified_times[metric_key].to_s == "not found"
-              = "#{definition.label} not currently available"
-            - else
-              = link_to definition.label, definition.download_path
+        - is_json_metric = definition.content_type == "application/json"
+        - download_filename = File.basename(definition.download_path.to_s)
+        %li{data: {testid: "metric-card-#{metric_key}"}}
+          %h2.metric-header
+            = definition.label
+            - if !refresh_in_progress && definition.download_path.present?
+              = semantic_action_button(action: :download, url: definition.download_path, icon_only: true, aria_label: "Download #{definition.label}", title: "Download #{definition.label}", data: {testid: "metric-download-#{metric_key}"}, download: (is_json_metric ? download_filename : nil))
 
-          %span.dataset-show-list-secondary
+          %div.dataset-show-list-secondary.inline-block
             Modified:
             = modified_times[metric_key].presence || "not found"
+
+            - if current_user&.admin? && definition.refreshable?
+              - if refresh_in_progress
+                %span.metric-status-inline{data: {testid: "metric-refresh-status-#{metric_key}"}}
+                  = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
+                  Refresh in progress
+              - else
+                = semantic_action_button(action: :regenerate, label: "Regenerate #{definition.label}", url: refresh_path_for(metric_key), method: :post, data: {testid: "metric-refresh-#{metric_key}"})
 
           - if definition.summary.present?
             %span.dataset-show-list-tertiary= definition.summary
 
           - if refresh_in_progress
             %p.idb-workflow-note
-              = semantic_status_badge(status: "in_progress", label: "refresh in progress", sr_label: "Refresh in progress")
-              Refresh this page manually to check status.
+              Please refresh this page manually to check status.
 
           - description_blocks = definition.description_blocks || []
           - if description_blocks.any?
@@ -54,15 +70,32 @@
                     %strong= "#{column_name}:"
                     = column_description
 
-          - if current_user&.admin? || current_user&.curator?
-            .idb-workflow-strip
-              %nav.idb-workflow-actions-right{aria: { label: "#{definition.label} actions" }}
-                - if refresh_in_progress
-                  %button.idb-button-secondary{type: "button", disabled: true} Refresh in progress
-                - else
-                  = button_to "Regenerate #{definition.label}", refresh_path_for(metric_key), method: :post, class: "idb-button-success"
-
     %section{aria: { label: "Datafiles listing" }}
       %h2.dataset-show-section-subtitle Datafiles listing
       %p
         = link_to "Datafiles listing JSON", "/metrics/datafiles_simple_list.json", class: "idb-button-secondary"
+
+    %section{aria: { label: "Download metrics summary" }}
+      %h2.dataset-show-section-subtitle Download Metrics Summary
+      %p Daily totals reflect only currently file-public datasets.
+
+      .dataset-show-table-wrap
+        %table.dataset-show-table
+          %caption.sr-only Curator download metrics summary by metric type and timeframe
+          %thead
+            %tr
+              %th Metric
+              %th All time
+              %th= "Calendar #{current_calendar_year}"
+              %th= current_fiscal_year_label
+          %tbody
+            %tr
+              %td Dataset downloads
+              %td= number_with_delimiter(dataset_downloads_summary[:all_time].to_i)
+              %td= number_with_delimiter(dataset_downloads_summary[:current_calendar_year].to_i)
+              %td= number_with_delimiter(dataset_downloads_summary[:current_fiscal_year].to_i)
+            %tr
+              %td Datafile downloads
+              %td= number_with_delimiter(datafile_downloads_summary[:all_time].to_i)
+              %td= number_with_delimiter(datafile_downloads_summary[:current_calendar_year].to_i)
+              %td= number_with_delimiter(datafile_downloads_summary[:current_fiscal_year].to_i)

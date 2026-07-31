@@ -126,11 +126,40 @@
 	border-top: 2px solid #e5e7eb;
 }
 
-.welcome-role-switch-controls {
+.welcome-staff-controls {
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	margin-left: auto;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.welcome-role-switch-form {
+	display: flex;
+	align-items: center;
 	gap: 0.5rem;
-	max-width: 24rem;
+	min-width: 380px;
+	flex-wrap: nowrap;
+	flex: 0 0 auto;
+}
+
+.welcome-role-switch-form label {
+	display: none;
+}
+
+.welcome-role-switch-form select {
+	width: 200px;
+	margin: 0;
+	padding: 0.5rem;
+	flex-shrink: 0;
+}
+
+.welcome-role-switch-form input[type="submit"] {
+	white-space: nowrap;
+	margin: 0;
+	flex-shrink: 0;
+	padding: 0.5rem 1rem;
 }
 
 .welcome-role-switch-controls select {

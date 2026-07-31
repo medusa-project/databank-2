@@ -604,6 +604,20 @@ namespace :migration do
       end
 
       dry_run = ENV.fetch("DRY_RUN", "false").casecmp("true").zero?
+      resume_from_line = ENV.fetch("DOWNLOAD_METRICS_IMPORT_RESUME_FROM_LINE", "1").to_i
+      max_records_window = ENV["DOWNLOAD_METRICS_IMPORT_MAX_RECORDS"].to_i
+      max_records_window = nil if max_records_window <= 0
+      checkpoint_file = ENV["DOWNLOAD_METRICS_IMPORT_CHECKPOINT_FILE"].to_s.strip
+      checkpoint_path = if checkpoint_file.present?
+        candidate = Pathname(checkpoint_file)
+        candidate = dir.join(candidate) unless candidate.absolute?
+        candidate
+      end
+      windowed_import = resume_from_line > 1 || max_records_window.present?
+
+      if resume_from_line <= 0
+        raise ArgumentError, "DOWNLOAD_METRICS_IMPORT_RESUME_FROM_LINE must be positive"
+      end
 
       summary = record_migration_run(
         run_type: "download_metrics_bundle_import",
@@ -670,9 +684,22 @@ namespace :migration do
 
         line_count = 0
         type_counts = Hash.new(0)
+        processed_in_window = 0
+        stopped_early = false
+        last_seen_line = resume_from_line - 1
 
         File.foreach(bundle_path).with_index(1) do |line, line_number|
+          next if line_number < resume_from_line
+
+          if max_records_window.present? && processed_in_window >= max_records_window
+            stopped_early = true
+            break
+          end
+
           next if line.strip.empty?
+
+          processed_in_window += 1
+          last_seen_line = line_number
 
           payload = JSON.parse(line)
           type = payload["type"].to_s
@@ -795,12 +822,12 @@ namespace :migration do
           summary[:records] << { line: line_number, status: :failed, message: "invalid JSON: #{e.message}" }
         end
 
-        if manifest_data&.dig("record_count").present?
+        if !windowed_import && manifest_data&.dig("record_count").present?
           expected_count = manifest_data["record_count"].to_i
           raise ArgumentError, "bundle record count mismatch" if expected_count != line_count
         end
 
-        if manifest_data&.dig("counts").is_a?(Hash)
+        if !windowed_import && manifest_data&.dig("counts").is_a?(Hash)
           %w[DatasetDownloadTally FileDownloadTally DayFileDownload].each do |record_type|
             expected = manifest_data["counts"][record_type]
             next if expected.nil?
@@ -808,6 +835,8 @@ namespace :migration do
             raise ArgumentError, "manifest count mismatch for #{record_type}" if type_counts[record_type].to_i != expected.to_i
           end
         end
+
+        next_resume_from_line = [ last_seen_line + 1, resume_from_line ].max
 
         summary[:processed_count] = line_count
         summary[:expected_record_count] = manifest_data&.dig("record_count")
@@ -821,6 +850,30 @@ namespace :migration do
           "FileDownloadTally" => type_counts["FileDownloadTally"].to_i,
           "DayFileDownload" => type_counts["DayFileDownload"].to_i
         }
+        summary[:windowed_import] = windowed_import
+        summary[:resume_from_line] = resume_from_line
+        summary[:max_records_window] = max_records_window
+        summary[:next_resume_from_line] = next_resume_from_line
+        summary[:stopped_early] = stopped_early
+
+        if checkpoint_path.present?
+          checkpoint_path.dirname.mkpath
+          checkpoint_payload = {
+            generated_at: Time.current.utc.iso8601,
+            next_resume_from_line: next_resume_from_line,
+            stopped_early: stopped_early,
+            summary: {
+              created: summary[:created],
+              updated: summary[:updated],
+              skipped_existing: summary[:skipped_existing],
+              failed: summary[:failed],
+              processed_count: summary[:processed_count],
+              counts: summary[:counts],
+              validation_error: summary[:validation_error]
+            }
+          }
+          File.write(checkpoint_path, JSON.pretty_generate(checkpoint_payload))
+        end
 
         Migration::RunReportWriter.new(
           report_path: resolved_report_path,
@@ -851,6 +904,146 @@ namespace :migration do
         puts "DayFileDownload records processed: #{summary[:counts].fetch('DayFileDownload', 0)}"
       end
       puts "Validation error: #{summary[:validation_error]}" if summary[:validation_error].present?
+    end
+
+    desc "Run download metrics import in bounded resumable windows using checkpoint state"
+    task import_in_chunks: :environment do
+      dir = Pathname(ENV.fetch("DIR"))
+      bundle_file = ENV.fetch("BUNDLE_FILE", "legacy_download_metrics.ndjson")
+      report_file = ENV.fetch("REPORT_FILE", "download_metrics_chunk.report.json")
+      checkpoint_file = ENV.fetch("CHECKPOINT_FILE", "download_metrics_import.checkpoint.json")
+      lock_file = ENV.fetch("LOCK_FILE", "download_metrics_import.lock")
+
+      max_records = ENV.fetch("MAX_RECORDS", "50000").to_i
+      max_iterations = ENV.fetch("MAX_ITERATIONS", "100").to_i
+      max_minutes = ENV.fetch("MAX_MINUTES", "240").to_i
+      max_consecutive_failures = ENV.fetch("MAX_CONSECUTIVE_FAILURES", "5").to_i
+      max_stalled_runs = ENV.fetch("MAX_STALLED_RUNS", "2").to_i
+      resume_overlap = ENV.fetch("RESUME_OVERLAP_LINES", "0").to_i
+
+      raise ArgumentError, "MAX_RECORDS must be positive" if max_records <= 0
+      raise ArgumentError, "MAX_ITERATIONS must be positive" if max_iterations <= 0
+      raise ArgumentError, "MAX_MINUTES must be positive" if max_minutes <= 0
+      raise ArgumentError, "MAX_CONSECUTIVE_FAILURES must be positive" if max_consecutive_failures <= 0
+      raise ArgumentError, "MAX_STALLED_RUNS must be positive" if max_stalled_runs <= 0
+
+      checkpoint_path = Pathname(checkpoint_file)
+      checkpoint_path = dir.join(checkpoint_path) unless checkpoint_path.absolute?
+      report_path = Pathname(report_file)
+      report_path = dir.join(report_path) unless report_path.absolute?
+      lock_path = Pathname(lock_file)
+      lock_path = dir.join(lock_path) unless lock_path.absolute?
+
+      FileUtils.mkdir_p(dir)
+
+      lock_handle = File.open(lock_path, File::RDWR | File::CREAT, 0o644)
+      unless lock_handle.flock(File::LOCK_EX | File::LOCK_NB)
+        raise "Chunked download metrics import is already running (lock: #{lock_path})"
+      end
+
+      started_at = Time.current
+      deadline = started_at + max_minutes.minutes
+
+      iteration = 0
+      consecutive_failures = 0
+      stalled_runs = 0
+      previous_next_resume = nil
+      completed = false
+      last_summary = nil
+
+      begin
+        while Time.current <= deadline && iteration < max_iterations
+          iteration += 1
+
+          next_resume_line = 1
+          if checkpoint_path.file?
+            checkpoint = JSON.parse(File.read(checkpoint_path))
+            candidate = checkpoint["next_resume_from_line"].to_i
+            next_resume_line = candidate if candidate.positive?
+          end
+
+          if resume_overlap.positive? && next_resume_line > resume_overlap
+            next_resume_line -= resume_overlap
+          end
+
+          puts "Chunk #{iteration}: resume_from_line=#{next_resume_line}, max_records=#{max_records}"
+
+          previous_env = {
+            "DIR" => ENV["DIR"],
+            "BUNDLE_FILE" => ENV["BUNDLE_FILE"],
+            "REPORT_FILE" => ENV["REPORT_FILE"],
+            "DOWNLOAD_METRICS_IMPORT_RESUME_FROM_LINE" => ENV["DOWNLOAD_METRICS_IMPORT_RESUME_FROM_LINE"],
+            "DOWNLOAD_METRICS_IMPORT_MAX_RECORDS" => ENV["DOWNLOAD_METRICS_IMPORT_MAX_RECORDS"],
+            "DOWNLOAD_METRICS_IMPORT_CHECKPOINT_FILE" => ENV["DOWNLOAD_METRICS_IMPORT_CHECKPOINT_FILE"]
+          }
+
+          begin
+            ENV["DIR"] = dir.to_s
+            ENV["BUNDLE_FILE"] = bundle_file
+            ENV["REPORT_FILE"] = report_path.to_s
+            ENV["DOWNLOAD_METRICS_IMPORT_RESUME_FROM_LINE"] = next_resume_line.to_s
+            ENV["DOWNLOAD_METRICS_IMPORT_MAX_RECORDS"] = max_records.to_s
+            ENV["DOWNLOAD_METRICS_IMPORT_CHECKPOINT_FILE"] = checkpoint_path.to_s
+
+            task = Rake::Task["migration:download_metrics:import_from_dir"]
+            task.reenable
+            task.invoke
+          ensure
+            previous_env.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+          end
+
+          raise "checkpoint file not written: #{checkpoint_path}" unless checkpoint_path.file?
+
+          checkpoint = JSON.parse(File.read(checkpoint_path))
+          next_resume = checkpoint["next_resume_from_line"].to_i
+          stopped_early = checkpoint["stopped_early"]
+          last_summary = checkpoint["summary"] || {}
+
+          raise "invalid checkpoint next_resume_from_line: #{next_resume.inspect}" if next_resume <= 0
+
+          if previous_next_resume.present? && next_resume <= previous_next_resume
+            stalled_runs += 1
+            warn "No checkpoint progress detected (#{stalled_runs}/#{max_stalled_runs})"
+          else
+            stalled_runs = 0
+          end
+          previous_next_resume = next_resume
+
+          if last_summary["validation_error"].present?
+            consecutive_failures += 1
+            warn "Chunk #{iteration} validation error (#{consecutive_failures}/#{max_consecutive_failures}): #{last_summary['validation_error']}"
+          else
+            consecutive_failures = 0
+          end
+
+          if stalled_runs >= max_stalled_runs
+            warn "Stopping due to stalled checkpoint progress"
+            break
+          end
+
+          if consecutive_failures >= max_consecutive_failures
+            warn "Stopping due to consecutive validation errors"
+            break
+          end
+
+          unless stopped_early
+            completed = true
+            puts "Chunk loop complete: end-of-file reached"
+            break
+          end
+        end
+
+        warn "Stopping due to MAX_MINUTES ceiling" if Time.current > deadline
+        warn "Stopping due to MAX_ITERATIONS ceiling" if iteration >= max_iterations && !completed
+
+        puts "Chunk loop summary: completed=#{completed}, iterations=#{iteration}, consecutive_failures=#{consecutive_failures}, stalled_runs=#{stalled_runs}"
+        if last_summary.is_a?(Hash)
+          puts "Last chunk: failed=#{last_summary['failed']}, dataset_download_tallies=#{last_summary.dig('counts', 'DatasetDownloadTally')}, file_download_tallies=#{last_summary.dig('counts', 'FileDownloadTally')}, day_file_downloads=#{last_summary.dig('counts', 'DayFileDownload')}"
+        end
+      ensure
+        lock_handle.flock(File::LOCK_UN)
+        lock_handle.close
+      end
     end
   end
 

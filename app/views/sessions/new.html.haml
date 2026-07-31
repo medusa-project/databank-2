@@ -9,7 +9,8 @@
   %figcaption Selectable Roles
   %ul
     %li Depositor: Can create datasets, and edit created datasets
-    %li Curator: Can do anything to anything
+    %li Curator: Can view metrics, assist with deposits
+    %li Admin: System administrator with full access
     %li Guest: Not signed in. Can view info (guides, policies), and released datasets
     %li No Deposit: Signed in, but not authorized to create datasets.
 %div.idb-decorative-divider{ "aria-hidden" => "true" }
@@ -19,6 +20,6 @@
   = label_tag :name, "Name:"
   = text_field_tag :name
   = label_tag :role, "Role:"
-  = select_tag :role, options_for_select([["Depositor", "depositor"], ["Curator", "admin"], ["Guest", "guest"], ["No Deposit", "no_deposit"]]), { prompt: "Please select" }
+  = select_tag :role, options_for_select([["Depositor", "depositor"], ["Curator", "curator"], ["Admin", "admin"], ["Guest", "guest"], ["No Deposit", "no_deposit"]]), { prompt: "Please select" }
   %button{type: "submit"} Sign in
 %div.idb-decorative-divider{ "aria-hidden" => "true" }

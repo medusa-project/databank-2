@@ -21,13 +21,13 @@ RSpec.describe "Admin page", type: :request do
 
     get root_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Curator and Admin Page")
+    expect(response.body).to include("Curator and Admin Tools")
 
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     get root_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Curator and Admin Page")
+    expect(response.body).not_to include("Curator and Admin Tools")
     expect(response.body).to include("Change role")
   end
 
@@ -40,6 +40,18 @@ RSpec.describe "Admin page", type: :request do
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     get admin_path
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "treats configured legacy admin netids as admin and curator-capable" do
+    allow(IdbConfig).to receive(:fetch).with(:admin, :netids, default: "").and_return("alpha")
+
+    sign_in_as(email: "alpha@illinois.edu", name: "Alpha User", role: "depositor", uid: "alpha")
+
+    get admin_path
+    expect(response).to have_http_status(:ok)
+
+    get curator_guide_path
     expect(response).to have_http_status(:ok)
   end
 
@@ -146,10 +158,10 @@ RSpec.describe "Admin page", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
-  def sign_in_as(email:, name:, role:)
+  def sign_in_as(email:, name:, role:, uid: email)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",
-      uid: email,
+      uid: uid,
       info: {
         email: email,
         name: name,

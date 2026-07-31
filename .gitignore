@@ -77,3 +77,4 @@
 /public/datasets.tsv
 /public/funders.csv
 /public/related_materials.csv
+/public/*.lock

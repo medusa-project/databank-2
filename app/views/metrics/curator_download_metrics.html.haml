@@ -1,0 +1,87 @@
+- content_for :title, "Download Metrics"
+- summary = @download_metrics_summary || {}
+- yearly = @download_metrics_yearly_summary || {}
+- dataset_summary = summary[:dataset] || {}
+- datafile_summary = summary[:datafile] || {}
+- current_calendar_year = summary[:current_calendar_year] || Date.current.year
+- current_fiscal_year_label = summary[:current_fiscal_year_label] || "FY#{format('%02d', Date.current.year % 100)}"
+- calendar_rows = yearly[:calendar_rows] || []
+- fiscal_rows = yearly[:fiscal_rows] || []
+
+%ilw-content.dataset-show-page
+  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Download metrics details" }}
+    %h1.dataset-show-section-title Download Metrics
+
+    %p
+      = link_to "Back to Curator Metrics", curator_metrics_path, class: "idb-button-secondary"
+
+    %p
+      = link_to "Dataset downloads JSON", dataset_downloads_metrics_path(format: :json), class: "idb-button-primary"
+      = link_to "Datafile downloads JSON", file_downloads_metrics_path(format: :json), class: "idb-button-primary"
+      = link_to "Download breakdown JSON", download_metrics_breakdown_metrics_path(format: :json), class: "idb-button-secondary"
+
+    %h2.dataset-show-section-subtitle Current Snapshot
+    %p Snapshot totals reflect only currently file-public datasets.
+
+    .dataset-show-table-wrap
+      %table.dataset-show-table
+        %caption.sr-only Download metrics current snapshot totals
+        %thead
+          %tr
+            %th Metric
+            %th All time
+            %th= "Calendar #{current_calendar_year}"
+            %th= current_fiscal_year_label
+        %tbody
+          %tr
+            %td Dataset downloads
+            %td= number_with_delimiter(dataset_summary[:all_time].to_i)
+            %td= number_with_delimiter(dataset_summary[:current_calendar_year].to_i)
+            %td= number_with_delimiter(dataset_summary[:current_fiscal_year].to_i)
+          %tr
+            %td Datafile downloads
+            %td= number_with_delimiter(datafile_summary[:all_time].to_i)
+            %td= number_with_delimiter(datafile_summary[:current_calendar_year].to_i)
+            %td= number_with_delimiter(datafile_summary[:current_fiscal_year].to_i)
+
+    %h2.dataset-show-section-subtitle Calendar Year Totals
+    .dataset-show-table-wrap
+      %table.dataset-show-table
+        %caption.sr-only Download metrics by calendar year
+        %thead
+          %tr
+            %th Year
+            %th Dataset downloads
+            %th Datafile downloads
+        %tbody
+          - if calendar_rows.any?
+            - calendar_rows.each do |row|
+              %tr
+                %td= row[:year_label]
+                %td= number_with_delimiter(row[:dataset_downloads].to_i)
+                %td= number_with_delimiter(row[:datafile_downloads].to_i)
+          - else
+            %tr
+              %td{colspan: 3} No calendar-year download records found.
+
+    %h2.dataset-show-section-subtitle Fiscal Year Totals
+    .dataset-show-table-wrap
+      %table.dataset-show-table
+        %caption.sr-only Download metrics by fiscal year
+        %thead
+          %tr
+            %th Fiscal year
+            %th Date range
+            %th Dataset downloads
+            %th Datafile downloads
+        %tbody
+          - if fiscal_rows.any?
+            - fiscal_rows.each do |row|
+              %tr
+                %td= row[:fiscal_year_label]
+                %td= row[:date_range_label]
+                %td= number_with_delimiter(row[:dataset_downloads].to_i)
+                %td= number_with_delimiter(row[:datafile_downloads].to_i)
+          - else
+            %tr
+              %td{colspan: 4} No fiscal-year download records found.

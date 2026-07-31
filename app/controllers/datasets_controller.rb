@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
-  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link]
+  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -131,6 +131,28 @@ class DatasetsController < ApplicationController
        render json: return_hash, content_type: request.format
      end
    end
+
+  def open_in_granite
+    authorize! :view_files, @dataset
+
+    if @dataset.external_files_link.blank?
+      redirect_to dataset_path(@dataset), alert: "No external files link is available for this dataset."
+      return
+    end
+
+    redirect_url = safe_external_files_url(@dataset.external_files_link)
+    if redirect_url.nil?
+      redirect_to dataset_path(@dataset), alert: "The external files link is not a valid URL."
+      return
+    end
+
+    @dataset.datafiles.find_each do |datafile|
+      datafile.record_download(request.remote_ip)
+    end
+
+    redirect_to redirect_url, allow_other_host: true
+  end
+
   def pre_version
     authorize! :update, @dataset
 
@@ -534,6 +556,16 @@ class DatasetsController < ApplicationController
     version_controls_dataset_path(@dataset)
   end
 
+  def safe_external_files_url(url)
+    parsed = URI.parse(url.to_s)
+    return nil unless parsed.is_a?(URI::HTTP)
+    return nil if parsed.host.blank?
+
+    parsed.to_s
+  rescue URI::InvalidURIError
+    nil
+  end
+
   def review_action_redirect_path(default_path:)
     return default_path unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
 
@@ -700,7 +732,8 @@ class DatasetsController < ApplicationController
       funders: params[:funders],
       publication_years: params[:publication_years],
       publication_states: params[:publication_states],
-      depositors: params[:depositors]
+      depositors: params[:depositors],
+      external_files: params[:external_files]
     }
   end
 
@@ -726,6 +759,7 @@ class DatasetsController < ApplicationController
       publication_years: params[:publication_years],
       publication_states: params[:publication_states],
       depositors: params[:depositors],
+      external_files: params[:external_files],
       page: @page
     }.merge(overrides)
   end

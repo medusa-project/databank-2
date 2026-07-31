@@ -145,6 +145,22 @@ RSpec.describe Metric, type: :model do
   it "writes dataset downloads json and aggregate totals" do
     DatasetDownloadTally.delete_all
 
+    visible_dataset = create(
+      :dataset,
+      :published,
+      key: "IDB-1",
+      identifier: "10.5555/one",
+      embargo: Dataset::EMBARGO_NONE
+    )
+    create(
+      :dataset,
+      :published,
+      key: "IDB-2",
+      identifier: "10.5555/two",
+      embargo: Dataset::EMBARGO_FILE,
+      release_date: Date.current + 10
+    )
+
     DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 1), tally: 2)
     DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 2), tally: 3)
     DatasetDownloadTally.create!(dataset_key: "IDB-2", doi: nil, download_date: Date.new(2026, 6, 3), tally: 7)
@@ -157,11 +173,46 @@ RSpec.describe Metric, type: :model do
 
     expect(parsed.fetch("dataset_downloads")).to eq([
       { "doi" => "10.5555/one", "date" => "2026-06-01", "tally" => 2 },
-      { "doi" => "10.5555/one", "date" => "2026-06-02", "tally" => 3 },
-      { "doi" => nil, "date" => "2026-06-03", "tally" => 7 }
+      { "doi" => "10.5555/one", "date" => "2026-06-02", "tally" => 3 }
     ])
     expect(File.read(totals_path)).to include("doi,tally")
     expect(File.read(totals_path)).to include("10.5555/one,5")
+    expect(File.read(totals_path)).not_to include("10.5555/two")
+  end
+
+  it "writes datafile downloads json only for file-public datasets" do
+    file_public_dataset = create(
+      :dataset,
+      :published,
+      key: "IDB-FILE-1",
+      identifier: "10.5555/file-public",
+      embargo: Dataset::EMBARGO_NONE
+    )
+    hidden_dataset = create(
+      :dataset,
+      :published,
+      key: "IDB-FILE-2",
+      identifier: "10.5555/file-hidden",
+      embargo: Dataset::EMBARGO_METADATA,
+      release_date: Date.current + 30
+    )
+
+    FileDownloadTally.create!(dataset_key: file_public_dataset.key, doi: file_public_dataset.identifier, file_web_id: "abc12", filename: "public.csv", download_date: Date.new(2026, 7, 1), tally: 4)
+    FileDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, file_web_id: "def34", filename: "hidden.csv", download_date: Date.new(2026, 7, 1), tally: 9)
+
+    described_class.write_datafile_downloads_json
+
+    json_path = METRICS_CONFIG[:datafile_downloads_json][:relative_path]
+    parsed = JSON.parse(File.read(json_path))
+
+    expect(parsed.fetch("datafile_downloads")).to eq([
+      {
+        "doi" => "10.5555/file-public",
+        "file" => "public.csv",
+        "date" => "2026-07-01",
+        "tally" => 4
+      }
+    ])
   end
 
   it "writes datafiles csv using attachment and filename mime types" do

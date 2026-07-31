@@ -11,8 +11,11 @@ module Search
     AVAILABLE_FACETS = {
       "guest" => %i[subjects licenses funders publication_years],
       "depositor" => %i[subjects licenses funders publication_years publication_states],
-      "admin" => %i[subjects licenses funders publication_years publication_states depositors]
+      "admin" => %i[subjects licenses funders publication_years publication_states depositors external_files]
     }.freeze
+
+    EXTERNAL_FILES_HAS_VALUE = "has_external_files".freeze
+    EXTERNAL_FILES_NONE_VALUE = "no_external_files".freeze
 
     attr_reader :page, :per_page
 
@@ -73,6 +76,10 @@ module Search
           options[:depositors] = depositor_options(relation)
         end
 
+        if available_facets.include?(:external_files)
+          options[:external_files] = external_files_options(relation)
+        end
+
         options
       end
     end
@@ -87,6 +94,7 @@ module Search
       relation = filter_by_funders(relation)
       relation = filter_by_publication_states(relation)
       relation = filter_by_depositors(relation)
+      relation = filter_by_external_files(relation)
       relation.order(created_at: :desc)
     end
 
@@ -151,6 +159,25 @@ module Search
       return relation unless available_facets.include?(:depositors)
 
       relation.where(depositor_email: @filters[:depositors])
+    end
+
+    def filter_by_external_files(relation)
+      return relation if @filters[:external_files].empty?
+      return relation unless available_facets.include?(:external_files)
+
+      selected = @filters[:external_files]
+      include_has = selected.include?(EXTERNAL_FILES_HAS_VALUE)
+      include_none = selected.include?(EXTERNAL_FILES_NONE_VALUE)
+
+      return relation if include_has && include_none
+
+      if include_has
+        relation.where(external_files_present_sql)
+      elsif include_none
+        relation.where(external_files_absent_sql)
+      else
+        relation
+      end
     end
 
     def subject_options(relation)
@@ -290,6 +317,24 @@ module Search
         end
     end
 
+    def external_files_options(relation)
+      has_count = relation.where(external_files_present_sql).distinct.count(:id)
+      none_count = relation.where(external_files_absent_sql).distinct.count(:id)
+
+      options = []
+      options << { value: EXTERNAL_FILES_HAS_VALUE, label: "Has External Files", count: has_count } if has_count.positive?
+      options << { value: EXTERNAL_FILES_NONE_VALUE, label: "No External Files", count: none_count } if none_count.positive?
+      options
+    end
+
+    def external_files_present_sql
+      "COALESCE(NULLIF(datasets.external_files_note, ''), NULLIF(datasets.external_files_link, '')) IS NOT NULL"
+    end
+
+    def external_files_absent_sql
+      "COALESCE(NULLIF(datasets.external_files_note, ''), NULLIF(datasets.external_files_link, '')) IS NULL"
+    end
+
     def normalize_filters(filters)
       raw = filters || {}
       {
@@ -298,7 +343,8 @@ module Search
         funders: normalize_values(raw[:funders] || raw["funders"]),
         publication_years: normalize_int_values(raw[:publication_years] || raw["publication_years"]),
         publication_states: normalize_values(raw[:publication_states] || raw["publication_states"]),
-        depositors: normalize_values(raw[:depositors] || raw["depositors"])
+        depositors: normalize_values(raw[:depositors] || raw["depositors"]),
+        external_files: normalize_values(raw[:external_files] || raw["external_files"])
       }
     end
 

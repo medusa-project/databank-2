@@ -35,6 +35,7 @@ Rails.application.routes.draw do
       get :version_acknowledge
       get :download_link, defaults: { format: :json }
       post :copy_version_files
+      get :open_in_granite
       post "approve_version_request/:version_request_id", action: :approve_version_request, as: :approve_version_request
       post "reject_version_request/:version_request_id", action: :reject_version_request, as: :reject_version_request
       post :publish
@@ -98,11 +99,14 @@ Rails.application.routes.draw do
 
   get "/metric", to: "metrics#index"
   get "/admin_metrics", to: "metrics#admin_metrics"
+  get "/curator_metrics", to: "metrics#admin_metrics", as: :curator_metrics
+  get "/download_metrics", to: "metrics#curator_download_metrics", as: :curator_download_metrics
   resources :metrics, only: :index do
     collection do
       get :archived_content_csv
       get :datafiles_csv
       get :datafiles_simple_list
+      get :download_metrics_breakdown, defaults: { format: :json }
       get :dataset_downloads, defaults: { format: :json }
       get :file_downloads, defaults: { format: :json }
       get :funders_csv

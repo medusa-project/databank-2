@@ -179,12 +179,18 @@
                           not yet set
                       %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")
 
-    - if @dataset.datafiles.any?
+    - if @dataset.datafiles.any? || @dataset.external_files?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Files" }}
         %details.idb-section-disclosure.dataset-show-disclosure{open: true}
           %summary
-            %h2.dataset-show-section-title Files
+            - if @dataset.external_files?
+              %h2.dataset-show-section-title Files - Subset
+            - else
+              %h2.dataset-show-section-title Files
           .idb-section-body
+            - if @dataset.external_files?
+              = render "show_external_files", dataset: @dataset
+
             = render "file_restriction_alert", dataset: @dataset
             = render "globus_delay_alert", dataset: @dataset
             

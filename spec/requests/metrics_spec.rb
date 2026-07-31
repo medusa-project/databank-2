@@ -60,9 +60,148 @@ RSpec.describe "Metrics", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Metrics exports")
-    expect(response.body).to include("Dataset downloads JSON")
-    expect(response.body).to include("Daily download tallies grouped at the dataset level")
+    expect(response.body).to include("Datasets TSV")
+    expect(response.body).to include("Dataset-level export with core descriptive and usage fields")
     expect(response.body).to include("Field definitions")
+    expect(response.body).to include("Download Metrics Details")
+  end
+
+  it "blocks dedicated download metrics page for non-curator users" do
+    sign_in_as(email: "depositor-metrics-detail@example.edu", name: "Depositor Detail", role: "depositor")
+
+    get curator_download_metrics_path
+
+    expect(response).to redirect_to(metrics_path)
+    expect(flash[:alert]).to include("not authorized")
+  end
+
+  it "serves dedicated download metrics page for curators" do
+    sign_in_as(email: "curator-metrics-detail@example.edu", name: "Curator Detail", role: "curator")
+
+    get curator_download_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Download Metrics")
+    expect(response.body).to include("Calendar Year Totals")
+    expect(response.body).to include("Fiscal Year Totals")
+    expect(response.body).to include("Download breakdown JSON")
+  end
+
+  it "blocks download metrics breakdown JSON for non-curator users" do
+    sign_in_as(email: "depositor-breakdown@example.edu", name: "Depositor Breakdown", role: "depositor")
+
+    get download_metrics_breakdown_metrics_path(format: :json)
+
+    expect(response).to redirect_to(metrics_path)
+    expect(flash[:alert]).to include("not authorized")
+  end
+
+  it "serves download metrics breakdown JSON for curators" do
+    sign_in_as(email: "curator-breakdown@example.edu", name: "Curator Breakdown", role: "curator")
+
+    get download_metrics_breakdown_metrics_path(format: :json)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Type"]).to include("application/json")
+
+    parsed = JSON.parse(response.body)
+    expect(parsed).to include("generated_at", "summary", "calendar_years", "fiscal_years")
+  end
+
+  it "returns filtered yearly totals in download metrics breakdown JSON" do
+    sign_in_as(email: "admin-breakdown-filtered@example.edu", name: "Admin Breakdown", role: "admin")
+
+    public_dataset = create(:dataset, :published, key: "IDB-BRK-PUB", identifier: "10.5555/BRK-PUB", embargo: Dataset::EMBARGO_NONE)
+    hidden_dataset = create(:dataset, :published, key: "IDB-BRK-HID", identifier: "10.5555/BRK-HID", embargo: Dataset::EMBARGO_FILE, release_date: Date.current + 45)
+
+    DatasetDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, download_date: Date.new(2025, 7, 15), tally: 6)
+    DatasetDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, download_date: Date.new(2025, 7, 15), tally: 10)
+
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "brk01", filename: "public.tsv", download_date: Date.new(2025, 7, 15), tally: 4)
+    FileDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, file_web_id: "brk02", filename: "hidden.tsv", download_date: Date.new(2025, 7, 15), tally: 8)
+
+    get download_metrics_breakdown_metrics_path(format: :json)
+
+    expect(response).to have_http_status(:ok)
+    parsed = JSON.parse(response.body)
+
+    expect(parsed.dig("summary", "dataset", "all_time")).to eq(6)
+    expect(parsed.dig("summary", "datafile", "all_time")).to eq(4)
+
+    calendar_2025 = parsed.fetch("calendar_years").find { |row| row["year_label"] == "2025" }
+    expect(calendar_2025).to include("dataset_downloads" => 6, "datafile_downloads" => 4)
+
+    fiscal_2025 = parsed.fetch("fiscal_years").find { |row| row["fiscal_year_label"] == "FY25" }
+    expect(fiscal_2025).to include("dataset_downloads" => 6, "datafile_downloads" => 4)
+  end
+
+  it "includes public external-file datasets in breakdown totals" do
+    sign_in_as(email: "admin-external-breakdown@example.edu", name: "Admin External Breakdown", role: "admin")
+
+    external_dataset = create(
+      :dataset,
+      :published,
+      key: "IDB-EXT-BRK",
+      identifier: "10.5555/EXT-BRK",
+      embargo: Dataset::EMBARGO_NONE,
+      external_files_note: "Files are hosted in external storage",
+      external_files_link: "https://example.edu/external/files"
+    )
+
+    DatasetDownloadTally.create!(dataset_key: external_dataset.key, doi: external_dataset.identifier, download_date: Date.new(2026, 2, 10), tally: 5)
+
+    get download_metrics_breakdown_metrics_path(format: :json)
+
+    expect(response).to have_http_status(:ok)
+    parsed = JSON.parse(response.body)
+
+    expect(parsed.dig("summary", "dataset", "all_time")).to eq(5)
+    calendar_2026 = parsed.fetch("calendar_years").find { |row| row["year_label"] == "2026" }
+    expect(calendar_2026).to include("dataset_downloads" => 5)
+  end
+
+  it "renders calendar and fiscal yearly totals on dedicated download metrics page" do
+    sign_in_as(email: "admin-metrics-yearly@example.edu", name: "Admin Metrics Yearly", role: "admin")
+
+    public_dataset = create(:dataset, :published, key: "IDB-YEAR-PUB", identifier: "10.5555/YEAR-PUB", embargo: Dataset::EMBARGO_NONE)
+    hidden_dataset = create(:dataset, :published, key: "IDB-YEAR-HID", identifier: "10.5555/YEAR-HID", embargo: Dataset::EMBARGO_METADATA, release_date: Date.current + 90)
+
+    DatasetDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, download_date: Date.new(2025, 8, 1), tally: 4)
+    DatasetDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, download_date: Date.new(2025, 8, 1), tally: 12)
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "yr01", filename: "pub.csv", download_date: Date.new(2025, 8, 1), tally: 2)
+    FileDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, file_web_id: "yr02", filename: "hid.csv", download_date: Date.new(2025, 8, 1), tally: 9)
+
+    get curator_download_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("2025")
+    expect(response.body).to include("FY25")
+    expect(response.body).to match(/<td>2025<\/td>\s*<td>4<\/td>\s*<td>2<\/td>/)
+    expect(response.body).to match(/<td>FY25<\/td>\s*<td>2025-07-01 to 2026-06-30<\/td>\s*<td>4<\/td>\s*<td>2<\/td>/)
+  end
+
+  it "shows download metrics summary with calendar and fiscal totals" do
+    sign_in_as(email: "admin-summary@example.edu", name: "Admin Summary", role: "admin")
+
+    public_dataset = create(:dataset, :published, key: "IDB-SUM-PUB", identifier: "10.5555/SUM-PUB", embargo: Dataset::EMBARGO_NONE)
+    hidden_dataset = create(:dataset, :published, key: "IDB-SUM-HID", identifier: "10.5555/SUM-HID", embargo: Dataset::EMBARGO_FILE, release_date: Date.current + 60)
+
+    DatasetDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, download_date: Date.current, tally: 5)
+    DatasetDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, download_date: Date.current, tally: 11)
+
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "sum01", filename: "public.csv", download_date: Date.current, tally: 3)
+    FileDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, file_web_id: "sum02", filename: "hidden.csv", download_date: Date.current, tally: 7)
+
+    get admin_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Download Metrics Summary")
+    expect(response.body).to include("Dataset downloads")
+    expect(response.body).to include("Datafile downloads")
+    expect(response.body).to include("Calendar #{Date.current.year}")
+    expect(response.body).to include("FY#{format('%02d', (Date.current.month >= 7 ? Date.current.year : Date.current.year - 1) % 100)}")
+    expect(response.body).to match(/<td>Dataset downloads<\/td>\s*<td>5<\/td>\s*<td>5<\/td>\s*<td>5<\/td>/)
+    expect(response.body).to match(/<td>Datafile downloads<\/td>\s*<td>3<\/td>\s*<td>3<\/td>\s*<td>3<\/td>/)
   end
 
   it "serves admin metrics for curators" do
@@ -72,7 +211,7 @@ RSpec.describe "Metrics", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Metrics exports")
-    expect(response.body).to include("Regenerate Dataset downloads JSON")
+    expect(response.body).not_to include("Regenerate")
   end
 
   it "blocks refresh actions for non-admin users" do
@@ -94,14 +233,15 @@ RSpec.describe "Metrics", type: :request do
     expect(response).to redirect_to(metrics_path)
   end
 
-  it "enqueues refresh actions for curators" do
+  it "blocks refresh actions for curators" do
     sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
 
     expect do
       post refresh_dataset_downloads_metrics_path
-    end.to have_enqueued_job(MetricRefreshJob).with(:dataset_downloads_json)
+    end.not_to have_enqueued_job(MetricRefreshJob)
 
     expect(response).to redirect_to(metrics_path)
+    expect(flash[:alert]).to include("not authorized")
   end
 
   it "returns the public datafiles simple list" do

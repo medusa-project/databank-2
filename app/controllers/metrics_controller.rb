@@ -12,6 +12,11 @@ class MetricsController < ApplicationController
 
   before_action :require_admin_or_curator!, only: %i[
     admin_metrics
+    curator_download_metrics
+    download_metrics_breakdown
+  ]
+
+  before_action :require_admin!, only: %i[
     refresh_dataset_downloads
     refresh_datafile_downloads
     refresh_datasets_tsv
@@ -30,7 +35,31 @@ class MetricsController < ApplicationController
     @metric_definitions = Metric.admin_definitions
     @modified_times = Metric.modified_times
     @refresh_status = Metric.refresh_status
-    @title = "Admin metrics"
+    @download_metrics_summary = build_download_metrics_summary
+    @title = "Curator Metrics"
+  end
+
+  def curator_download_metrics
+    @download_metrics_summary = build_download_metrics_summary
+    @download_metrics_yearly_summary = build_download_metrics_yearly_summary
+    @title = "Download Metrics"
+  end
+
+  def download_metrics_breakdown
+    summary = build_download_metrics_summary
+    yearly = build_download_metrics_yearly_summary
+
+    render json: {
+      generated_at: Time.current.utc.iso8601,
+      current_calendar_year: summary[:current_calendar_year],
+      current_fiscal_year_label: summary[:current_fiscal_year_label],
+      summary: {
+        dataset: summary[:dataset],
+        datafile: summary[:datafile]
+      },
+      calendar_years: yearly[:calendar_rows],
+      fiscal_years: yearly[:fiscal_rows]
+    }
   end
 
   def dataset_downloads
@@ -147,5 +176,85 @@ class MetricsController < ApplicationController
     return if current_user&.admin? || current_user&.curator?
 
     redirect_to metrics_path, alert: "You are not authorized to perform this action."
+  end
+
+  def require_admin!
+    return if current_user&.admin?
+
+    redirect_to metrics_path, alert: "You are not authorized to perform this action."
+  end
+
+  def build_download_metrics_summary
+    public_dataset_keys = Dataset.files_publicly_readable_now_scope.pluck(:key)
+    dataset_scope = DatasetDownloadTally.where(dataset_key: public_dataset_keys)
+    datafile_scope = FileDownloadTally.where(dataset_key: public_dataset_keys)
+
+    today = Date.current
+    calendar_range = Date.new(today.year, 1, 1)..Date.new(today.year, 12, 31)
+    fiscal_start_year = today.month >= 7 ? today.year : today.year - 1
+    fiscal_range = Date.new(fiscal_start_year, 7, 1)..Date.new(fiscal_start_year + 1, 6, 30)
+
+    {
+      current_calendar_year: today.year,
+      current_fiscal_year_label: format("FY%02d", fiscal_start_year % 100),
+      dataset: {
+        all_time: dataset_scope.sum(:tally),
+        current_calendar_year: dataset_scope.where(download_date: calendar_range).sum(:tally),
+        current_fiscal_year: dataset_scope.where(download_date: fiscal_range).sum(:tally)
+      },
+      datafile: {
+        all_time: datafile_scope.sum(:tally),
+        current_calendar_year: datafile_scope.where(download_date: calendar_range).sum(:tally),
+        current_fiscal_year: datafile_scope.where(download_date: fiscal_range).sum(:tally)
+      }
+    }
+  end
+
+  def build_download_metrics_yearly_summary
+    public_dataset_keys = Dataset.files_publicly_readable_now_scope.pluck(:key)
+    dataset_scope = DatasetDownloadTally.where(dataset_key: public_dataset_keys)
+    datafile_scope = FileDownloadTally.where(dataset_key: public_dataset_keys)
+
+    min_date = [ dataset_scope.minimum(:download_date), datafile_scope.minimum(:download_date) ].compact.min
+    today = Date.current
+
+    current_calendar_year = today.year
+    current_fiscal_start_year = today.month >= 7 ? today.year : today.year - 1
+
+    earliest_calendar_year = min_date ? min_date.year : current_calendar_year
+    earliest_fiscal_start_year = if min_date
+      min_date.month >= 7 ? min_date.year : min_date.year - 1
+    else
+      current_fiscal_start_year
+    end
+
+    calendar_years = (earliest_calendar_year..current_calendar_year).to_a.reverse.first(10)
+    fiscal_start_years = (earliest_fiscal_start_year..current_fiscal_start_year).to_a.reverse.first(10)
+
+    {
+      current_calendar_year: current_calendar_year,
+      current_fiscal_year_label: format_fiscal_label(current_fiscal_start_year),
+      calendar_rows: calendar_years.map do |year|
+        range = Date.new(year, 1, 1)..Date.new(year, 12, 31)
+        {
+          year_label: year.to_s,
+          dataset_downloads: dataset_scope.where(download_date: range).sum(:tally),
+          datafile_downloads: datafile_scope.where(download_date: range).sum(:tally)
+        }
+      end,
+      fiscal_rows: fiscal_start_years.map do |start_year|
+        range = Date.new(start_year, 7, 1)..Date.new(start_year + 1, 6, 30)
+        {
+          fiscal_year_label: format_fiscal_label(start_year),
+          date_range_label: "#{range.begin.iso8601} to #{range.end.iso8601}",
+          dataset_downloads: dataset_scope.where(download_date: range).sum(:tally),
+          datafile_downloads: datafile_scope.where(download_date: range).sum(:tally)
+        }
+      end
+    }
+  end
+
+  def format_fiscal_label(start_year)
+    format("FY%02d", start_year % 100)
   end
 end

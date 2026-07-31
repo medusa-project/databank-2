@@ -49,45 +49,83 @@ async function createDataset(page) {
   };
 }
 
+async function updateDatasetExternalFiles(page, editUrl) {
+  await page.goto(editUrl);
+  await page
+    .locator("#dataset_external_files_link")
+    .fill("https://example.test/external-files");
+  await page
+    .locator("#dataset_external_files_note")
+    .fill("External files are available for this dataset.");
+}
+
 async function createGuideSection(page) {
   await page.goto("/guide/sections/new");
-  await page.locator('input[name="guide_section[label]"]').fill(`A11y Section ${Date.now()}`);
-  await page.locator('input[name="guide_section[anchor]"]').fill(`a11y-section-${Date.now()}`);
+  await page
+    .locator('input[name="guide_section[label]"]')
+    .fill(`A11y Section ${Date.now()}`);
+  await page
+    .locator('input[name="guide_section[anchor]"]')
+    .fill(`a11y-section-${Date.now()}`);
   await page.getByRole("button", { name: "Save Section" }).click();
   await expect(page).toHaveURL(/\/guide\/sections/);
-  const editLink = page.locator('a[href*="/guide/sections/"][href*="/edit"]').last();
+  const editLink = page
+    .locator('a[href*="/guide/sections/"][href*="/edit"]')
+    .last();
   return editLink.getAttribute("href");
 }
 
 async function createGuideItem(page, sectionEditHref) {
   // Derive section id from its edit path  (/guide/sections/42/edit → 42)
-  const sectionId = sectionEditHref.match(/\/guide\/sections\/(\d+)\/edit/)?.[1];
+  const sectionId = sectionEditHref.match(
+    /\/guide\/sections\/(\d+)\/edit/,
+  )?.[1];
   await page.goto("/guide/items/new");
-  await page.locator('select[name="guide_item[section_id]"]').selectOption(sectionId);
-  await page.locator('input[name="guide_item[label]"]').fill(`A11y Item ${Date.now()}`);
-  await page.locator('input[name="guide_item[anchor]"]').fill(`a11y-item-${Date.now()}`);
+  await page
+    .locator('select[name="guide_item[section_id]"]')
+    .selectOption(sectionId);
+  await page
+    .locator('input[name="guide_item[label]"]')
+    .fill(`A11y Item ${Date.now()}`);
+  await page
+    .locator('input[name="guide_item[anchor]"]')
+    .fill(`a11y-item-${Date.now()}`);
   await page.getByRole("button", { name: "Save Item" }).click();
   await expect(page).toHaveURL(/\/guide\/items/);
-  const editLink = page.locator('a[href*="/guide/items/"][href*="/edit"]').last();
+  const editLink = page
+    .locator('a[href*="/guide/items/"][href*="/edit"]')
+    .last();
   return editLink.getAttribute("href");
 }
 
 async function createGuideSubitem(page, itemEditHref) {
   const itemId = itemEditHref.match(/\/guide\/items\/(\d+)\/edit/)?.[1];
   await page.goto("/guide/subitems/new");
-  await page.locator('select[name="guide_subitem[item_id]"]').selectOption(itemId);
-  await page.locator('input[name="guide_subitem[label]"]').fill(`A11y Subitem ${Date.now()}`);
-  await page.locator('input[name="guide_subitem[anchor]"]').fill(`a11y-subitem-${Date.now()}`);
+  await page
+    .locator('select[name="guide_subitem[item_id]"]')
+    .selectOption(itemId);
+  await page
+    .locator('input[name="guide_subitem[label]"]')
+    .fill(`A11y Subitem ${Date.now()}`);
+  await page
+    .locator('input[name="guide_subitem[anchor]"]')
+    .fill(`a11y-subitem-${Date.now()}`);
   await page.getByRole("button", { name: "Save Subitem" }).click();
   await expect(page).toHaveURL(/\/guide\/subitems/);
-  const editLink = page.locator('a[href*="/guide/subitems/"][href*="/edit"]').last();
+  const editLink = page
+    .locator('a[href*="/guide/subitems/"][href*="/edit"]')
+    .last();
   return editLink.getAttribute("href");
 }
 
 async function createFeaturedResearcher(page) {
   await page.goto("/featured_researchers/new");
-  await page.locator('input[name="featured_researcher[name]"]').fill(`A11y Spotlight ${Date.now()}`);
-  await page.locator('textarea[name="featured_researcher[bio]"]').fill("Accessibility-focused spotlight bio.");
+  await page
+    .locator('input[name="featured_researcher[name]"]')
+    .fill(`A11y Spotlight ${Date.now()}`);
+  await page
+    .locator('textarea[name="featured_researcher[bio]"]')
+    .fill("Accessibility-focused spotlight bio.");
   await page
     .locator('input[name="featured_researcher[question]"]')
     .fill("Why did you choose Illinois Data Bank?");
@@ -200,6 +238,30 @@ test.describe("admin pages", () => {
     await signInAs(page, "admin");
   });
 
+  test("curator metrics page", async ({ page }) => {
+    await expectNoA11yViolations(page, "/curator_metrics");
+  });
+
+  test("download metrics detail page", async ({ page }) => {
+    await expectNoA11yViolations(page, "/download_metrics");
+  });
+
+  test("dataset edit with external files fields", async ({ page }) => {
+    const { editUrl } = await createDataset(page);
+    await updateDatasetExternalFiles(page, editUrl);
+    await expect(page.locator("#dataset_external_files_link")).toHaveValue(
+      "https://example.test/external-files",
+    );
+    await expect(page.locator("#dataset_external_files_note")).toHaveValue(
+      "External files are available for this dataset.",
+    );
+    const results = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      results.violations,
+      `Violations on dataset edit external files fields: ${JSON.stringify(results.violations, null, 2)}`,
+    ).toEqual([]);
+  });
+
   test("external delivery attempts", async ({ page }) => {
     await expectNoA11yViolations(page, "/admin/external_delivery_attempts");
   });
@@ -274,13 +336,20 @@ test.describe("admin pages", () => {
 
   test("researcher spotlights edit form", async ({ page }) => {
     const previewUrl = await createFeaturedResearcher(page);
-    const spotlightId = previewUrl.match(/\/featured_researchers\/(\d+)\/preview/)?.[1];
-    await expectNoA11yViolations(page, `/featured_researchers/${spotlightId}/edit`);
+    const spotlightId = previewUrl.match(
+      /\/featured_researchers\/(\d+)\/preview/,
+    )?.[1];
+    await expectNoA11yViolations(
+      page,
+      `/featured_researchers/${spotlightId}/edit`,
+    );
   });
 
   test("researcher spotlights show page", async ({ page }) => {
     const previewUrl = await createFeaturedResearcher(page);
-    const spotlightId = previewUrl.match(/\/featured_researchers\/(\d+)\/preview/)?.[1];
+    const spotlightId = previewUrl.match(
+      /\/featured_researchers\/(\d+)\/preview/,
+    )?.[1];
     await page.goto(`/featured_researchers/${spotlightId}`);
     const results = await new AxeBuilder({ page }).include("main").analyze();
     expect(

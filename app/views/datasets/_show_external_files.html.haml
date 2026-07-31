@@ -1,0 +1,14 @@
+.dataset-external-files
+  %h3.dataset-show-nested-title Files - All
+
+  - if dataset.external_files_note.present?
+    .dataset-show-metadata-note
+      = sanitize(dataset.external_files_note, tags: %w[p br ul ol li a strong em b i u blockquote code pre h3 h4 h5 h6], attributes: %w[href title target rel])
+  - else
+    %p No external files note is available.
+
+  - if dataset.external_files_link.present?
+    %p
+      = link_to "Access All Files", open_in_granite_dataset_path(dataset), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: { label: "Access all externally stored files" }
+  - else
+    %p No associated large files are available yet.
