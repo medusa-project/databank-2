@@ -140,11 +140,17 @@ class DatasetsController < ApplicationController
       return
     end
 
+    redirect_url = safe_external_files_url(@dataset.external_files_link)
+    if redirect_url.nil?
+      redirect_to dataset_path(@dataset), alert: "The external files link is not a valid URL."
+      return
+    end
+
     @dataset.datafiles.find_each do |datafile|
       datafile.record_download(request.remote_ip)
     end
 
-    redirect_to @dataset.external_files_link, allow_other_host: true
+    redirect_to redirect_url, allow_other_host: true
   end
 
   def pre_version
@@ -548,6 +554,16 @@ class DatasetsController < ApplicationController
     return edit_dataset_path(@dataset) unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
 
     version_controls_dataset_path(@dataset)
+  end
+
+  def safe_external_files_url(url)
+    parsed = URI.parse(url.to_s)
+    return nil unless parsed.is_a?(URI::HTTP)
+    return nil if parsed.host.blank?
+
+    parsed.to_s
+  rescue URI::InvalidURIError
+    nil
   end
 
   def review_action_redirect_path(default_path:)

@@ -81,4 +81,46 @@ RSpec.describe "Dataset external files", type: :request do
     follow_redirect!
     expect(response.body).to include("No external files link is available for this dataset.")
   end
+
+  it "returns to dataset page when external files link uses an unsafe scheme" do
+    dataset = create(
+      :dataset,
+      :published,
+      embargo: Dataset::EMBARGO_NONE,
+      identifier: "10.5555/BADSCHEME",
+      external_files_link: "javascript:alert('xss')"
+    )
+    create(:datafile, dataset: dataset)
+
+    expect do
+      get open_in_granite_dataset_path(dataset)
+    end.to change(DayFileDownload, :count).by(0)
+      .and change(DatasetDownloadTally, :count).by(0)
+      .and change(FileDownloadTally, :count).by(0)
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("The external files link is not a valid URL.")
+  end
+
+  it "returns to dataset page when external files link is malformed" do
+    dataset = create(
+      :dataset,
+      :published,
+      embargo: Dataset::EMBARGO_NONE,
+      identifier: "10.5555/BADMALFORMED",
+      external_files_link: "https://example .org/bad"
+    )
+    create(:datafile, dataset: dataset)
+
+    expect do
+      get open_in_granite_dataset_path(dataset)
+    end.to change(DayFileDownload, :count).by(0)
+      .and change(DatasetDownloadTally, :count).by(0)
+      .and change(FileDownloadTally, :count).by(0)
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("The external files link is not a valid URL.")
+  end
 end
