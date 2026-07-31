@@ -26,6 +26,6 @@ module Dataset::Globusable
 
   # Check if dataset has external files (files not in the repository system)
   def external_files?
-    external_files_note.present? || external_files_link.present?
+    external_files_note.to_s.strip.present? || external_files_link.to_s.strip.present?
   end
 end
