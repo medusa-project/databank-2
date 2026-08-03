@@ -547,6 +547,21 @@ class Metric
       end
     end
 
+    def generate_all_historical_downloads
+      current_cal_year = current_calendar_year
+      current_fis_year = current_fiscal_year
+
+      %i[dataset_downloads datafile_downloads].each do |metric_type|
+        (FIRST_DOWNLOAD_CALENDAR_YEAR...current_cal_year).each do |year|
+          public_send("write_#{metric_type}_csv_by_year", year, :calendar)
+        end
+
+        (FIRST_DOWNLOAD_FISCAL_YEAR...current_fis_year).each do |year|
+          public_send("write_#{metric_type}_csv_by_year", year, :fiscal)
+        end
+      end
+    end
+
     private
 
     def add_current_year_metric_to_zip(zip, metric_type, current_year, slice_type)
