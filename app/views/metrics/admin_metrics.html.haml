@@ -4,17 +4,13 @@
 - metric_definitions = @metric_definitions || []
 
 %ilw-content.dataset-show-page
-  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Metrics exports" }}
-    %h1.dataset-show-section-title Curator Metrics
-
+  %section{aria: { label: "Metrics exports" }}
     %p
-      = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
-      = link_to "Download Metrics Details", download_metrics_path, class: "idb-button-secondary"
+      = semantic_action_button(action: :metrics, label: "Public Metrics Dashboard", url: metrics_path, style: :idb)
+      = semantic_action_button(action: :metrics, label: "Download Metrics Details", url: download_metrics_path, style: :idb)
 
     - if metric_definitions.empty?
       %p.idb-workflow-note No metric exports are currently configured.
-
-    %h2.dataset-show-section-subtitle Metrics Exports
 
     %ul.dataset-show-list
       - metric_definitions.each do |definition|
@@ -65,7 +61,3 @@
                     %strong= "#{column_name}:"
                     = column_description
 
-    %section{aria: { label: "Datafiles listing" }}
-      %h2.dataset-show-section-subtitle Datafiles listing
-      %p
-        = link_to "Datafiles listing JSON", "/metrics/datafiles_simple_list.json", class: "idb-button-secondary"

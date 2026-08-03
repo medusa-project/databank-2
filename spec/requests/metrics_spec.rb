@@ -38,7 +38,7 @@ RSpec.describe "Metrics", type: :request do
     get admin_metrics_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Metrics Exports")
+    expect(response.body).to include("Public Metrics Dashboard")
     expect(response.body).to include("Datasets TSV")
     expect(response.body).to include("Download Metrics Details")
   end

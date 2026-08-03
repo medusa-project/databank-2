@@ -35,3 +35,86 @@ form.inline-block button {
   margin: 0;
   padding: 0;
 }
+
+.download-metrics-field-definitions {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #edf1f5;
+  border-left: 3px solid #d6dde6;
+  border-radius: 0.4rem;
+  background-color: #fbfcfd;
+}
+
+.download-metrics-field-definitions ul {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.download-metrics-field-definitions li {
+  border-top: 1px solid #edf1f5;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.download-metrics-field-definitions li:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.download-metrics-file-groups {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.download-metrics-file-group {
+  padding: 0.85rem 1rem;
+  border: 1px solid #edf1f5;
+  border-left: 3px solid #d6dde6;
+  border-radius: 0.4rem;
+  background-color: #fbfcfd;
+}
+
+.download-metrics-file-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.download-metrics-file-list li {
+  border-top: 1px solid #edf1f5;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.download-metrics-file-list li:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.download-metrics-zip-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #edf1f5;
+  border-left: 3px solid #d6dde6;
+  border-radius: 0.4rem;
+  background-color: #fbfcfd;
+}
+
+.download-metrics-zip-actions .legacy-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .download-metrics-zip-actions {
+    grid-template-columns: 1fr;
+  }
+}
