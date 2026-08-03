@@ -101,17 +101,16 @@ Rails.application.routes.draw do
   get "/admin_metrics", to: "metrics#admin_metrics"
   get "/curator_metrics", to: "metrics#admin_metrics", as: :curator_metrics
   get "/download_metrics", to: "metrics#curator_download_metrics", as: :curator_download_metrics
+  get "/metrics/archived/:metric_type/:year/:slice_type", to: "metrics#archived_download_metric", as: :archived_download_metric
+  get "/metrics/download_zip/:group", to: "metrics#download_zip", as: :metrics_download_zip
   resources :metrics, only: :index do
     collection do
       get :archived_content_csv
       get :datafiles_csv
       get :datafiles_simple_list
-      get :download_metrics_breakdown, defaults: { format: :json }
-      get :dataset_downloads, defaults: { format: :json }
-      get :file_downloads, defaults: { format: :json }
+      get :dataset_downloads_csv
+      get :datafile_downloads_csv
       get :funders_csv
-      post :refresh_dataset_downloads
-      post :refresh_datafile_downloads
       post :refresh_datafiles_csv
       post :refresh_container_csv
       get :related_materials_csv
