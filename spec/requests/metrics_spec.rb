@@ -46,7 +46,7 @@ RSpec.describe "Metrics", type: :request do
   it "blocks dedicated download metrics page for non-curator users" do
     sign_in_as(email: "depositor-metrics-detail@example.edu", name: "Depositor Detail", role: "depositor")
 
-    get curator_download_metrics_path
+    get download_metrics_path
 
     expect(response).to redirect_to(metrics_path)
     expect(flash[:alert]).to include("not authorized")
@@ -55,7 +55,7 @@ RSpec.describe "Metrics", type: :request do
   it "serves dedicated download metrics page for curators" do
     sign_in_as(email: "curator-metrics-detail@example.edu", name: "Curator Detail", role: "curator")
 
-    get curator_download_metrics_path
+    get download_metrics_path
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Download Metrics")
@@ -68,7 +68,7 @@ RSpec.describe "Metrics", type: :request do
     sign_in_as(email: "admin-metrics-generate@example.edu", name: "Admin Generate", role: "admin")
     allow(Metric).to receive(:ensure_download_metrics)
 
-    get curator_download_metrics_path
+    get download_metrics_path
 
     expect(response).to have_http_status(:ok)
     expect(Metric).to have_received(:ensure_download_metrics)

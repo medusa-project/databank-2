@@ -10,7 +10,7 @@ class MetricsController < ApplicationController
 
   before_action :require_admin_or_curator!, only: %i[
     admin_metrics
-    curator_download_metrics
+    download_metrics
     dataset_downloads_csv
     datafile_downloads_csv
     archived_download_metric
@@ -37,7 +37,7 @@ class MetricsController < ApplicationController
     @title = "Curator Metrics"
   end
 
-  def curator_download_metrics
+  def download_metrics
     Metric.ensure_download_metrics
     @current_calendar_year = Metric.current_calendar_year
     @current_fiscal_year = Metric.current_fiscal_year

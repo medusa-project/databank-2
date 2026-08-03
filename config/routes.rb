@@ -100,7 +100,7 @@ Rails.application.routes.draw do
   get "/metric", to: "metrics#index"
   get "/admin_metrics", to: "metrics#admin_metrics"
   get "/curator_metrics", to: "metrics#admin_metrics", as: :curator_metrics
-  get "/download_metrics", to: "metrics#curator_download_metrics", as: :curator_download_metrics
+  get "/download_metrics", to: "metrics#download_metrics", as: :download_metrics
   get "/metrics/archived/:metric_type/:year/:slice_type", to: "metrics#archived_download_metric", as: :archived_download_metric
   get "/metrics/download_zip/:group", to: "metrics#download_zip", as: :metrics_download_zip
   resources :metrics, only: :index do

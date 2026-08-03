@@ -9,7 +9,7 @@
 
     %p
       = link_to "Metrics Dashboard", "/metrics", class: "idb-button-primary"
-      = link_to "Download Metrics Details", curator_download_metrics_path, class: "idb-button-secondary"
+      = link_to "Download Metrics Details", download_metrics_path, class: "idb-button-secondary"
 
     - if metric_definitions.empty?
       %p.idb-workflow-note No metric exports are currently configured.
