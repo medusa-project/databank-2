@@ -111,6 +111,12 @@ module ApplicationHelper
       icon: "arrow-down",
       icon_style: :solid
     },
+    back: {
+      label: "Back",
+      variant: "primary",
+      icon: "arrow-left",
+      icon_style: :solid
+    },
     add: {
       label: "Add",
       variant: "primary",
