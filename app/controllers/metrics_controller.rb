@@ -38,11 +38,14 @@ class MetricsController < ApplicationController
   end
 
   def download_metrics
-    Metric.ensure_download_metrics
-    @current_calendar_year = Metric.current_calendar_year
-    @current_fiscal_year = Metric.current_fiscal_year
-    @prior_calendar_years = (Metric::FIRST_DOWNLOAD_CALENDAR_YEAR...@current_calendar_year).to_a.reverse
-    @prior_fiscal_years = (Metric::FIRST_DOWNLOAD_FISCAL_YEAR...@current_fiscal_year).to_a.reverse
+    begin
+      Metric.ensure_download_metrics
+    rescue StandardError => error
+      Rails.logger.error("Unable to ensure download metrics: #{error.message}")
+      flash.now[:alert] = "Some download metrics files are temporarily unavailable."
+    end
+
+    assign_download_metric_years
     @title = "Download Metrics"
   end
 
@@ -116,6 +119,12 @@ class MetricsController < ApplicationController
 
   def related_materials_csv
     serve_configured_metric_file(:related_materials_csv)
+  end
+
+  def assign_download_metric_years
+    @download_metrics_availability = Metrics::DownloadMetricsAvailability.new
+    @current_calendar_year = @download_metrics_availability.current_calendar_year
+    @current_fiscal_year = @download_metrics_availability.current_fiscal_year
   end
 
   def refresh_datasets_tsv

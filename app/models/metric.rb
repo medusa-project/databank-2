@@ -207,6 +207,25 @@ class Metric
       filename_for_year_metric(metric_type, year, slice_type)
     end
 
+    def year_metric_available?(metric_type:, year:, slice_type:)
+      if year_is_current?(year, slice_type)
+        filename = filename_for_year_metric(metric_type, year, slice_type)
+        return File.exist?(Rails.root.join("public", filename))
+      end
+
+      archived_metric_exists?(metric_type, year, slice_type)
+    rescue StandardError
+      false
+    end
+
+    def archived_metric_exists?(metric_type, year, slice_type)
+      storage_key = storage_key_for_archived_metric(metric_type, year, slice_type)
+      StorageManager.instance.report_root.exist?(storage_key)
+    rescue StandardError => error
+      Rails.logger.error("Error checking archived metric #{storage_key}: #{error.message}")
+      false
+    end
+
     def definitions
       METRICS_CONFIG.each_with_object([]) do |(raw_key, raw_config), arr|
         metric_key = raw_key.to_sym

@@ -74,6 +74,52 @@ RSpec.describe "Metrics", type: :request do
     expect(Metric).to have_received(:ensure_download_metrics)
   end
 
+  it "still renders download metrics page when ensure step fails" do
+    sign_in_as(email: "admin-metrics-error@example.edu", name: "Admin Metrics Error", role: "admin")
+    allow(Metric).to receive(:ensure_download_metrics).and_raise(StandardError, "storage unavailable")
+
+    get download_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Download Metrics")
+    expect(flash[:alert]).to eq("Some download metrics files are temporarily unavailable.")
+  end
+
+  it "lists only years with available metric files" do
+    sign_in_as(email: "curator-availability@example.edu", name: "Curator Availability", role: "curator")
+
+    allow(Metric).to receive(:ensure_download_metrics)
+    allow(Metric).to receive(:current_calendar_year).and_return(2026)
+    allow(Metric).to receive(:current_fiscal_year).and_return(26)
+
+    allow(Metric).to receive(:year_metric_available?) do |metric_type:, year:, slice_type:|
+      [
+        [metric_type, year, slice_type],
+        [metric_type, year.to_i, slice_type]
+      ].any? do |triple|
+        [
+          [:dataset_downloads, 2026, :calendar],
+          [:dataset_downloads, 2024, :calendar],
+          [:dataset_downloads, 25, :fiscal],
+          [:datafile_downloads, 26, :fiscal],
+          [:datafile_downloads, 2023, :calendar]
+        ].include?(triple)
+      end
+    end
+
+    get download_metrics_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Dataset Downloads 2026 (Calendar Year)")
+    expect(response.body).to include("Dataset Downloads 2024 (Calendar Year)")
+    expect(response.body).to include("Dataset Downloads FY25 (Fiscal Year)")
+    expect(response.body).not_to include("Dataset Downloads 2025 (Calendar Year)")
+    expect(response.body).not_to include("Dataset Downloads FY24 (Fiscal Year)")
+    expect(response.body).to include("Datafile Downloads 2023 (Calendar Year)")
+    expect(response.body).to include("Datafile Downloads FY26 (Fiscal Year)")
+    expect(response.body).not_to include("Datafile Downloads 2026 (Calendar Year)")
+  end
+
   it "serves archived content csv publicly" do
     get archived_content_csv_metrics_path(format: :csv)
 
