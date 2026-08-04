@@ -328,11 +328,11 @@ module Search
     end
 
     def external_files_present_sql
-      "COALESCE(NULLIF(datasets.external_files_note, ''), NULLIF(datasets.external_files_link, '')) IS NOT NULL"
+      "COALESCE(NULLIF(BTRIM(datasets.external_files_note), ''), NULLIF(BTRIM(datasets.external_files_link), '')) IS NOT NULL"
     end
 
     def external_files_absent_sql
-      "COALESCE(NULLIF(datasets.external_files_note, ''), NULLIF(datasets.external_files_link, '')) IS NULL"
+      "COALESCE(NULLIF(BTRIM(datasets.external_files_note), ''), NULLIF(BTRIM(datasets.external_files_link), '')) IS NULL"
     end
 
     def normalize_filters(filters)

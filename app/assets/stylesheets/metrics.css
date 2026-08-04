@@ -35,3 +35,65 @@ form.inline-block button {
   margin: 0;
   padding: 0;
 }
+
+.download-metrics-field-definitions {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.download-metrics-field-definitions .download-metrics-definition-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.download-metrics-field-definitions .download-metrics-definition-list > li {
+  border-top: 1px solid #dfe6ee;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  line-height: 1.45;
+}
+
+.download-metrics-field-definitions .download-metrics-definition-list > li:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.download-metrics-file-groups {
+  margin-top: 0.5rem;
+}
+
+.download-metrics-file-group {
+  padding: 0;
+}
+
+.download-metrics-file-list {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.download-metrics-file-list li {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.download-metrics-file-list li:first-child {
+  border-top: 0;
+}
+
+.download-metrics-zip-actions {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.download-metrics-zip-actions .legacy-btn {
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .download-metrics-zip-actions {
+    margin-top: 0.75rem;
+  }
+}

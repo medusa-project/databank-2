@@ -1,0 +1,161 @@
+- content_for :title, "Download Metrics"
+- current_calendar_year = @current_calendar_year
+- current_fiscal_year = @current_fiscal_year
+- current_fiscal_label = "FY#{current_fiscal_year.to_s.rjust(2, '0')}"
+- dataset_availability = @download_metrics_availability.for(:dataset_downloads)
+- datafile_availability = @download_metrics_availability.for(:datafile_downloads)
+
+= semantic_action_button(action: :back, label: "Back to Curator Metrics Page", url: admin_metrics_path, style: :legacy, icon_position: :left, class: "btn-sm idb", data: {testid: "admin-metric-page-link"})
+
+.metrics-section
+  %h2 Dataset Downloads
+
+  .indent
+    %p Daily download tallies grouped at the dataset level.
+    .dataset-show-list-tertiary.download-metrics-field-definitions
+      %strong Field Definitions
+      %ul.download-metrics-definition-list
+        %li
+          %strong dataset_key:
+          Unique key that identifies the dataset.
+        %li
+          %strong doi:
+          DOI that identifies the dataset.
+        %li
+          %strong download_date:
+          Download date for the tally row.
+        %li
+          %strong tally:
+          Number of downloads counted on that date for the dataset.
+
+  .metrics-zip-actions.download-metrics-zip-actions
+    = semantic_action_button(action: :download, label: "Download All Calendar Year CSVs (zip)", url: metrics_download_zip_path(group: :dataset_calendar), aria_label: "Download all dataset calendar year CSVs as zip", style: :legacy, icon_position: :right, class: "btn-sm idb")
+    = semantic_action_button(action: :download, label: "Download All Fiscal Year CSVs (zip)", url: metrics_download_zip_path(group: :dataset_fiscal), aria_label: "Download all dataset fiscal year CSVs as zip", style: :legacy, icon_position: :right, class: "btn-sm idb")
+
+  .download-metrics-file-groups
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Current Year Files
+      %ul.download-metrics-file-list
+        - if dataset_availability.current_available?(:calendar)
+          %li
+            - current_dataset_calendar = Metric.filename_for_year_metric(:dataset_downloads, current_calendar_year, :calendar)
+            %a{href: "/#{current_dataset_calendar}",
+                data: {testid: "metric-download-dataset-#{current_calendar_year}-calendar"},
+                "aria-label" => "Download Dataset Downloads #{current_calendar_year} (Calendar Year)",
+                title: "Download Dataset Downloads #{current_calendar_year} (Calendar Year)",
+                download: current_dataset_calendar}
+              Dataset Downloads #{current_calendar_year} (Calendar Year)
+        - if dataset_availability.current_available?(:fiscal)
+          %li
+            - current_dataset_fiscal = Metric.filename_for_year_metric(:dataset_downloads, current_fiscal_year, :fiscal)
+            %a{href: "/#{current_dataset_fiscal}",
+                data: {testid: "metric-download-dataset-#{current_fiscal_label}-fiscal"},
+                "aria-label" => "Download Dataset Downloads #{current_fiscal_label} (Fiscal Year)",
+                title: "Download Dataset Downloads #{current_fiscal_label} (Fiscal Year)",
+                download: current_dataset_fiscal}
+              Dataset Downloads #{current_fiscal_label} (Fiscal Year)
+        - if !dataset_availability.current_available?(:calendar) && !dataset_availability.current_available?(:fiscal)
+          %li No current-year dataset download files are available.
+
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Prior Year Files - Calendar Year
+      %ul.download-metrics-file-list
+        - dataset_availability.prior_calendar_years.each do |year|
+          %li
+            %a{href: archived_download_metric_path(metric_type: :dataset_downloads, year: year, slice_type: :calendar),
+                data: {testid: "metric-download-dataset-#{year}-calendar"},
+                download: Metric.filename_for_year_metric(:dataset_downloads, year, :calendar)}
+              Dataset Downloads #{year} (Calendar Year)
+        - if dataset_availability.prior_calendar_years.empty?
+          %li No archived calendar-year dataset download files are available.
+
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Prior Year Files - Fiscal Year
+      %ul.download-metrics-file-list
+        - dataset_availability.prior_fiscal_years.each do |fy|
+          - fy_label = "FY#{fy.to_s.rjust(2, '0')}"
+          %li
+            %a{href: archived_download_metric_path(metric_type: :dataset_downloads, year: fy_label, slice_type: :fiscal),
+                data: {testid: "metric-download-dataset-#{fy_label}-fiscal"},
+                download: Metric.filename_for_year_metric(:dataset_downloads, fy, :fiscal)}
+              Dataset Downloads #{fy_label} (Fiscal Year)
+        - if dataset_availability.prior_fiscal_years.empty?
+          %li No archived fiscal-year dataset download files are available.
+
+.metrics-section
+  %h2 Datafile Downloads
+
+  .metrics-zip-actions.download-metrics-zip-actions
+    = semantic_action_button(action: :download, label: "Download All Calendar Year CSVs (zip)", url: metrics_download_zip_path(group: :datafile_calendar), aria_label: "Download all datafile calendar year CSVs as zip", style: :legacy, icon_position: :right, class: "btn-sm idb")
+    = semantic_action_button(action: :download, label: "Download All Fiscal Year CSVs (zip)", url: metrics_download_zip_path(group: :datafile_fiscal), aria_label: "Download all datafile fiscal year CSVs as zip", style: :legacy, icon_position: :right, class: "btn-sm idb")
+
+  .indent
+    %p Daily download tallies grouped at the datafile level.
+    .dataset-show-list-tertiary.download-metrics-field-definitions
+      %strong Field Definitions
+      %ul.download-metrics-definition-list
+        %li
+          %strong file_web_id:
+          Unique identifier for the datafile.
+        %li
+          %strong dataset_key:
+          Unique key that identifies the dataset containing the datafile.
+        %li
+          %strong doi:
+          DOI that identifies the dataset.
+        %li
+          %strong download_date:
+          Download date for the tally row.
+        %li
+          %strong tally:
+          Number of downloads counted on that date for the datafile.
+
+  .download-metrics-file-groups
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Current Year Files
+      %ul.download-metrics-file-list
+        - if datafile_availability.current_available?(:calendar)
+          %li
+            - current_datafile_calendar = Metric.filename_for_year_metric(:datafile_downloads, current_calendar_year, :calendar)
+            %a{href: "/#{current_datafile_calendar}",
+                data: {testid: "metric-download-datafile-#{current_calendar_year}-calendar"},
+                "aria-label" => "Download Datafile Downloads #{current_calendar_year} (Calendar Year)",
+                title: "Download Datafile Downloads #{current_calendar_year} (Calendar Year)",
+                download: current_datafile_calendar}
+              Datafile Downloads #{current_calendar_year} (Calendar Year)
+        - if datafile_availability.current_available?(:fiscal)
+          %li
+            - current_datafile_fiscal = Metric.filename_for_year_metric(:datafile_downloads, current_fiscal_year, :fiscal)
+            %a{href: "/#{current_datafile_fiscal}",
+                data: {testid: "metric-download-datafile-#{current_fiscal_label}-fiscal"},
+                "aria-label" => "Download Datafile Downloads #{current_fiscal_label} (Fiscal Year)",
+                title: "Download Datafile Downloads #{current_fiscal_label} (Fiscal Year)",
+                download: current_datafile_fiscal}
+              Datafile Downloads #{current_fiscal_label} (Fiscal Year)
+        - if !datafile_availability.current_available?(:calendar) && !datafile_availability.current_available?(:fiscal)
+          %li No current-year datafile download files are available.
+
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Prior Year Files - Calendar Year
+      %ul.download-metrics-file-list
+        - datafile_availability.prior_calendar_years.each do |year|
+          %li
+            %a{href: archived_download_metric_path(metric_type: :datafile_downloads, year: year, slice_type: :calendar),
+                data: {testid: "metric-download-datafile-#{year}-calendar"},
+                download: Metric.filename_for_year_metric(:datafile_downloads, year, :calendar)}
+              Datafile Downloads #{year} (Calendar Year)
+        - if datafile_availability.prior_calendar_years.empty?
+          %li No archived calendar-year datafile download files are available.
+
+    .dataset-show-list-tertiary.download-metrics-file-group
+      %strong Prior Year Files - Fiscal Year
+      %ul.download-metrics-file-list
+        - datafile_availability.prior_fiscal_years.each do |fy|
+          - fy_label = "FY#{fy.to_s.rjust(2, '0')}"
+          %li
+            %a{href: archived_download_metric_path(metric_type: :datafile_downloads, year: fy_label, slice_type: :fiscal),
+                data: {testid: "metric-download-datafile-#{fy_label}-fiscal"},
+                download: Metric.filename_for_year_metric(:datafile_downloads, fy, :fiscal)}
+              Datafile Downloads #{fy_label} (Fiscal Year)
+        - if datafile_availability.prior_fiscal_years.empty?
+          %li No archived fiscal-year datafile download files are available.

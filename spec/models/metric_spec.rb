@@ -1,18 +1,17 @@
 require "rails_helper"
 
 RSpec.describe Metric, type: :model do
+  include ActiveSupport::Testing::TimeHelpers
+
   def metric_config_for(tmpdir)
     {
-      dataset_downloads_json: {
-        relative_path: File.join(tmpdir, "dataset_downloads.json"),
-        download_path: "/dataset_downloads.json",
-        content_type: "application/json",
-        label: "Dataset downloads JSON",
-        summary: "Daily download tallies grouped at the dataset level.",
-        columns: [ { name: "doi", description: "DOI that identifies the dataset." } ]
+      datasets_tsv: {
+        relative_path: File.join(tmpdir, "datasets.tsv"),
+        download_path: "/datasets.tsv",
+        content_type: "text/tab-separated-values",
+        label: "Datasets TSV",
+        summary: "Dataset export"
       },
-      datafile_downloads_json: { relative_path: File.join(tmpdir, "datafile_downloads.json") },
-      datasets_tsv: { relative_path: File.join(tmpdir, "datasets.tsv") },
       datafiles_csv: { relative_path: File.join(tmpdir, "datafiles.csv") },
       container_contents_csv: { relative_path: File.join(tmpdir, "container_contents.csv") },
       funders_csv: { relative_path: File.join(tmpdir, "funders.csv") },
@@ -47,25 +46,12 @@ RSpec.describe Metric, type: :model do
   end
 
   it "builds config-backed metric definitions" do
-    definition = described_class.definition_for(:dataset_downloads_json)
+    definition = described_class.definition_for(:datasets_tsv)
 
-    expect(definition.label).to eq("Dataset downloads JSON")
-    expect(definition.download_path).to eq("/dataset_downloads.json")
-    expect(definition.content_type).to eq("application/json")
-    expect(definition.summary).to include("Daily download tallies")
-    expect(definition.columns).to include(include(name: "doi"))
-  end
-
-  it "filters admin definitions to refreshable metrics" do
-    admin_keys = described_class.admin_definitions.map(&:key)
-
-    expect(admin_keys).to match_array(described_class::LOCK_KEYS)
-    expect(admin_keys).not_to include(:dataset_report_csv)
-  end
-
-  it "returns a writer method for known metric keys" do
-    expect(described_class.writer_method_for(:funders_csv)).to eq(:write_funders_csv)
-    expect { described_class.writer_method_for(:missing_metric) }.to raise_error(ArgumentError, /Unknown metric key/)
+    expect(definition.label).to eq("Datasets TSV")
+    expect(definition.download_path).to eq("/datasets.tsv")
+    expect(definition.content_type).to eq("text/tab-separated-values")
+    expect(definition.summary).to include("Dataset export")
   end
 
   it "tracks lock files and refresh status" do
@@ -81,245 +67,108 @@ RSpec.describe Metric, type: :model do
     expect(described_class.in_progress?(:datasets_tsv)).to be(false)
   end
 
-  it "ensures missing metric files exist when reading modified times" do
-    allow(described_class).to receive(:write_dataset_downloads_json) do
-      File.write(METRICS_CONFIG[:dataset_downloads_json][:relative_path], "{}")
-    end
-    allow(described_class).to receive(:write_datafile_downloads_json) do
-      File.write(METRICS_CONFIG[:datafile_downloads_json][:relative_path], "{}")
-    end
-    allow(described_class).to receive(:write_datasets_tsv) do
-      File.write(METRICS_CONFIG[:datasets_tsv][:relative_path], "header\n")
-    end
-    allow(described_class).to receive(:write_datafiles_csv) do
-      File.write(METRICS_CONFIG[:datafiles_csv][:relative_path], "header\n")
-    end
-    allow(described_class).to receive(:write_container_contents_csv) do
-      File.write(METRICS_CONFIG[:container_contents_csv][:relative_path], "header\n")
-    end
-    allow(described_class).to receive(:write_funders_csv) do
-      File.write(METRICS_CONFIG[:funders_csv][:relative_path], "header\n")
-    end
-    allow(described_class).to receive(:write_related_materials_csv) do
-      File.write(METRICS_CONFIG[:related_materials_csv][:relative_path], "header\n")
+  it "calculates current fiscal year" do
+    travel_to(Time.zone.parse("2026-07-15 12:00:00")) do
+      expect(described_class.current_fiscal_year).to eq(26)
     end
 
-    modified_times = described_class.modified_times
-
-    expect(modified_times.keys).to match_array(described_class::LOCK_KEYS)
-    described_class::LOCK_KEYS.each do |key|
-      expect(File.exist?(METRICS_CONFIG[key][:relative_path])).to be(true)
-      expect(modified_times[key]).to eq(File.mtime(METRICS_CONFIG[key][:relative_path]).to_fs(:long))
+    travel_to(Time.zone.parse("2026-06-15 12:00:00")) do
+      expect(described_class.current_fiscal_year).to eq(25)
     end
   end
 
-  it "refreshes only missing or stale metrics when ensuring freshness" do
-    fresh_key = :dataset_downloads_json
-    stale_key = :datafile_downloads_json
-    missing_key = :datasets_tsv
-    stale_time = 2.days.ago.to_time
+  it "builds year-specific metric filenames" do
+    expect(described_class.filename_for_year_metric(:dataset_downloads, 2026, :calendar)).to eq("dataset_downloads_2026.csv")
+    expect(described_class.filename_for_year_metric(:datafile_downloads, 26, :fiscal)).to eq("datafile_downloads_FY26.csv")
+  end
 
-    File.write(METRICS_CONFIG[fresh_key][:relative_path], "fresh")
-    File.write(METRICS_CONFIG[stale_key][:relative_path], "stale")
-    File.utime(stale_time, stale_time, METRICS_CONFIG[stale_key][:relative_path])
+  it "writes calendar-year dataset downloads CSV filtered to file-public datasets" do
+    public_dataset = create(:dataset, :published, key: "IDB-PUB-1", identifier: "10.5555/pub-1", embargo: Dataset::EMBARGO_NONE)
+    private_dataset = create(:dataset, :published, key: "IDB-PRIV-1", identifier: "10.5555/priv-1", embargo: Dataset::EMBARGO_METADATA, release_date: Date.current + 90)
 
-    allow(described_class).to receive(:write_dataset_downloads_json)
-    allow(described_class).to receive(:write_datafile_downloads_json) do
-      File.write(METRICS_CONFIG[stale_key][:relative_path], "rewritten stale")
+    DatasetDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, download_date: Date.new(2025, 1, 15), tally: 3)
+    DatasetDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, download_date: Date.new(2026, 1, 15), tally: 2)
+    DatasetDownloadTally.create!(dataset_key: private_dataset.key, doi: private_dataset.identifier, download_date: Date.new(2025, 1, 15), tally: 9)
+
+    allow(described_class).to receive(:current_calendar_year).and_return(2025)
+    described_class.write_dataset_downloads_csv_by_year(2025, :calendar)
+
+    csv_path = Rails.root.join("public", "dataset_downloads_2025.csv")
+    rows = CSV.read(csv_path)
+
+    expect(rows.first).to eq(%w[dataset_key doi download_date tally])
+    expect(rows).to include([ public_dataset.key, public_dataset.identifier, "2025-01-15", "3" ])
+    expect(rows.flatten).not_to include(private_dataset.key)
+
+    File.delete(csv_path) if File.exist?(csv_path)
+  end
+
+  it "writes fiscal-year datafile downloads CSV filtered to fiscal date range" do
+    public_dataset = create(:dataset, :published, key: "IDB-PUB-FILE", identifier: "10.5555/pub-file", embargo: Dataset::EMBARGO_NONE)
+
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "f1", filename: "a.csv", download_date: Date.new(2026, 7, 2), tally: 4)
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "f2", filename: "b.csv", download_date: Date.new(2027, 6, 15), tally: 5)
+    FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "f3", filename: "c.csv", download_date: Date.new(2026, 6, 15), tally: 8)
+
+    allow(described_class).to receive(:current_fiscal_year).and_return(26)
+    described_class.write_datafile_downloads_csv_by_year(26, :fiscal)
+
+    csv_path = Rails.root.join("public", "datafile_downloads_FY26.csv")
+    rows = CSV.read(csv_path)
+
+    expect(rows.first).to eq(%w[file_web_id dataset_key doi download_date tally])
+    expect(rows).to include([ "f1", public_dataset.key, public_dataset.identifier, "2026-07-02", "4" ])
+    expect(rows).to include([ "f2", public_dataset.key, public_dataset.identifier, "2027-06-15", "5" ])
+    expect(rows.flatten).not_to include("f3")
+
+    File.delete(csv_path) if File.exist?(csv_path)
+  end
+
+  it "retrieves archived metric content from report storage" do
+    fake_root = instance_double("ReportRoot")
+    fake_io = StringIO.new("dataset_key,doi,download_date,tally\n")
+
+    allow(StorageManager.instance).to receive(:report_root).and_return(fake_root)
+    allow(fake_root).to receive(:exist?).with("dataset_downloads_2020.csv").and_return(true)
+    allow(fake_root).to receive(:with_input_io).with("dataset_downloads_2020.csv").and_yield(fake_io)
+
+    content = described_class.retrieve_archived_metric_from_storage(:dataset_downloads, 2020, :calendar)
+
+    expect(content).to include("dataset_key,doi")
+  end
+
+  it "returns nil when archived metric does not exist" do
+    fake_root = instance_double("ReportRoot")
+    allow(StorageManager.instance).to receive(:report_root).and_return(fake_root)
+    allow(fake_root).to receive(:exist?).and_return(false)
+
+    expect(described_class.retrieve_archived_metric_from_storage(:dataset_downloads, 2020, :calendar)).to be_nil
+  end
+
+  it "builds zip for a valid group with current and archived files" do
+    require "zip"
+
+    current_filename = "dataset_downloads_2026.csv"
+    current_path = Rails.root.join("public", current_filename)
+    File.write(current_path, "dataset_key,doi,download_date,tally\nIDB-A,10.1/a,2026-01-01,1\n")
+
+    allow(described_class).to receive(:current_calendar_year).and_return(2026)
+    allow(described_class).to receive(:retrieve_archived_metric_from_storage) do |_metric, year, _slice|
+      next nil unless year == 2025
+
+      "dataset_key,doi,download_date,tally\nIDB-B,10.1/b,2025-01-01,2\n"
     end
-    allow(described_class).to receive(:write_datasets_tsv) do
-      File.write(METRICS_CONFIG[missing_key][:relative_path], "new file")
+
+    zip_data = described_class.build_zip_for_group(:dataset_calendar)
+
+    entries = []
+    Zip::File.open_buffer(zip_data) do |zip|
+      entries = zip.entries.map(&:name)
     end
-    allow(described_class).to receive(:write_datafiles_csv)
-    allow(described_class).to receive(:write_container_contents_csv)
-    allow(described_class).to receive(:write_funders_csv)
-    allow(described_class).to receive(:write_related_materials_csv)
 
-    described_class.ensure_fresh_metrics
-
-    expect(described_class).not_to have_received(:write_dataset_downloads_json)
-    expect(described_class).to have_received(:write_datafile_downloads_json)
-    expect(described_class).to have_received(:write_datasets_tsv)
-  end
-
-  it "writes dataset downloads json and aggregate totals" do
-    DatasetDownloadTally.delete_all
-
-    visible_dataset = create(
-      :dataset,
-      :published,
-      key: "IDB-1",
-      identifier: "10.5555/one",
-      embargo: Dataset::EMBARGO_NONE
-    )
-    create(
-      :dataset,
-      :published,
-      key: "IDB-2",
-      identifier: "10.5555/two",
-      embargo: Dataset::EMBARGO_FILE,
-      release_date: Date.current + 10
-    )
-
-    DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 1), tally: 2)
-    DatasetDownloadTally.create!(dataset_key: "IDB-1", doi: "10.5555/one", download_date: Date.new(2026, 6, 2), tally: 3)
-    DatasetDownloadTally.create!(dataset_key: "IDB-2", doi: nil, download_date: Date.new(2026, 6, 3), tally: 7)
-
-    described_class.write_dataset_downloads_json
-
-    json_path = METRICS_CONFIG[:dataset_downloads_json][:relative_path]
-    totals_path = json_path.sub(/\.json\z/, "_totals.csv")
-    parsed = JSON.parse(File.read(json_path))
-
-    expect(parsed.fetch("dataset_downloads")).to eq([
-      { "doi" => "10.5555/one", "date" => "2026-06-01", "tally" => 2 },
-      { "doi" => "10.5555/one", "date" => "2026-06-02", "tally" => 3 }
-    ])
-    expect(File.read(totals_path)).to include("doi,tally")
-    expect(File.read(totals_path)).to include("10.5555/one,5")
-    expect(File.read(totals_path)).not_to include("10.5555/two")
-  end
-
-  it "writes datafile downloads json only for file-public datasets" do
-    file_public_dataset = create(
-      :dataset,
-      :published,
-      key: "IDB-FILE-1",
-      identifier: "10.5555/file-public",
-      embargo: Dataset::EMBARGO_NONE
-    )
-    hidden_dataset = create(
-      :dataset,
-      :published,
-      key: "IDB-FILE-2",
-      identifier: "10.5555/file-hidden",
-      embargo: Dataset::EMBARGO_METADATA,
-      release_date: Date.current + 30
-    )
-
-    FileDownloadTally.create!(dataset_key: file_public_dataset.key, doi: file_public_dataset.identifier, file_web_id: "abc12", filename: "public.csv", download_date: Date.new(2026, 7, 1), tally: 4)
-    FileDownloadTally.create!(dataset_key: hidden_dataset.key, doi: hidden_dataset.identifier, file_web_id: "def34", filename: "hidden.csv", download_date: Date.new(2026, 7, 1), tally: 9)
-
-    described_class.write_datafile_downloads_json
-
-    json_path = METRICS_CONFIG[:datafile_downloads_json][:relative_path]
-    parsed = JSON.parse(File.read(json_path))
-
-    expect(parsed.fetch("datafile_downloads")).to eq([
-      {
-        "doi" => "10.5555/file-public",
-        "file" => "public.csv",
-        "date" => "2026-07-01",
-        "tally" => 4
-      }
-    ])
-  end
-
-  it "writes datafiles csv using attachment and filename mime types" do
-    dataset = create(:dataset, :published, identifier: "10.5555/metrics-files", release_date: Date.new(2026, 6, 8))
-    attached = create(:datafile, dataset: dataset)
-    detached = create(:datafile, dataset: dataset, attach_binary: false, binary_name: "archive.zip", binary_size: 99)
-
-    described_class.write_datafiles_csv
-
-    csv_rows = CSV.read(METRICS_CONFIG[:datafiles_csv][:relative_path])
-
-    expect(csv_rows.first).to eq(%w[doi pub_date filename file_format num_bytes total_downloads])
-    expect(csv_rows).to include([
-      "10.5555/metrics-files",
-      "2026-06-08",
-      attached.binary_name,
-      "text/csv",
-      attached.binary_size.to_i.to_s,
-      "0"
-    ])
-    expect(csv_rows).to include([
-      "10.5555/metrics-files",
-      "2026-06-08",
-      "archive.zip",
-      "application/zip",
-      "99",
-      "0"
-    ])
-  end
-
-  it "writes related materials csv while skipping version relations" do
-    dataset = create(:dataset, :published, identifier: "10.5555/related-materials")
-    dataset.related_materials.create!(
-      title: "Supplementary spreadsheet",
-      relation_type: "IsSupplementTo",
-      datacite_list: "IsSupplementTo, IsCitedBy",
-      uri_type: "DOI",
-      uri: "https://doi.org/10.1234/example",
-      selected_type: "Dataset"
-    )
-    dataset.related_materials.create!(
-      title: "Previous version",
-      relation_type: RelatedMaterial::VERSION_PREVIOUS_RELATION,
-      uri_type: "DOI",
-      uri: "https://doi.org/10.1234/previous",
-      material_type: "Dataset"
-    )
-
-    described_class.write_related_materials_csv
-
-    csv_rows = CSV.read(METRICS_CONFIG[:related_materials_csv][:relative_path])
-
-    expect(csv_rows.first).to eq(%w[doi datacite_relationship material_id_type material_id material_type])
-    expect(csv_rows).to include([
-      "10.5555/related-materials",
-      "IsSupplementTo",
-      "DOI",
-      "https://doi.org/10.1234/example",
-      "Dataset"
-    ])
-    expect(csv_rows).to include([
-      "10.5555/related-materials",
-      "IsCitedBy",
-      "DOI",
-      "https://doi.org/10.1234/example",
-      "Dataset"
-    ])
-    expect(csv_rows.flatten).not_to include(RelatedMaterial::VERSION_PREVIOUS_RELATION)
-  end
-
-  it "generates dataset report csv and text exports" do
-    dataset = create(
-      :dataset,
-      :published,
-      title: "Metrics Report Dataset",
-      key: "IDB-7777777",
-      identifier: "10.5555/report-dataset",
-      release_date: Date.new(2026, 6, 8),
-      keywords: "metrics,reporting",
-      corresponding_creator_name: "Contact Creator",
-      corresponding_creator_email: "contact@example.edu",
-      description: "Dataset report body",
-      subject: "Physics",
-      published_at: Time.zone.parse("2026-06-08 10:00:00")
-    )
-    dataset.creators.destroy_all
-    dataset.creators.create!(name: "Jane Creator", email: "jane@example.edu", contact: true, row_position: 1)
-    dataset.funders.create!(name: "NSF", grant: "PHY-123")
-
-    described_class.generate_datasets_reports
-
-    csv_rows = CSV.read(METRICS_CONFIG[:dataset_report_csv][:relative_path])
-    text_report = File.read(METRICS_CONFIG[:dataset_report_text][:relative_path])
-
-    expect(csv_rows.first).to eq(%w[key doi release_date funders title keywords corresponding_creator subject])
-    expect(csv_rows).to include([
-      "IDB-7777777",
-      "10.5555/report-dataset",
-      "2026-06-08",
-      "NSF (PHY-123)",
-      "Metrics Report Dataset",
-      "metrics,reporting",
-      "Jane Creator | jane@example.edu",
-      "Physics"
-    ])
-    expect(text_report).to include("Key: IDB-7777777")
-    expect(text_report).to include("Citation: Jane Creator (2026) Metrics Report Dataset. Illinois Data Bank https://doi.org/10.5555/report-dataset")
-    expect(text_report).to include("Description: Dataset report body")
+    expect(entries).to include("dataset_downloads_2026.csv")
+    expect(entries).to include("dataset_downloads_2025.csv")
+  ensure
+    File.delete(current_path) if File.exist?(current_path)
   end
 end

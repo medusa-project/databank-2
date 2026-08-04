@@ -44,6 +44,8 @@ gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
 gem "csv", "~> 3.3"
+# ZIP archive support for download metrics bundle exports
+gem "rubyzip", "~> 2.4"
 # Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
 gem "net-imap", ">= 0.6.4.1"
 # Fix CVE in concurrent-ruby reported by CI security scan

@@ -1,8 +1,6 @@
 class MetricsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[
     index
-    dataset_downloads
-    file_downloads
     datafiles_simple_list
     datafiles_csv
     funders_csv
@@ -12,13 +10,14 @@ class MetricsController < ApplicationController
 
   before_action :require_admin_or_curator!, only: %i[
     admin_metrics
-    curator_download_metrics
-    download_metrics_breakdown
+    download_metrics
+    dataset_downloads_csv
+    datafile_downloads_csv
+    archived_download_metric
+    download_zip
   ]
 
   before_action :require_admin!, only: %i[
-    refresh_dataset_downloads
-    refresh_datafile_downloads
     refresh_datasets_tsv
     refresh_datafiles_csv
     refresh_container_csv
@@ -35,39 +34,66 @@ class MetricsController < ApplicationController
     @metric_definitions = Metric.admin_definitions
     @modified_times = Metric.modified_times
     @refresh_status = Metric.refresh_status
-    @download_metrics_summary = build_download_metrics_summary
     @title = "Curator Metrics"
   end
 
-  def curator_download_metrics
-    @download_metrics_summary = build_download_metrics_summary
-    @download_metrics_yearly_summary = build_download_metrics_yearly_summary
+  def download_metrics
+    begin
+      Metric.ensure_download_metrics
+    rescue StandardError => error
+      Rails.logger.error("Unable to ensure download metrics: #{error.message}")
+      flash.now[:alert] = "Some download metrics files are temporarily unavailable."
+    end
+
+    assign_download_metric_years
     @title = "Download Metrics"
   end
 
-  def download_metrics_breakdown
-    summary = build_download_metrics_summary
-    yearly = build_download_metrics_yearly_summary
-
-    render json: {
-      generated_at: Time.current.utc.iso8601,
-      current_calendar_year: summary[:current_calendar_year],
-      current_fiscal_year_label: summary[:current_fiscal_year_label],
-      summary: {
-        dataset: summary[:dataset],
-        datafile: summary[:datafile]
-      },
-      calendar_years: yearly[:calendar_rows],
-      fiscal_years: yearly[:fiscal_rows]
-    }
+  def dataset_downloads_csv
+    filename = Metric.filename_for_year_metric(:dataset_downloads, Metric.current_calendar_year, :calendar)
+    serve_metrics_file(Rails.root.join("public", filename), type: "text/csv")
   end
 
-  def dataset_downloads
-    serve_configured_metric_file(:dataset_downloads_json)
+  def datafile_downloads_csv
+    filename = Metric.filename_for_year_metric(:datafile_downloads, Metric.current_calendar_year, :calendar)
+    serve_metrics_file(Rails.root.join("public", filename), type: "text/csv")
   end
 
-  def file_downloads
-    serve_configured_metric_file(:datafile_downloads_json)
+  def archived_download_metric
+    metric_type = params[:metric_type]&.to_sym
+    raw_year = params[:year].to_s
+    slice_type = params[:slice_type]&.to_sym
+    year = raw_year.start_with?("FY") ? raw_year.delete_prefix("FY").to_i : raw_year.to_i
+
+    return head :bad_request unless metric_type.in?(%i[dataset_downloads datafile_downloads])
+    return head :bad_request unless slice_type.in?(%i[calendar fiscal])
+    return head :bad_request unless year > 1 && year < 2100
+
+    content = Metric.retrieve_archived_metric_from_storage(metric_type, year, slice_type)
+    return head :not_found unless content.present?
+
+    send_data(
+      content,
+      type: "text/csv",
+      filename: Metric.filename_for_year_metric(metric_type, year, slice_type),
+      disposition: "inline"
+    )
+  rescue StandardError => error
+    Rails.logger.error("Error retrieving archived metric #{metric_type}/#{year}/#{slice_type}: #{error.message}")
+    head :internal_server_error
+  end
+
+  def download_zip
+    group = params[:group].to_sym
+    return head :bad_request unless Metric::DOWNLOAD_ZIP_GROUPS.include?(group)
+
+    zip_data = Metric.build_zip_for_group(group)
+    send_data zip_data, type: "application/zip", filename: "#{group}_downloads.zip", disposition: "attachment"
+  rescue ArgumentError
+    head :bad_request
+  rescue StandardError => error
+    Rails.logger.error("Error building zip for group #{group}: #{error.message}")
+    head :internal_server_error
   end
 
   def datafiles_simple_list
@@ -95,12 +121,10 @@ class MetricsController < ApplicationController
     serve_configured_metric_file(:related_materials_csv)
   end
 
-  def refresh_dataset_downloads
-    enqueue_metric_refresh(metric_key: :dataset_downloads_json, label: "Dataset downloads JSON")
-  end
-
-  def refresh_datafile_downloads
-    enqueue_metric_refresh(metric_key: :datafile_downloads_json, label: "Datafile downloads JSON")
+  def assign_download_metric_years
+    @download_metrics_availability = Metrics::DownloadMetricsAvailability.new
+    @current_calendar_year = @download_metrics_availability.current_calendar_year
+    @current_fiscal_year = @download_metrics_availability.current_fiscal_year
   end
 
   def refresh_datasets_tsv
@@ -131,8 +155,6 @@ class MetricsController < ApplicationController
 
   def refresh_path_for(metric_key)
     {
-      dataset_downloads_json: refresh_dataset_downloads_metrics_path,
-      datafile_downloads_json: refresh_datafile_downloads_metrics_path,
       datasets_tsv: refresh_datasets_tsv_metrics_path,
       datafiles_csv: refresh_datafiles_csv_metrics_path,
       container_contents_csv: refresh_container_contents_csv_metrics_path,
@@ -182,79 +204,5 @@ class MetricsController < ApplicationController
     return if current_user&.admin?
 
     redirect_to metrics_path, alert: "You are not authorized to perform this action."
-  end
-
-  def build_download_metrics_summary
-    public_dataset_keys = Dataset.files_publicly_readable_now_scope.pluck(:key)
-    dataset_scope = DatasetDownloadTally.where(dataset_key: public_dataset_keys)
-    datafile_scope = FileDownloadTally.where(dataset_key: public_dataset_keys)
-
-    today = Date.current
-    calendar_range = Date.new(today.year, 1, 1)..Date.new(today.year, 12, 31)
-    fiscal_start_year = today.month >= 7 ? today.year : today.year - 1
-    fiscal_range = Date.new(fiscal_start_year, 7, 1)..Date.new(fiscal_start_year + 1, 6, 30)
-
-    {
-      current_calendar_year: today.year,
-      current_fiscal_year_label: format("FY%02d", fiscal_start_year % 100),
-      dataset: {
-        all_time: dataset_scope.sum(:tally),
-        current_calendar_year: dataset_scope.where(download_date: calendar_range).sum(:tally),
-        current_fiscal_year: dataset_scope.where(download_date: fiscal_range).sum(:tally)
-      },
-      datafile: {
-        all_time: datafile_scope.sum(:tally),
-        current_calendar_year: datafile_scope.where(download_date: calendar_range).sum(:tally),
-        current_fiscal_year: datafile_scope.where(download_date: fiscal_range).sum(:tally)
-      }
-    }
-  end
-
-  def build_download_metrics_yearly_summary
-    public_dataset_keys = Dataset.files_publicly_readable_now_scope.pluck(:key)
-    dataset_scope = DatasetDownloadTally.where(dataset_key: public_dataset_keys)
-    datafile_scope = FileDownloadTally.where(dataset_key: public_dataset_keys)
-
-    min_date = [ dataset_scope.minimum(:download_date), datafile_scope.minimum(:download_date) ].compact.min
-    today = Date.current
-
-    current_calendar_year = today.year
-    current_fiscal_start_year = today.month >= 7 ? today.year : today.year - 1
-
-    earliest_calendar_year = min_date ? min_date.year : current_calendar_year
-    earliest_fiscal_start_year = if min_date
-      min_date.month >= 7 ? min_date.year : min_date.year - 1
-    else
-      current_fiscal_start_year
-    end
-
-    calendar_years = (earliest_calendar_year..current_calendar_year).to_a.reverse.first(10)
-    fiscal_start_years = (earliest_fiscal_start_year..current_fiscal_start_year).to_a.reverse.first(10)
-
-    {
-      current_calendar_year: current_calendar_year,
-      current_fiscal_year_label: format_fiscal_label(current_fiscal_start_year),
-      calendar_rows: calendar_years.map do |year|
-        range = Date.new(year, 1, 1)..Date.new(year, 12, 31)
-        {
-          year_label: year.to_s,
-          dataset_downloads: dataset_scope.where(download_date: range).sum(:tally),
-          datafile_downloads: datafile_scope.where(download_date: range).sum(:tally)
-        }
-      end,
-      fiscal_rows: fiscal_start_years.map do |start_year|
-        range = Date.new(start_year, 7, 1)..Date.new(start_year + 1, 6, 30)
-        {
-          fiscal_year_label: format_fiscal_label(start_year),
-          date_range_label: "#{range.begin.iso8601} to #{range.end.iso8601}",
-          dataset_downloads: dataset_scope.where(download_date: range).sum(:tally),
-          datafile_downloads: datafile_scope.where(download_date: range).sum(:tally)
-        }
-      end
-    }
-  end
-
-  def format_fiscal_label(start_year)
-    format("FY%02d", start_year % 100)
   end
 end
