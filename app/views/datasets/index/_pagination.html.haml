@@ -1,0 +1,13 @@
+- nav_classes = ["datasets-pagination", local_assigns[:extra_classes]].compact.join(" ")
+%nav{class: nav_classes, aria: { label: label }}
+  - if @page > 1
+    = link_to "<", datasets_path(index_query_params(page: @page - 1)), class: "datasets-page-link", aria: { label: "Previous page" }
+  - pagination_items.each do |item|
+    - if item == :gap
+      %span.datasets-page-ellipsis{aria: { hidden: true }} ...
+    - elsif item == @page
+      %span.datasets-page-current{aria: { current: "page" }}= item
+    - else
+      = link_to item, datasets_path(index_query_params(page: item)), class: "datasets-page-link", aria: { label: "Page #{item}" }
+  - if @page < @total_pages
+    = link_to ">", datasets_path(index_query_params(page: @page + 1)), class: "datasets-page-link", aria: { label: "Next page" }

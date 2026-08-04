@@ -1,0 +1,27 @@
+%article.dataset-result-card.record
+  = render partial: "index/result_badges", locals: { dataset: dataset }
+
+  .record_citation
+    %h3.dataset-title
+      %a(href="/datasets/#{dataset.key}" class="dataset-link" id="link#{dataset.key}")
+        %strong= dataset.title.present? ? dataset.title : "(Untitled)"
+    = dataset_creator_list(dataset: dataset)
+    = "(#{dataset_publication_year(dataset: dataset)})"
+
+  - if dataset.description.present?
+    %div{ class: "more #{dataset.key}" }
+      = dataset.description
+
+  - if dataset.keywords.present?
+    .keyword_display
+      keywords:
+      = dataset.keywords
+  -if dataset.identifier.present?
+    .identifier_display
+      DOI:
+      =dataset.identifier
+  - if can?(:manage, dataset)
+    .depositor_display
+      %span.metadata-label Depositor:
+      = "#{dataset.depositor_name},"
+      = dataset.depositor_email

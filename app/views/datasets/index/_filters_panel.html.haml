@@ -1,0 +1,11 @@
+%section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
+  .datasets-filter-header
+    %h2#datasets-filters-heading.datasets-section-heading Filters
+    .datasets-filter-actions
+      = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "idb-button-secondary datasets-clear-filters"
+      - if @total_count.positive?
+        = link_to "Generate Report from Search Results", datasets_path(index_query_params(report: "generate")), class: "idb-button-primary datasets-generate-report-button"
+
+  - dataset_index_facets.each do |facet|
+    - next unless @available_facets.include?(facet[:key])
+    = render partial: "index/filter_facet", locals: { facet: facet }

@@ -1,0 +1,9 @@
+%section.datasets-results-panel{aria: { labelledby: "datasets-results-heading" }}
+  %h2#datasets-results-heading.datasets-section-heading Results
+
+  - if @datasets.any?
+    .datasets-results-list
+      - @datasets.each do |dataset|
+        = render partial: "index/result_card", locals: { dataset: dataset }
+  - else
+    %p.no-results No datasets found.

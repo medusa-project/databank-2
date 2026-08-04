@@ -1,0 +1,9 @@
+- if dataset.description.present?
+  - description_preview = dataset_description_preview(description: dataset.description)
+  - if description_preview.present?
+    %p.dataset-result-description{data: { controller: "description-toggle", description_toggle_more_label_value: "more description", description_toggle_less_label_value: "less description" }}
+      %span= "#{description_preview[:preview]}..."
+      %span{data: { description_toggle_target: "remainder" }, hidden: true}= description_preview[:remainder]
+      = button_tag "more description", type: "button", class: "dataset-description-toggle", data: { action: "description-toggle#toggle", description_toggle_target: "button" }, aria: { expanded: false }
+  - else
+    %p.dataset-result-description= dataset.description
