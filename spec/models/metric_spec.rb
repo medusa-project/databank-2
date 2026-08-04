@@ -97,7 +97,7 @@ RSpec.describe Metric, type: :model do
     rows = CSV.read(csv_path)
 
     expect(rows.first).to eq(%w[dataset_key doi download_date tally])
-    expect(rows).to include([public_dataset.key, public_dataset.identifier, "2025-01-15", "3"])
+    expect(rows).to include([ public_dataset.key, public_dataset.identifier, "2025-01-15", "3" ])
     expect(rows.flatten).not_to include(private_dataset.key)
 
     File.delete(csv_path) if File.exist?(csv_path)
@@ -117,8 +117,8 @@ RSpec.describe Metric, type: :model do
     rows = CSV.read(csv_path)
 
     expect(rows.first).to eq(%w[file_web_id dataset_key doi download_date tally])
-    expect(rows).to include(["f1", public_dataset.key, public_dataset.identifier, "2026-07-02", "4"])
-    expect(rows).to include(["f2", public_dataset.key, public_dataset.identifier, "2027-06-15", "5"])
+    expect(rows).to include([ "f1", public_dataset.key, public_dataset.identifier, "2026-07-02", "4" ])
+    expect(rows).to include([ "f2", public_dataset.key, public_dataset.identifier, "2027-06-15", "5" ])
     expect(rows.flatten).not_to include("f3")
 
     File.delete(csv_path) if File.exist?(csv_path)

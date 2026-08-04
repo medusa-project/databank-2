@@ -8,12 +8,12 @@ RSpec.describe Metrics::DownloadMetricsAvailability do
   before do
     allow(metric_model).to receive(:year_metric_available?) do |metric_type:, year:, slice_type:|
       [
-        [:dataset_downloads, 2026, :calendar],
-        [:dataset_downloads, 2024, :calendar],
-        [:dataset_downloads, 25, :fiscal],
-        [:datafile_downloads, 26, :fiscal],
-        [:datafile_downloads, 2023, :calendar]
-      ].include?([metric_type, year, slice_type])
+        [ :dataset_downloads, 2026, :calendar ],
+        [ :dataset_downloads, 2024, :calendar ],
+        [ :dataset_downloads, 25, :fiscal ],
+        [ :datafile_downloads, 26, :fiscal ],
+        [ :datafile_downloads, 2023, :calendar ]
+      ].include?([ metric_type, year, slice_type ])
     end
   end
 
@@ -32,12 +32,12 @@ RSpec.describe Metrics::DownloadMetricsAvailability do
 
     expect(dataset.current_available?(:calendar)).to be(true)
     expect(dataset.current_available?(:fiscal)).to be(false)
-    expect(dataset.prior_calendar_years).to eq([2024])
-    expect(dataset.prior_fiscal_years).to eq([25])
+    expect(dataset.prior_calendar_years).to eq([ 2024 ])
+    expect(dataset.prior_fiscal_years).to eq([ 25 ])
 
     expect(datafile.current_available?(:calendar)).to be(false)
     expect(datafile.current_available?(:fiscal)).to be(true)
-    expect(datafile.prior_calendar_years).to eq([2023])
+    expect(datafile.prior_calendar_years).to eq([ 2023 ])
     expect(datafile.prior_fiscal_years).to eq([])
   end
 

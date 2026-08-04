@@ -158,7 +158,7 @@ class Metric
       current_fis_year = current_fiscal_year
 
       %i[dataset_downloads datafile_downloads].each do |metric_type|
-        [ [current_cal_year, :calendar], [current_fis_year, :fiscal] ].each do |year, slice_type|
+        [ [ current_cal_year, :calendar ], [ current_fis_year, :fiscal ] ].each do |year, slice_type|
           filename = filename_for_year_metric(metric_type, year, slice_type)
           path = Rails.root.join("public", filename)
           if !File.exist?(path) || File.mtime(path) < 1.day.ago
@@ -183,7 +183,7 @@ class Metric
       start_year = 2000 + fiscal_year
       start_date = Date.new(start_year, FISCAL_YEAR_START_MONTH, 1)
       end_date = Date.new(start_year + 1, FISCAL_YEAR_START_MONTH, 1) - 1.day
-      [start_date, end_date]
+      [ start_date, end_date ]
     end
 
     def year_is_current?(year, slice_type)
@@ -335,7 +335,7 @@ class Metric
         CSV.open(target_path, "w") do |report|
           report << DATASET_DOWNLOADS_CSV_HEADINGS
           scope.find_each do |row|
-            report << [row.dataset_key, row.doi, row.download_date, row.tally]
+            report << [ row.dataset_key, row.doi, row.download_date, row.tally ]
           end
         end
 
@@ -358,7 +358,7 @@ class Metric
         CSV.open(target_path, "w") do |report|
           report << DATAFILE_DOWNLOADS_CSV_HEADINGS
           scope.find_each do |row|
-            report << [row.file_web_id, row.dataset_key, row.doi, row.download_date, row.tally]
+            report << [ row.file_web_id, row.dataset_key, row.doi, row.download_date, row.tally ]
           end
         end
 
@@ -531,7 +531,7 @@ class Metric
       normalized_group = group.to_sym
       raise ArgumentError, "Invalid group: #{group}" unless DOWNLOAD_ZIP_GROUPS.include?(normalized_group)
 
-      metric_type, slice_type = normalized_group.to_s.split("_").then { |metric, slice| ["#{metric}_downloads".to_sym, slice.to_sym] }
+      metric_type, slice_type = normalized_group.to_s.split("_").then { |metric, slice| [ "#{metric}_downloads".to_sym, slice.to_sym ] }
       current_year = slice_type == :fiscal ? current_fiscal_year : current_calendar_year
       first_year = slice_type == :fiscal ? FIRST_DOWNLOAD_FISCAL_YEAR : FIRST_DOWNLOAD_CALENDAR_YEAR
 

@@ -94,15 +94,15 @@ RSpec.describe "Metrics", type: :request do
 
     allow(Metric).to receive(:year_metric_available?) do |metric_type:, year:, slice_type:|
       [
-        [metric_type, year, slice_type],
-        [metric_type, year.to_i, slice_type]
+        [ metric_type, year, slice_type ],
+        [ metric_type, year.to_i, slice_type ]
       ].any? do |triple|
         [
-          [:dataset_downloads, 2026, :calendar],
-          [:dataset_downloads, 2024, :calendar],
-          [:dataset_downloads, 25, :fiscal],
-          [:datafile_downloads, 26, :fiscal],
-          [:datafile_downloads, 2023, :calendar]
+          [ :dataset_downloads, 2026, :calendar ],
+          [ :dataset_downloads, 2024, :calendar ],
+          [ :dataset_downloads, 25, :fiscal ],
+          [ :datafile_downloads, 26, :fiscal ],
+          [ :datafile_downloads, 2023, :calendar ]
         ].include?(triple)
       end
     end

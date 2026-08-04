@@ -205,5 +205,4 @@ class MetricsController < ApplicationController
 
     redirect_to metrics_path, alert: "You are not authorized to perform this action."
   end
-
 end
