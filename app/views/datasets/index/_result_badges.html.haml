@@ -40,12 +40,6 @@
   &nbsp;
 
 - if can?(:read, dataset) && dataset.release_date.present? && dataset.publicly_readable_now?
-  - release_label = if dataset.release_date > Date.current
-      "planned publication date"
-    elsif dataset.published?
-      "published"
-    else
-      "release date"
-    end
+  - release_label = dataset.release_date > Date.current ? "planned publication date" : (dataset.published? ? "published" : "release date")
   = semantic_badge(kind: :status_ok, tone: "primary", label: "#{release_label}: #{dataset.release_date.iso8601}", icon: "calendar-check", icon_style: :solid, sr_label: "#{release_label.humanize} #{dataset.release_date.iso8601}")
   &nbsp;
