@@ -4,6 +4,6 @@
   - if @datasets.any?
     .datasets-results-list
       - @datasets.each do |dataset|
-        = render partial: "index/result_card", locals: { dataset: dataset }
+        = render partial: "datasets/index/result_card", locals: { dataset: dataset }
   - else
     %p.no-results No datasets found.

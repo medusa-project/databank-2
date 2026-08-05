@@ -8,4 +8,4 @@
 
   - dataset_index_facets.each do |facet|
     - next unless @available_facets.include?(facet[:key])
-    = render partial: "index/filter_facet", locals: { facet: facet }
+    = render partial: "datasets/index/filter_facet", locals: { facet: facet }

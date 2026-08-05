@@ -12,7 +12,7 @@
     %p.datasets-results-count{aria: { live: "polite" }}= dataset_results_count_text(search: @search, datasets: @datasets, total_count: @total_count)
 
   - if @total_pages > 1
-    = render partial: "index/pagination", locals: { label: "Results pagination (top)", extra_classes: "datasets-pagination-top" }
+    = render partial: "datasets/index/pagination", locals: { label: "Results pagination (top)", extra_classes: "datasets-pagination-top" }
 
   .datasets-per-page-control
     = f.label :per_page, "Results per page", class: "sr-only"
