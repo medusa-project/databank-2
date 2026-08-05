@@ -43,6 +43,52 @@ RSpec.describe "Datasets search", type: :request do
     expect(response.body).not_to include("Marine Biology Survey")
   end
 
+  it "searches published datasets by identifier" do
+    dataset = Dataset.create!(
+      title: "Identifier Lookup Dataset",
+      description: "Matches by DOI identifier",
+      keywords: "identifier-search",
+      subject: "Earth Systems",
+      identifier: "10.5555/IDB-IDENTIFIER-LOOKUP",
+      owner_uid: "owner-identifier-lookup",
+      depositor_name: "Owner Identifier Lookup",
+      depositor_email: "owner-identifier-lookup@example.edu",
+      publication_state: :published
+    )
+
+    get datasets_path, params: { q: "10.5555/IDB-IDENTIFIER-LOOKUP" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(dataset.title)
+    expect(response.body).to include(dataset.identifier)
+  end
+
+  it "searches published datasets by DOI-prefixed and resolver URL identifier queries" do
+    dataset = Dataset.create!(
+      title: "Flexible Identifier Lookup Dataset",
+      description: "Matches by normalized identifier queries",
+      keywords: "identifier-search-flexible",
+      subject: "Earth Systems",
+      identifier: "10.5555/IDB-FLEXIBLE-LOOKUP",
+      owner_uid: "owner-flexible-lookup",
+      depositor_name: "Owner Flexible Lookup",
+      depositor_email: "owner-flexible-lookup@example.edu",
+      publication_state: :published
+    )
+
+    [
+      "doi:10.5555/IDB-FLEXIBLE-LOOKUP",
+      "https://doi.org/10.5555/IDB-FLEXIBLE-LOOKUP",
+      "https://dx.doi.org/10.5555/IDB-FLEXIBLE-LOOKUP"
+    ].each do |query|
+      get datasets_path, params: { q: query }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(dataset.title)
+      expect(response.body).to include(dataset.identifier)
+    end
+  end
+
   it "does not show draft datasets to guests in search results" do
     Dataset.create!(
       title: "Draft Climate Dataset",

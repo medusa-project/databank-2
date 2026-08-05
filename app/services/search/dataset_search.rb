@@ -102,13 +102,35 @@ module Search
       return relation if @query.blank?
 
       q = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
+      identifier_query_variants = normalized_identifier_query_variants
+      identifier_conditions = identifier_query_variants.each_index.map { |index| "datasets.identifier ILIKE :identifier_q#{index}" }
+      binds = identifier_query_variants.each_with_index.each_with_object({ q: q }) do |(variant, index), query_binds|
+        query_binds["identifier_q#{index}".to_sym] = "%#{ActiveRecord::Base.sanitize_sql_like(variant)}%"
+      end
+
       relation
         .left_joins(:funders)
         .where(
-          "datasets.title ILIKE :q OR datasets.description ILIKE :q OR datasets.keywords ILIKE :q OR datasets.subject ILIKE :q OR funders.name ILIKE :q",
-          q: q
+          [
+            "datasets.title ILIKE :q",
+            "datasets.description ILIKE :q",
+            "datasets.keywords ILIKE :q",
+            "datasets.subject ILIKE :q",
+            *identifier_conditions,
+            "funders.name ILIKE :q"
+          ].join(" OR "),
+          binds
         )
         .distinct
+    end
+
+    def normalized_identifier_query_variants
+      variants = [ @query ]
+      stripped = @query.dup
+      stripped.sub!(/\A(?:doi:\s*|https?:\/\/(?:dx\.)?doi\.org\/)/i, "")
+      stripped = stripped.strip.delete_suffix("/")
+      variants << stripped if stripped.present? && stripped != @query
+      variants.uniq
     end
 
     def filter_by_subjects(relation)
