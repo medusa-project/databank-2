@@ -194,13 +194,38 @@
 
 .datasets-results-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.45rem;
 }
 
 .dataset-result-card {
   border-left: 3px solid #d6dde6;
   background: #fff;
-  padding: 0.5rem 0.6rem 0.7rem;
+  padding: 0.42rem 0.58rem 0.52rem;
+  line-height: 1.35;
+}
+
+.dataset-result-card .curator-only {
+  margin: 0 0 0.2rem;
+}
+
+.dataset-result-card .record_citation {
+  margin: 0;
+}
+
+.dataset-result-card .dataset-title {
+  margin: 0 0 0.08rem;
+  line-height: 1.2;
+}
+
+.dataset-result-card .more {
+  margin: 0.16rem 0 0.2rem;
+  line-height: 1.35;
+}
+
+.dataset-result-card .keyword_display,
+.dataset-result-card .identifier_display,
+.dataset-result-card .depositor_display {
+  margin: 0.1rem 0 0;
 }
 
 .dataset-result-curator-badges {
