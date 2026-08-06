@@ -363,7 +363,8 @@ class Dataset < ApplicationRecord
       end
     end
 
-    content += "\n[ #{'File'.pluralize(datafiles.count)} (#{datafiles.count}): ]\n"
+    file_count = datafiles.size
+    content += "\n[ #{'File'.pluralize(file_count)} (#{file_count}): ]\n"
     datafiles.order(:id).each do |datafile|
       formatted_size = ActionController::Base.helpers.number_to_human_size(datafile.binary_size.to_i)
       content += ". #{datafile.binary_name}, #{formatted_size}\n"

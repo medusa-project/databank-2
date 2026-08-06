@@ -485,11 +485,24 @@ class DatasetsController < ApplicationController
   private
 
   def set_dataset
-    @dataset = Dataset.find_by!(key: params[:id])
+    @dataset = dataset_lookup_scope.find_by!(key: params[:id])
 
     unless @dataset.publicly_readable_now? || logged_in?
       redirect_to login_path, alert: "Please sign in to continue."
     end
+  end
+
+  def dataset_lookup_scope
+    return Dataset.all unless action_name == "show"
+
+    Dataset.includes(
+      :contributors,
+      :creators,
+      :funders,
+      :related_materials,
+      :version_requests,
+      datafiles: [ :nested_items, { binary_attachment: :blob } ]
+    )
   end
 
   def build_version_comparison(current:, previous:)

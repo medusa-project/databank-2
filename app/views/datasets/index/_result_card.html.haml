@@ -8,9 +8,7 @@
     = dataset_creator_list(dataset: dataset)
     = "(#{dataset_publication_year(dataset: dataset)})"
 
-  - if dataset.description.present?
-    %div{ class: "more #{dataset.key}" }
-      = dataset.description
+  = render partial: "datasets/index/result_description", locals: { dataset: dataset }
 
   - if dataset.keywords.present?
     .keyword_display

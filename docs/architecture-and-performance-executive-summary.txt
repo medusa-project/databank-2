@@ -1,0 +1,36 @@
+Illinois Data Bank Rewrite (databank to databank-2)
+Executive Summary
+Date: 2026-08-06
+
+Project intent
+The rewrite to databank-2 was designed to improve user-perceived performance, modernize the frontend architecture, and reduce operational complexity in core workflows such as dataset discovery and long-form help content (Guides and Policies).
+
+Key outcomes to date
+1. Modernized web stack
+- databank-2 moves to a newer Rails runtime and modern Rails frontend patterns (Hotwire/Stimulus, importmap, tokenized CSS architecture).
+- This reduces dependency on broad, legacy jQuery/Bootstrap plugin initialization patterns.
+
+2. Search architecture simplification
+- Legacy Solr/Sunspot search has been replaced with application-level ActiveRecord/PostgreSQL search in databank-2.
+- Identifier lookup now supports normalized DOI input forms and includes an exact-match fast path before fuzzy fallback.
+- This improves DOI query precision while preserving flexible search behavior.
+
+3. Better side navigation model for Guides and Policies
+- databank-2 uses a sticky TOC layout and a focused Stimulus controller for section tracking and in-page navigation.
+- Compared with legacy scrollspy/affix behavior, this should provide smoother interaction and lower client-side overhead on long content pages.
+
+4. Expected performance profile
+- Reasonable expectation of better load and interaction responsiveness for navigation-heavy pages due to reduced frontend bootstrap overhead and cleaner page-specific behavior.
+- Reasonable expectation of simpler, more predictable operations without a separate Solr runtime dependency for dataset search.
+- Remaining performance results still depend on deployment tuning (DB sizing/indexing, caching/compression, and content payload characteristics).
+
+Recommended report structure
+1. Executive Summary (this section)
+2. Architecture Differences (legacy vs databank-2)
+3. Search and Data Access Changes
+4. Guides/Policies Side Navigation Performance
+5. Dataset Show Page Load Performance (including 50-200 datafile scenarios)
+6. Risks, Caveats, and Next Optimization Steps
+
+Bottom line
+The databank-2 rewrite is directionally correct for the stated goals: faster perceived UX, a more maintainable and modern UI architecture, and better long-term performance tuning leverage.
