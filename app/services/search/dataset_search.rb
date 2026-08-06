@@ -101,24 +101,32 @@ module Search
     def relation_with_query(relation)
       return relation if @query.blank?
 
-      q = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
-      identifier_query_variants = normalized_identifier_query_variants
-      identifier_conditions = identifier_query_variants.each_index.map { |index| "datasets.identifier ILIKE :identifier_q#{index}" }
-      binds = identifier_query_variants.each_with_index.each_with_object({ q: q }) do |(variant, index), query_binds|
-        query_binds["identifier_q#{index}".to_sym] = "%#{ActiveRecord::Base.sanitize_sql_like(variant)}%"
+      query_variants = normalized_identifier_query_variants
+      exact_identifier = normalized_identifier_exact_match_value
+      if exact_identifier.present?
+        exact_match_relation = relation.where(identifier: exact_identifier)
+        return exact_match_relation if exact_match_relation.exists?
+      end
+
+      variant_conditions = query_variants.each_index.map do |index|
+        [
+          "datasets.title ILIKE :q#{index}",
+          "datasets.description ILIKE :q#{index}",
+          "datasets.keywords ILIKE :q#{index}",
+          "datasets.subject ILIKE :q#{index}",
+          "datasets.identifier ILIKE :q#{index}",
+          "funders.name ILIKE :q#{index}"
+        ].join(" OR ")
+      end
+
+      binds = query_variants.each_with_index.each_with_object({}) do |(variant, index), query_binds|
+        query_binds["q#{index}".to_sym] = "%#{ActiveRecord::Base.sanitize_sql_like(variant)}%"
       end
 
       relation
         .left_joins(:funders)
         .where(
-          [
-            "datasets.title ILIKE :q",
-            "datasets.description ILIKE :q",
-            "datasets.keywords ILIKE :q",
-            "datasets.subject ILIKE :q",
-            *identifier_conditions,
-            "funders.name ILIKE :q"
-          ].join(" OR "),
+          variant_conditions.map { |condition| "(#{condition})" }.join(" OR "),
           binds
         )
         .distinct
@@ -131,6 +139,15 @@ module Search
       stripped = stripped.strip.delete_suffix("/")
       variants << stripped if stripped.present? && stripped != @query
       variants.uniq
+    end
+
+    def normalized_identifier_exact_match_value
+      normalized_identifier_query_variants.find { |value| doi_like_query?(value: value) }
+    end
+
+    def doi_like_query?(value:)
+      normalized = value.to_s.strip
+      normalized.match?(/\A10\.\d{4,9}\/.+/i)
     end
 
     def filter_by_subjects(relation)

@@ -89,6 +89,59 @@ RSpec.describe "Datasets search", type: :request do
     end
   end
 
+  it "prefers exact identifier matches for DOI-like queries" do
+    identifier = "10.5555/IDB-EXACT-FAST-PATH"
+
+    exact_dataset = Dataset.create!(
+      title: "Exact Identifier Dataset",
+      description: "Exact DOI match",
+      keywords: "exact-doi",
+      subject: "Earth Systems",
+      identifier: identifier,
+      owner_uid: "owner-exact-doi",
+      depositor_name: "Owner Exact DOI",
+      depositor_email: "owner-exact-doi@example.edu",
+      publication_state: :published
+    )
+
+    fuzzy_only_dataset = Dataset.create!(
+      title: "Contains #{identifier} In Title",
+      description: "Should be excluded when exact DOI hit exists",
+      keywords: "exact-doi",
+      subject: "Earth Systems",
+      owner_uid: "owner-fuzzy-doi",
+      depositor_name: "Owner Fuzzy DOI",
+      depositor_email: "owner-fuzzy-doi@example.edu",
+      publication_state: :published
+    )
+
+    get datasets_path, params: { q: "doi:#{identifier}" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(exact_dataset.title)
+    expect(response.body).not_to include(fuzzy_only_dataset.title)
+  end
+
+  it "falls back to fuzzy search when exact DOI identifier is not found" do
+    query_identifier = "10.5555/IDB-NO-EXACT-HIT"
+
+    fuzzy_dataset = Dataset.create!(
+      title: "Fuzzy fallback #{query_identifier}",
+      description: "Found by title when exact DOI identifier is absent",
+      keywords: "fallback-doi",
+      subject: "Earth Systems",
+      owner_uid: "owner-fallback-doi",
+      depositor_name: "Owner Fallback DOI",
+      depositor_email: "owner-fallback-doi@example.edu",
+      publication_state: :published
+    )
+
+    get datasets_path, params: { q: "https://doi.org/#{query_identifier}" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(fuzzy_dataset.title)
+  end
+
   it "does not show draft datasets to guests in search results" do
     Dataset.create!(
       title: "Draft Climate Dataset",
