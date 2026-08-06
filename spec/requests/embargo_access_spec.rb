@@ -233,4 +233,34 @@ RSpec.describe "Embargo access", type: :request do
     expect(response.body).to include(dataset_path(dataset))
     expect(response.body).to include("Depositor")
   end
+
+  it "hides metadata-suppressed hold datasets from guests" do
+    dataset = create(:dataset, :published,
+      title: "Hold Metadata Suppressed Dataset",
+      embargo: Dataset::EMBARGO_NONE,
+      hold_state: Dataset::HOLD_TEMP_METADATA
+    )
+
+    get datasets_path, params: { q: "Hold Metadata Suppressed Dataset" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include(dataset_path(dataset))
+  end
+
+  it "shows file-suppressed hold datasets in public search but blocks guest file download" do
+    dataset = create(:dataset, :published,
+      title: "Hold File Suppressed Dataset",
+      embargo: Dataset::EMBARGO_NONE,
+      hold_state: Dataset::HOLD_TEMP_FILE
+    )
+    datafile = create(:datafile, dataset: dataset)
+
+    get datasets_path, params: { q: "Hold File Suppressed Dataset" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(dataset_path(dataset))
+
+    get download_dataset_datafile_path(dataset, datafile)
+    expect(response).to have_http_status(:forbidden)
+  end
 end

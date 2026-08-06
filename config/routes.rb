@@ -25,9 +25,22 @@ Rails.application.routes.draw do
     member do
       get :pre_version
       get :version_controls
+      get :suppression_controls
       get :download_metrics, defaults: { format: :json }
       get :record_text
       get :confirm_review
+      post :suppression_action
+      get :suppress_changelog
+      get :unsuppress_changelog
+      get :temporarily_suppress_files
+      get :temporarily_suppress_metadata
+      get :unsuppress
+      get :permanently_suppress_files
+      get :permanently_suppress_metadata
+      get :suppress_review
+      get :unsuppress_review
+      get :draft_to_version
+      get :version_to_draft
       post :get_current_token, defaults: { format: :json }
       post :get_new_token, defaults: { format: :json }
       post :request_review

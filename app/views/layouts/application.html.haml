@@ -3,9 +3,9 @@
 %html{lang: "en"}
   %head
     - if page_title.present?
-      %title= "#{page_title} | Illinois Data Bank | Illinois"
+      %title= "#{page_title} | Data Bank | Illinois"
     - else
-      %title Illinois Data Bank | Illinois
+      %title Data Bank | Illinois
     %meta{charset: "utf-8"}/
     %meta{"http-equiv" => "Content-Type", content: "text/html; charset=UTF-8"}/
     %meta{name: "viewport", content: "width=device-width,initial-scale=1"}/
@@ -48,11 +48,13 @@
     = csrf_meta_tags
     = csp_meta_tag
     - if @dataset&.published?
-      %meta{name: "citation_title", content: @dataset.title}/
-      %meta{name: "citation_publisher", content: "Illinois Data Bank"}/
-      - if @dataset.identifier.present?
-        %meta{name: "citation_doi", content: @dataset.identifier}/
-      %meta{name: "citation_language", content: "en"}/
+ - if @dataset && @dataset.publication_state && @dataset.publication_state != Databank::PublicationState::DRAFT
+      %meta{:content => "#{@dataset.title}", :name => "citation_title"}/
+      %meta{:content => "#{@dataset.creator_list}", :name => "citation_author"}/
+      %meta{:content => "#{@dataset.publisher}", :name => "citation_publisher"}/
+      %meta{:content => "#{@dataset.publication_year}", :name => "citation_publication_date"}/
+      %meta{:content => "#{@dataset.identifier}", :name => "citation_doi"}/
+      %meta{:content => "en", :name => "citation_language"}/
   %body{style: "margin: 0; padding: 0;", data: {controller: "navigation"}}
     %ilw-page
       = render "shared/header"

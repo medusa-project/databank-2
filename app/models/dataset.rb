@@ -55,6 +55,14 @@ class Dataset < ApplicationRecord
   EMBARGO_FILE = "file".freeze
   EMBARGO_METADATA = "metadata".freeze
   EMBARGO_OPTIONS = [ EMBARGO_NONE, EMBARGO_FILE, EMBARGO_METADATA ].freeze
+  HOLD_NONE = "none".freeze
+  HOLD_TEMP_FILE = "files temporarily suppressed".freeze
+  HOLD_TEMP_METADATA = "metadata temporarily suppressed".freeze
+  HOLD_TEMP_VERSION = "version candidate under curator review".freeze
+  HOLD_PERM_FILE = "files permanently suppressed".freeze
+  HOLD_PERM_METADATA = "metadata permanently suppressed".freeze
+  HOLD_METADATA_BLOCKING_STATES = [ HOLD_TEMP_METADATA, HOLD_PERM_METADATA, HOLD_TEMP_VERSION ].freeze
+  HOLD_FILE_BLOCKING_STATES = [ HOLD_TEMP_FILE, HOLD_PERM_FILE, HOLD_TEMP_METADATA, HOLD_PERM_METADATA, HOLD_TEMP_VERSION ].freeze
   CREATOR_TYPE_PERSON = 0
   CREATOR_TYPE_INSTITUTION = 1
 
@@ -96,14 +104,18 @@ class Dataset < ApplicationRecord
     published.where(is_test: false).where(
       <<~SQL.squish,
         COALESCE(NULLIF(embargo, ''), :none) <> :metadata
+        AND COALESCE(NULLIF(hold_state, ''), :hold_none) NOT IN (:metadata_holds)
         OR (
           COALESCE(NULLIF(embargo, ''), :none) = :metadata
           AND release_date IS NOT NULL
           AND release_date <= :today
+          AND COALESCE(NULLIF(hold_state, ''), :hold_none) NOT IN (:metadata_holds)
         )
       SQL
       none: EMBARGO_NONE,
       metadata: EMBARGO_METADATA,
+      hold_none: HOLD_NONE,
+      metadata_holds: HOLD_METADATA_BLOCKING_STATES,
       today: Date.current
     )
   }
@@ -112,15 +124,19 @@ class Dataset < ApplicationRecord
     published.where(is_test: false).where(
       <<~SQL.squish,
         COALESCE(NULLIF(embargo, ''), :none) NOT IN (:file, :metadata)
+        AND COALESCE(NULLIF(hold_state, ''), :hold_none) NOT IN (:file_holds)
         OR (
           COALESCE(NULLIF(embargo, ''), :none) IN (:file, :metadata)
           AND release_date IS NOT NULL
           AND release_date <= :today
+          AND COALESCE(NULLIF(hold_state, ''), :hold_none) NOT IN (:file_holds)
         )
       SQL
       none: EMBARGO_NONE,
       file: EMBARGO_FILE,
       metadata: EMBARGO_METADATA,
+      hold_none: HOLD_NONE,
+      file_holds: HOLD_FILE_BLOCKING_STATES,
       today: Date.current
     )
   }
@@ -257,11 +273,30 @@ class Dataset < ApplicationRecord
   end
 
   def curator_visibility_label
-    return "Draft" if draft?
-    return "Metadata and Files Publication Delayed (Embargoed)" if metadata_embargoed? && !embargo_released?
-    return "Metadata Published, Files Publication Delayed (Embargoed)" if file_embargoed? && !embargo_released?
+    visibility
+  end
 
-    "Published"
+  def visibility
+    return "Unsaved Draft" if new_record?
+
+    case hold_state_mode
+    when HOLD_TEMP_METADATA
+      "Metadata and Files Temporarily Suppressed"
+    when HOLD_TEMP_FILE
+      "Metadata Published, Files Temporarily Suppressed"
+    when HOLD_PERM_FILE
+      "Metadata Published, Files Withdrawn"
+    when HOLD_PERM_METADATA
+      "Withdrawn"
+    when HOLD_TEMP_VERSION
+      "Version Candidate Under Curator Review"
+    else
+      return "Draft" if draft?
+      return "Metadata and Files Publication Delayed (Embargoed)" if metadata_embargoed? && !embargo_released?
+      return "Metadata Published, Files Publication Delayed (Embargoed)" if file_embargoed? && !embargo_released?
+
+      "Metadata and Files Published"
+    end
   end
 
   def has_sharing_link?
@@ -300,9 +335,22 @@ class Dataset < ApplicationRecord
     release_date.present? && release_date <= on_date
   end
 
+  def hold_state_mode
+    hold_state.to_s.strip.presence || HOLD_NONE
+  end
+
+  def hold_blocks_public_metadata?
+    HOLD_METADATA_BLOCKING_STATES.include?(hold_state_mode)
+  end
+
+  def hold_blocks_public_files?
+    HOLD_FILE_BLOCKING_STATES.include?(hold_state_mode)
+  end
+
   def publicly_readable_now?(on_date: Date.current)
     return false if is_test?
     return false unless published?
+    return false if hold_blocks_public_metadata?
     return true unless metadata_embargoed?
 
     embargo_released?(on_date: on_date)
@@ -311,6 +359,7 @@ class Dataset < ApplicationRecord
   def files_publicly_readable_now?(on_date: Date.current)
     return false if is_test?
     return false unless published?
+    return false if hold_blocks_public_files?
     return true unless file_embargoed? || metadata_embargoed?
 
     embargo_released?(on_date: on_date)

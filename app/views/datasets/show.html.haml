@@ -293,12 +293,15 @@
               %p
                 No change log entries available.
 
-  - if logged_in? && can?(:review_versions, @dataset)
+  - if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator controls" }}
       %details.idb-section-disclosure.dataset-show-disclosure{open: true}
         %summary
           %h2.dataset-show-section-title Curator Controls
         .idb-section-body
+          - if can?(:manage, @dataset)
+            %p
+              = link_to "Suppression Controls", suppression_controls_dataset_path(@dataset), class: "idb-button-danger"
           %p
             = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
           %p
