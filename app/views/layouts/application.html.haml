@@ -48,7 +48,6 @@
     = csrf_meta_tags
     = csp_meta_tag
     - if @dataset&.published?
- - if @dataset && @dataset.publication_state && @dataset.publication_state != Databank::PublicationState::DRAFT
       %meta{:content => "#{@dataset.title}", :name => "citation_title"}/
       %meta{:content => "#{@dataset.creator_list}", :name => "citation_author"}/
       %meta{:content => "#{@dataset.publisher}", :name => "citation_publisher"}/

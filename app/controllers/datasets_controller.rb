@@ -79,6 +79,13 @@ class DatasetsController < ApplicationController
   def request_review
     authorize! :update, @dataset
     @dataset.update_column(:identifier, @dataset.generate_doi) if @dataset.identifier.blank?
+    review_request = ReviewRequest.create!(
+      dataset: @dataset,
+      requester_name: current_user.name,
+      requester_email: current_user.email,
+      requested_at: Time.zone.now
+    )
+    ReviewRequestMailer.review_requested(review_request: review_request, dataset: @dataset).deliver_now
     render :confirm_review
   end
    def download_link

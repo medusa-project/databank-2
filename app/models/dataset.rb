@@ -86,6 +86,7 @@ class Dataset < ApplicationRecord
   has_many :notes,             -> { order(created_at: :desc, id: :desc) }, dependent: :destroy
   has_many :related_materials, -> { order(Arel.sql("COALESCE(row_position, position) ASC, id ASC")) }, dependent: :destroy
   has_one :token, class_name: "Token", primary_key: :key, foreign_key: :dataset_key, inverse_of: :dataset, dependent: :destroy
+  has_many :review_requests, dependent: :destroy
   has_many :version_requests, dependent: :destroy
   has_many :approved_version_requests, class_name: "VersionRequest", foreign_key: :approved_dataset_id, inverse_of: :approved_dataset, dependent: :nullify
   has_many :external_delivery_attempts, dependent: :destroy
