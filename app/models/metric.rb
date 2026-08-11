@@ -14,7 +14,7 @@ class Metric
   ].freeze
   MIMETYPE_DEFAULT = "application/octet-stream"
   FIRST_DOWNLOAD_CALENDAR_YEAR = 2016
-  FIRST_DOWNLOAD_FISCAL_YEAR = 15
+  FIRST_DOWNLOAD_FISCAL_YEAR = 16
   FISCAL_YEAR_START_MONTH = 7
   DATASET_DOWNLOADS_CSV_HEADINGS = %w[dataset_key doi download_date tally].freeze
   DATAFILE_DOWNLOADS_CSV_HEADINGS = %w[file_web_id dataset_key doi download_date tally].freeze
@@ -174,13 +174,13 @@ class Metric
 
     def current_fiscal_year
       now = Time.zone.now
-      return now.year % 100 if now.month >= FISCAL_YEAR_START_MONTH
+      return (now.year + 1) % 100 if now.month >= FISCAL_YEAR_START_MONTH
 
-      (now.year - 1) % 100
+      now.year % 100
     end
 
     def date_range_for_fiscal_year(fiscal_year)
-      start_year = 2000 + fiscal_year
+      start_year = 2000 + fiscal_year - 1
       start_date = Date.new(start_year, FISCAL_YEAR_START_MONTH, 1)
       end_date = Date.new(start_year + 1, FISCAL_YEAR_START_MONTH, 1) - 1.day
       [ start_date, end_date ]
