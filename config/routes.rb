@@ -148,6 +148,13 @@ Rails.application.routes.draw do
   get "/contact",  to: "pages#contact",  as: :contact_us
   get "/help",     to: "pages#guides",   as: :help
 
+  cookie_asset_sections = /(datasets|guides|policies|contact|help|deposit)/
+
+  # Toolkit cookie notice can request relative paths like "datasets/css/...".
+  # Redirect those section-scoped requests to canonical public asset paths.
+  get "/:section/css/*asset", to: redirect { |params, _req| "/css/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
+  get "/:section/partials/*asset", to: redirect { |params, _req| "/partials/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
+
   # Errors
   post "/", to: "errors#error404"
 
