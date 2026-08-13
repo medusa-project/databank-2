@@ -12,6 +12,13 @@
 	white-space: nowrap;
 }
 
+.badge-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
 .idb-badge .idb-button-icon {
 	font-size: 0.85em;
 }
