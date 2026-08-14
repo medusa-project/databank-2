@@ -5,7 +5,6 @@
       = semantic_badge(kind: :neutral, label: "created: #{dataset.created_at.to_date.iso8601}", icon: false, sr_label: "Created #{dataset.created_at.to_date.iso8601}")
       = semantic_badge(kind: :neutral, label: "ingested: #{dataset.curator_ingested_date&.iso8601 || 'N/A'}", icon: false, sr_label: "Ingested #{dataset.curator_ingested_date&.iso8601 || 'not available'}")
       = semantic_badge(kind: :neutral, label: "released: #{dataset.release_date&.iso8601 || 'N/A'}", icon: false, sr_label: "Released #{dataset.release_date&.iso8601 || 'not available'}")
-      = semantic_badge(kind: :neutral, tone: "info", label: dataset.curator_visibility_label, icon: "eye", icon_style: :regular, sr_label: "Visibility #{dataset.curator_visibility_label}")
       = semantic_badge(kind: :neutral, label: dataset.subject.presence || "Uncategorized", icon: false, sr_label: "Subject #{dataset.subject.presence || 'Uncategorized'}")
       -# if there are any notes, give a badge tone of danger (red), otherwise default to neutral. This is a visual cue for curators to check the notes if they exist.
       = semantic_badge(kind: :neutral, tone: (dataset.notes.any? ? "danger" : ""), label: pluralize(dataset.notes.size, "note"), icon: false, sr_label: "#{dataset.notes.size} notes")
@@ -21,10 +20,10 @@
 - elsif dataset.draft? && dataset.version_eligible?
   = semantic_badge(kind: :status_ok, label: "version candidate", icon: false, sr_label: "Version candidate eligible to be submitted for pre-publication review")
 
+- if can?(:edit, dataset)
+  = semantic_badge(kind: :neutral, tone: "info", label: dataset.curator_visibility_label, icon: "eye", icon_style: :regular, sr_label: "Visibility #{dataset.curator_visibility_label}")
 - if can?(:edit, dataset) && dataset.has_sharing_link? && !dataset.published?
   = semantic_badge(kind: :status_ok, label: "has sharing link", icon: false, sr_label: "Has sharing link")
-- if can?(:edit, dataset) && dataset.draft?
-  = semantic_badge(kind: :neutral, label: "draft", icon: false, sr_label: "Draft")
 
 - if can?(:read, dataset) && dataset.release_date.present? && dataset.publicly_readable_now?
   - release_label = dataset.release_date > Date.current ? "planned publication date" : (dataset.published? ? "published" : "release date")
