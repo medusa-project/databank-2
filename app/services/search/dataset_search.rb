@@ -177,7 +177,7 @@ module Search
     def filter_by_publication_years(relation)
       return relation if @filters[:publication_years].empty?
 
-      relation.where("EXTRACT(YEAR FROM published_at)::int IN (?)", @filters[:publication_years])
+      relation.where(Arel.sql(publication_year_sql_expression).in(@filters[:publication_years]))
     end
 
     def filter_by_funders(relation)
@@ -251,11 +251,15 @@ module Search
 
     def publication_year_options(relation)
       relation
-        .where.not(published_at: nil)
-        .group("EXTRACT(YEAR FROM published_at)::int")
-        .order(Arel.sql("EXTRACT(YEAR FROM published_at)::int DESC"))
+        .where("COALESCE(datasets.published_at, datasets.updated_at, datasets.created_at) IS NOT NULL")
+        .group(publication_year_sql_expression)
+        .order(Arel.sql("#{publication_year_sql_expression} DESC"))
         .count
         .map { |value, count| { value: value.to_i, count: count } }
+    end
+
+    def publication_year_sql_expression
+      "EXTRACT(YEAR FROM COALESCE(datasets.published_at, datasets.updated_at, datasets.created_at))::int"
     end
 
     def funder_options(relation)
