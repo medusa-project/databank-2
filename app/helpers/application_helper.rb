@@ -345,10 +345,10 @@ module ApplicationHelper
 
     resolved_tone = (tone.presence || defaults[:tone]).to_s
     resolved_icon = if icon == false
-                      nil
-                    else
-                      icon.presence || defaults[:icon]
-                    end
+      nil
+    else
+      icon.presence || defaults[:icon]
+    end
     resolved_icon_style = icon_style.presence || defaults[:icon_style] || :solid
     resolved_label = label.presence || defaults[:label]
 

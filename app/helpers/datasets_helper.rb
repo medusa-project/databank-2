@@ -11,7 +11,7 @@ module DatasetsHelper
 
   def dataset_results_count_text(search:, datasets:, total_count:)
     start_item = search.offset_value + 1
-    end_item = [search.offset_value + datasets.length, total_count].min
+    end_item = [ search.offset_value + datasets.length, total_count ].min
 
     "Displaying #{start_item} - #{end_item} of #{total_count} in total"
   end
@@ -22,7 +22,7 @@ module DatasetsHelper
 
   def dataset_facet_value(facet_key:, row:)
     value = row[:value]
-    return value.to_s if [:publication_years, :publication_states].include?(facet_key)
+    return value.to_s if [ :publication_years, :publication_states ].include?(facet_key)
 
     value
   end

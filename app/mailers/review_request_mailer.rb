@@ -3,7 +3,7 @@ class ReviewRequestMailer < ApplicationMailer
     @review_request = review_request
     @dataset = dataset
 
-    recipients = (CuratorDirectory.review_recipients + [review_request.requester_email, dataset.depositor_email]).uniq
+    recipients = (CuratorDirectory.review_recipients + [ review_request.requester_email, dataset.depositor_email ]).uniq
 
     mail(
       to: recipients,

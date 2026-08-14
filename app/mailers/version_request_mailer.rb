@@ -13,7 +13,7 @@ class VersionRequestMailer < ApplicationMailer
     @version_request = version_request
     @dataset = dataset
 
-    recipients = [version_request.requester_email, dataset.depositor_email].uniq
+    recipients = [ version_request.requester_email, dataset.depositor_email ].uniq
 
     mail(
       to: recipients,
