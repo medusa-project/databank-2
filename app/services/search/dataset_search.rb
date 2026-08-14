@@ -19,10 +19,12 @@ module Search
 
     attr_reader :page, :per_page
 
-    def initialize(scope:, query:, filters:, page:, per_page:, role:)
+    def initialize(scope:, query:, filters:, page:, per_page:, role:, current_user: nil)
       @scope = scope
       @query = query.to_s.strip
       @role = role.to_s
+      @current_user_username = current_user&.username.to_s.strip
+      @current_user_email = current_user&.email.to_s.strip
       @filters = normalize_filters(filters)
       @page = normalize_page(page)
       @per_page = normalize_per_page(per_page)
@@ -88,6 +90,7 @@ module Search
 
     def filtered_results_relation
       relation = relation_with_query(@scope)
+      relation = filter_by_editor(relation)
       relation = filter_by_subjects(relation)
       relation = filter_by_licenses(relation)
       relation = filter_by_publication_years(relation)
@@ -154,6 +157,15 @@ module Search
       return relation if @filters[:subjects].empty?
 
       relation.where(subject: @filters[:subjects])
+    end
+
+    def filter_by_editor(relation)
+      return relation if @filters[:editor].blank?
+      return relation unless @role == "depositor"
+      return relation if @current_user_username.blank? || @current_user_email.blank?
+      return relation unless @filters[:editor] == @current_user_username
+
+      relation.where(depositor_email: @current_user_email)
     end
 
     def filter_by_licenses(relation)
@@ -377,6 +389,7 @@ module Search
     def normalize_filters(filters)
       raw = filters || {}
       {
+        editor: normalize_value(raw[:editor] || raw["editor"]),
         subjects: normalize_values(raw[:subjects] || raw["subjects"]),
         licenses: normalize_values(raw[:licenses] || raw["licenses"]),
         funders: normalize_values(raw[:funders] || raw["funders"]),
@@ -389,6 +402,10 @@ module Search
 
     def normalize_values(values)
       Array(values).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    end
+
+    def normalize_value(value)
+      value.to_s.strip.presence
     end
 
     def normalize_int_values(values)

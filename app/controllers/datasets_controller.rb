@@ -15,7 +15,8 @@ class DatasetsController < ApplicationController
       filters: dataset_filter_params,
       page: @page,
       per_page: @per_page,
-      role: current_role
+      role: current_role,
+      current_user: current_user
     )
 
     @datasets = @search.results.includes(:notes, :token, :version_requests, :external_delivery_attempts)
@@ -934,6 +935,7 @@ class DatasetsController < ApplicationController
 
   def dataset_filter_params
     {
+      editor: params[:editor],
       subjects: params[:subjects],
       licenses: params[:licenses],
       funders: params[:funders],
@@ -960,6 +962,7 @@ class DatasetsController < ApplicationController
     {
       q: @query,
       per_page: @per_page,
+      editor: params[:editor],
       subjects: params[:subjects],
       licenses: params[:licenses],
       funders: params[:funders],
