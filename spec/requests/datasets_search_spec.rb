@@ -220,6 +220,19 @@ RSpec.describe "Datasets search", type: :request do
       external_files_link: nil
     )
 
+    Dataset.create!(
+      title: "Whitespace External Fields Dataset",
+      description: "Whitespace-only external file values should be treated as blank",
+      keywords: "no-external-files-filter",
+      subject: "Engineering",
+      owner_uid: "owner-whitespace-external",
+      depositor_name: "Owner Whitespace External",
+      depositor_email: "owner-whitespace-external@example.edu",
+      publication_state: :published,
+      external_files_note: "   ",
+      external_files_link: "   "
+    )
+
     get datasets_path, params: {
       q: "no-external-files-filter",
       external_files: [ Search::DatasetSearch::EXTERNAL_FILES_NONE_VALUE ]
@@ -227,6 +240,7 @@ RSpec.describe "Datasets search", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("No External Files Included Dataset")
+    expect(response.body).to include("Whitespace External Fields Dataset")
     expect(response.body).not_to include("Has External Repo Dataset")
   end
 

@@ -132,7 +132,7 @@
 	gap: 1rem;
 	margin-left: auto;
 	flex-wrap: wrap;
-	justify-content: flex-end;
+	justify-content: center;
 }
 
 .welcome-role-switch-form {

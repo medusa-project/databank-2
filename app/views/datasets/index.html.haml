@@ -4,7 +4,7 @@
   - if @report_mode
     = render partial: "citation_report"
   - else
-    = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", aria: { label: "Dataset search and filters" } } do |f|
+    = form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", data: { controller: "facet-autosubmit", action: "change->facet-autosubmit#submitOnChange" }, aria: { label: "Dataset search and filters" } } do |f|
       .datasets-toolbar
         .datasets-query-controls
           = f.label :q, "Search datasets", class: "sr-only"

@@ -2,11 +2,10 @@
 
 require "csv"
 require "fileutils"
+require "stringio"
 
 class Metric
   LOCK_KEYS = %i[
-    dataset_downloads_json
-    datafile_downloads_json
     datasets_tsv
     datafiles_csv
     container_contents_csv
@@ -14,6 +13,12 @@ class Metric
     related_materials_csv
   ].freeze
   MIMETYPE_DEFAULT = "application/octet-stream"
+  FIRST_DOWNLOAD_CALENDAR_YEAR = 2016
+  FIRST_DOWNLOAD_FISCAL_YEAR = 15
+  FISCAL_YEAR_START_MONTH = 7
+  DATASET_DOWNLOADS_CSV_HEADINGS = %w[dataset_key doi download_date tally].freeze
+  DATAFILE_DOWNLOADS_CSV_HEADINGS = %w[file_web_id dataset_key doi download_date tally].freeze
+  DOWNLOAD_ZIP_GROUPS = %i[dataset_calendar dataset_fiscal datafile_calendar datafile_fiscal].freeze
 
   Definition = Struct.new(:key, :config, keyword_init: true) do
     def label
@@ -148,6 +153,79 @@ class Metric
       end
     end
 
+    def ensure_download_metrics
+      current_cal_year = current_calendar_year
+      current_fis_year = current_fiscal_year
+
+      %i[dataset_downloads datafile_downloads].each do |metric_type|
+        [ [ current_cal_year, :calendar ], [ current_fis_year, :fiscal ] ].each do |year, slice_type|
+          filename = filename_for_year_metric(metric_type, year, slice_type)
+          path = Rails.root.join("public", filename)
+          if !File.exist?(path) || File.mtime(path) < 1.day.ago
+            public_send("write_#{metric_type}_csv_by_year", year, slice_type)
+          end
+        end
+      end
+    end
+
+    def current_calendar_year
+      Time.zone.now.year
+    end
+
+    def current_fiscal_year
+      now = Time.zone.now
+      return now.year % 100 if now.month >= FISCAL_YEAR_START_MONTH
+
+      (now.year - 1) % 100
+    end
+
+    def date_range_for_fiscal_year(fiscal_year)
+      start_year = 2000 + fiscal_year
+      start_date = Date.new(start_year, FISCAL_YEAR_START_MONTH, 1)
+      end_date = Date.new(start_year + 1, FISCAL_YEAR_START_MONTH, 1) - 1.day
+      [ start_date, end_date ]
+    end
+
+    def year_is_current?(year, slice_type)
+      case slice_type
+      when :calendar
+        year == current_calendar_year
+      when :fiscal
+        year == current_fiscal_year
+      else
+        raise ArgumentError, "Invalid slice_type: #{slice_type}"
+      end
+    end
+
+    def filename_for_year_metric(metric_type, year, slice_type)
+      base = metric_type.to_s
+      suffix = slice_type == :fiscal ? "FY#{year.to_s.rjust(2, '0')}" : year.to_s
+      "#{base}_#{suffix}.csv"
+    end
+
+    def storage_key_for_archived_metric(metric_type, year, slice_type)
+      filename_for_year_metric(metric_type, year, slice_type)
+    end
+
+    def year_metric_available?(metric_type:, year:, slice_type:)
+      if year_is_current?(year, slice_type)
+        filename = filename_for_year_metric(metric_type, year, slice_type)
+        return File.exist?(Rails.root.join("public", filename))
+      end
+
+      archived_metric_exists?(metric_type, year, slice_type)
+    rescue StandardError
+      false
+    end
+
+    def archived_metric_exists?(metric_type, year, slice_type)
+      storage_key = storage_key_for_archived_metric(metric_type, year, slice_type)
+      StorageManager.instance.report_root.exist?(storage_key)
+    rescue StandardError => error
+      Rails.logger.error("Error checking archived metric #{storage_key}: #{error.message}")
+      false
+    end
+
     def definitions
       METRICS_CONFIG.each_with_object([]) do |(raw_key, raw_config), arr|
         metric_key = raw_key.to_sym
@@ -226,64 +304,67 @@ class Metric
       end
     end
 
-    def write_dataset_downloads_json
-      metric_key = :dataset_downloads_json
-      set_in_progress(metric_key)
+    def write_dataset_downloads_csv
+      write_dataset_downloads_csv_orchestrator
+    end
 
+    def write_datafile_downloads_csv
+      write_datafile_downloads_csv_orchestrator
+    end
+
+    def write_dataset_downloads_csv_orchestrator
+      write_dataset_downloads_csv_by_year(current_calendar_year, :calendar)
+      write_dataset_downloads_csv_by_year(current_fiscal_year, :fiscal)
+    end
+
+    def write_datafile_downloads_csv_orchestrator
+      write_datafile_downloads_csv_by_year(current_calendar_year, :calendar)
+      write_datafile_downloads_csv_by_year(current_fiscal_year, :fiscal)
+    end
+
+    def write_dataset_downloads_csv_by_year(year, slice_type)
+      target_filename = filename_for_year_metric(:dataset_downloads, year, slice_type)
+      target_path = Rails.root.join("public", target_filename)
+
+      mark_year_metric_in_progress(:dataset_downloads, year, slice_type)
       begin
-        first_record = true
-        totals = Hash.new(0)
-        public_dataset_keys = download_metrics_public_dataset_keys
+        public_keys = download_metrics_public_dataset_keys
+        scope = DatasetDownloadTally.where(dataset_key: public_keys)
+        scope = apply_download_year_filter(scope, year, slice_type)
 
-        File.open(metric_path(metric_key), "w") do |file|
-          file.puts(%({"dataset_downloads":[))
-
-          DatasetDownloadTally.where(dataset_key: public_dataset_keys).order(:download_date, :id).find_each do |row|
-            row_json = { doi: row.doi, date: row.download_date, tally: row.tally }.to_json
-            file.puts(first_record ? row_json : ",#{row_json}")
-            first_record = false
-            totals[row.doi] += row.tally.to_i if row.doi.present?
+        CSV.open(target_path, "w") do |report|
+          report << DATASET_DOWNLOADS_CSV_HEADINGS
+          scope.find_each do |row|
+            report << [ row.dataset_key, row.doi, row.download_date, row.tally ]
           end
-
-          file.puts("]}")
         end
 
-        totals_path = metric_path(metric_key).sub(/\.json\z/, "_totals.csv")
-        File.open(totals_path, "w") do |file|
-          file.puts("doi,tally")
-          totals.each { |doi, tally| file.puts("#{doi},#{tally}") }
-        end
+        handle_archived_metric(target_path, :dataset_downloads, year, slice_type)
       ensure
-        clear_in_progress(metric_key)
+        clear_year_metric_in_progress(:dataset_downloads, year, slice_type)
       end
     end
 
-    def write_datafile_downloads_json
-      metric_key = :datafile_downloads_json
-      set_in_progress(metric_key)
+    def write_datafile_downloads_csv_by_year(year, slice_type)
+      target_filename = filename_for_year_metric(:datafile_downloads, year, slice_type)
+      target_path = Rails.root.join("public", target_filename)
 
+      mark_year_metric_in_progress(:datafile_downloads, year, slice_type)
       begin
-        first_record = true
-        public_dataset_keys = download_metrics_public_dataset_keys
+        public_keys = download_metrics_public_dataset_keys
+        scope = FileDownloadTally.where(dataset_key: public_keys)
+        scope = apply_download_year_filter(scope, year, slice_type)
 
-        File.open(metric_path(metric_key), "w") do |file|
-          file.puts(%({"datafile_downloads":[))
-
-          FileDownloadTally.where(dataset_key: public_dataset_keys).order(:download_date, :id).find_each do |row|
-            row_json = {
-              doi: row.doi,
-              file: row.filename,
-              date: row.download_date,
-              tally: row.tally
-            }.to_json
-            file.puts(first_record ? row_json : ",#{row_json}")
-            first_record = false
+        CSV.open(target_path, "w") do |report|
+          report << DATAFILE_DOWNLOADS_CSV_HEADINGS
+          scope.find_each do |row|
+            report << [ row.file_web_id, row.dataset_key, row.doi, row.download_date, row.tally ]
           end
-
-          file.puts("]}")
         end
+
+        handle_archived_metric(target_path, :datafile_downloads, year, slice_type)
       ensure
-        clear_in_progress(metric_key)
+        clear_year_metric_in_progress(:datafile_downloads, year, slice_type)
       end
     end
 
@@ -433,7 +514,133 @@ class Metric
       end
     end
 
+    def retrieve_archived_metric_from_storage(metric_type, year, slice_type)
+      storage_key = storage_key_for_archived_metric(metric_type, year, slice_type)
+      report_root = StorageManager.instance.report_root
+      return nil unless report_root.exist?(storage_key)
+
+      report_root.with_input_io(storage_key) do |io|
+        return io.read
+      end
+    rescue StandardError => error
+      Rails.logger.error("Error retrieving archived metric #{storage_key}: #{error.message}")
+      nil
+    end
+
+    def build_zip_for_group(group)
+      normalized_group = group.to_sym
+      raise ArgumentError, "Invalid group: #{group}" unless DOWNLOAD_ZIP_GROUPS.include?(normalized_group)
+
+      metric_type, slice_type = normalized_group.to_s.split("_").then { |metric, slice| [ "#{metric}_downloads".to_sym, slice.to_sym ] }
+      current_year = slice_type == :fiscal ? current_fiscal_year : current_calendar_year
+      first_year = slice_type == :fiscal ? FIRST_DOWNLOAD_FISCAL_YEAR : FIRST_DOWNLOAD_CALENDAR_YEAR
+
+      require "zip"
+      buffer = Zip::OutputStream.write_buffer do |zip|
+        add_current_year_metric_to_zip(zip, metric_type, current_year, slice_type)
+
+        (first_year...current_year).to_a.reverse_each do |year|
+          content = retrieve_archived_metric_from_storage(metric_type, year, slice_type)
+          next if content.blank?
+
+          zip.put_next_entry(filename_for_year_metric(metric_type, year, slice_type))
+          zip.write(content)
+        end
+      end
+
+      buffer.string
+    end
+
+    def archive_prior_year_downloads_to_storage
+      current_cal_year = current_calendar_year
+      current_fis_year = current_fiscal_year
+
+      %i[dataset_downloads datafile_downloads].each do |metric_type|
+        (FIRST_DOWNLOAD_CALENDAR_YEAR...current_cal_year).each do |year|
+          maybe_archive_metric_file(metric_type, year, :calendar)
+        end
+
+        (FIRST_DOWNLOAD_FISCAL_YEAR...current_fis_year).each do |year|
+          maybe_archive_metric_file(metric_type, year, :fiscal)
+        end
+      end
+    end
+
+    def generate_all_historical_downloads
+      current_cal_year = current_calendar_year
+      current_fis_year = current_fiscal_year
+
+      %i[dataset_downloads datafile_downloads].each do |metric_type|
+        (FIRST_DOWNLOAD_CALENDAR_YEAR...current_cal_year).each do |year|
+          public_send("write_#{metric_type}_csv_by_year", year, :calendar)
+        end
+
+        (FIRST_DOWNLOAD_FISCAL_YEAR...current_fis_year).each do |year|
+          public_send("write_#{metric_type}_csv_by_year", year, :fiscal)
+        end
+      end
+    end
+
     private
+
+    def add_current_year_metric_to_zip(zip, metric_type, current_year, slice_type)
+      filename = filename_for_year_metric(metric_type, current_year, slice_type)
+      path = Rails.root.join("public", filename)
+      return unless File.exist?(path)
+
+      zip.put_next_entry(filename)
+      zip.write(File.read(path))
+    end
+
+    def maybe_archive_metric_file(metric_type, year, slice_type)
+      filename = filename_for_year_metric(metric_type, year, slice_type)
+      file_path = Rails.root.join("public", filename)
+      return unless File.exist?(file_path)
+
+      archive_metric_to_storage(file_path, metric_type, year, slice_type)
+    end
+
+    def apply_download_year_filter(scope, year, slice_type)
+      return scope.where("EXTRACT(YEAR FROM download_date) = ?", year) if slice_type == :calendar
+
+      start_date, end_date = date_range_for_fiscal_year(year)
+      scope.where(download_date: start_date..end_date)
+    end
+
+    def year_metric_lock_path(metric_type, year, slice_type)
+      filename = filename_for_year_metric(metric_type, year, slice_type)
+      Rails.root.join("public", "#{filename}.lock")
+    end
+
+    def mark_year_metric_in_progress(metric_type, year, slice_type)
+      FileUtils.touch(year_metric_lock_path(metric_type, year, slice_type))
+    end
+
+    def clear_year_metric_in_progress(metric_type, year, slice_type)
+      lock_path = year_metric_lock_path(metric_type, year, slice_type)
+      File.delete(lock_path) if File.exist?(lock_path)
+    end
+
+    def should_archive_metric?(year, slice_type)
+      !year_is_current?(year, slice_type)
+    end
+
+    def handle_archived_metric(file_path, metric_type, year, slice_type)
+      return nil unless should_archive_metric?(year, slice_type)
+
+      archive_metric_to_storage(file_path, metric_type, year, slice_type)
+    end
+
+    def archive_metric_to_storage(file_path, metric_type, year, slice_type)
+      return nil unless File.exist?(file_path)
+
+      storage_key = storage_key_for_archived_metric(metric_type, year, slice_type)
+      report_root = StorageManager.instance.report_root
+      file_content = File.read(file_path)
+      report_root.copy_io_to(storage_key, StringIO.new(file_content), nil, file_content.bytesize)
+      File.delete(file_path)
+      storage_key
+    end
 
     def ensure_metrics_exist!
       refreshable_definitions.each do |definition|

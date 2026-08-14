@@ -1,39 +1,3 @@
-:dataset_downloads_json:
-  :relative_path: <%= Rails.root.join("public/dataset_downloads.json") %>
-  :download_path: /dataset_downloads.json
-  :content_type: application/json
-  :label: Dataset downloads JSON
-  :refreshable: false
-  :show_in_admin: false
-  :summary: Daily download tallies grouped at the dataset level.
-  :description_blocks:
-    - A JSON export detailing downloads calculated per dataset per day.
-  :columns:
-    - :name: doi
-      :description: DOI that identifies the dataset.
-    - :name: date
-      :description: Download date for the tally row.
-    - :name: tally
-      :description: Number of downloads counted on that date for the dataset DOI.
-:datafile_downloads_json:
-  :relative_path: <%= Rails.root.join("public/datafile_downloads.json") %>
-  :download_path: /datafile_downloads.json
-  :content_type: application/json
-  :label: Datafile downloads JSON
-  :refreshable: false
-  :show_in_admin: false
-  :summary: Daily download tallies grouped at the datafile level.
-  :description_blocks:
-    - A JSON export detailing downloads calculated per datafile per day.
-  :columns:
-    - :name: doi
-      :description: DOI that identifies the dataset containing the datafile.
-    - :name: file
-      :description: Datafile name.
-    - :name: date
-      :description: Download date for the tally row.
-    - :name: tally
-      :description: Number of downloads counted on that date for the datafile.
 :datafiles_csv:
   :relative_path: <%= Rails.root.join("public/datafiles.csv") %>
   :download_path: /datafiles.csv

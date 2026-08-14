@@ -70,8 +70,10 @@
 
 # Generated metrics export artifacts
 /public/archive_file_contents.csv
+/public/datafile_downloads_*.csv
 /public/datafile_downloads.json
 /public/datafiles.csv
+/public/dataset_downloads_*.csv
 /public/dataset_downloads.json
 /public/dataset_downloads_totals.csv
 /public/datasets.tsv

@@ -19,6 +19,12 @@ RSpec.describe Dataset, type: :model do
 
       expect(dataset.external_files?).to be(true)
     end
+
+    it "returns false when external files note and link are whitespace only" do
+      dataset = create(:dataset, external_files_note: "   ", external_files_link: "   ")
+
+      expect(dataset.external_files?).to be(false)
+    end
   end
 
   describe "embargo behavior" do
