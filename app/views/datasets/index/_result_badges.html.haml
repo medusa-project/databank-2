@@ -1,30 +1,31 @@
 - if can?(:manage, dataset)
   .curator-only
     .dataset-result-curator-badges.badge-group
-      = semantic_badge(kind: :neutral, label: "updated: #{dataset.updated_at.to_date.iso8601}", icon: "calendar-day", icon_style: :solid, sr_label: "Updated #{dataset.updated_at.to_date.iso8601}")
-      = semantic_badge(kind: :neutral, label: "created: #{dataset.created_at.to_date.iso8601}", icon: "calendar-day", icon_style: :solid, sr_label: "Created #{dataset.created_at.to_date.iso8601}")
-      = semantic_badge(kind: :neutral, label: "ingested: #{dataset.curator_ingested_date&.iso8601 || 'N/A'}", icon: "calendar-day", icon_style: :solid, sr_label: "Ingested #{dataset.curator_ingested_date&.iso8601 || 'not available'}")
-      = semantic_badge(kind: :neutral, label: "released: #{dataset.release_date&.iso8601 || 'N/A'}", icon: "calendar-day", icon_style: :solid, sr_label: "Released #{dataset.release_date&.iso8601 || 'not available'}")
+      = semantic_badge(kind: :neutral, label: "updated: #{dataset.updated_at.to_date.iso8601}", icon: false, sr_label: "Updated #{dataset.updated_at.to_date.iso8601}")
+      = semantic_badge(kind: :neutral, label: "created: #{dataset.created_at.to_date.iso8601}", icon: false, sr_label: "Created #{dataset.created_at.to_date.iso8601}")
+      = semantic_badge(kind: :neutral, label: "ingested: #{dataset.curator_ingested_date&.iso8601 || 'N/A'}", icon: false, sr_label: "Ingested #{dataset.curator_ingested_date&.iso8601 || 'not available'}")
+      = semantic_badge(kind: :neutral, label: "released: #{dataset.release_date&.iso8601 || 'N/A'}", icon: false, sr_label: "Released #{dataset.release_date&.iso8601 || 'not available'}")
       = semantic_badge(kind: :neutral, tone: "info", label: dataset.curator_visibility_label, icon: "eye", icon_style: :regular, sr_label: "Visibility #{dataset.curator_visibility_label}")
-      = semantic_badge(kind: :neutral, tone: "info", label: dataset.subject.presence || "Uncategorized", icon: "tag", icon_style: :solid, sr_label: "Subject #{dataset.subject.presence || 'Uncategorized'}")
-      = semantic_badge(kind: :neutral, label: pluralize(dataset.notes.size, "note"), icon: "note-sticky", icon_style: :regular, sr_label: "#{dataset.notes.size} notes")
+      = semantic_badge(kind: :neutral, label: dataset.subject.presence || "Uncategorized", icon: false, sr_label: "Subject #{dataset.subject.presence || 'Uncategorized'}")
+      -# if there are any notes, give a badge tone of danger (red), otherwise default to neutral. This is a visual cue for curators to check the notes if they exist.
+      = semantic_badge(kind: :neutral, tone: (dataset.notes.any? ? "danger" : ""), label: pluralize(dataset.notes.size, "note"), icon: false, sr_label: "#{dataset.notes.size} notes")
       - if dataset_has_external_files?(dataset: dataset)
         = semantic_badge(kind: :status_alert, label: "external files", icon: "triangle-exclamation", icon_style: :solid, sr_label: "External files")
       - if dataset_suppressed_by_curator?(dataset: dataset)
         = semantic_badge(kind: :status_alert, label: "suppressed by curator", icon: "triangle-exclamation", icon_style: :solid, sr_label: "Suppressed by curator")
 
 - if dataset.draft? && dataset.version_request_pending?
-  = semantic_badge(kind: :status_alert, label: "version candidate", icon: "triangle-exclamation", icon_style: :solid, sr_label: "Version candidate under review")
+  = semantic_badge(kind: :status_alert, label: "version candidate", icon: false, sr_label: "Version candidate under review")
 - elsif dataset.draft? && dataset.version_request_approved?
-  = semantic_badge(kind: :status_alert, label: "pre-publication review", icon: "triangle-exclamation", icon_style: :solid, sr_label: "Pre-publication review")
+  = semantic_badge(kind: :status_alert, label: "pre-publication review", icon: false, sr_label: "Pre-publication review")
 - elsif dataset.draft? && dataset.version_eligible?
-  = semantic_badge(kind: :status_ok, label: "version candidate", icon: "circle-check", icon_style: :solid, sr_label: "Version candidate eligible to be submitted for pre-publication review")
+  = semantic_badge(kind: :status_ok, label: "version candidate", icon: false, sr_label: "Version candidate eligible to be submitted for pre-publication review")
 
 - if can?(:edit, dataset) && dataset.has_sharing_link? && !dataset.published?
-  = semantic_badge(kind: :status_ok, label: "has sharing link", icon: "link", icon_style: :solid, sr_label: "Has sharing link")
+  = semantic_badge(kind: :status_ok, label: "has sharing link", icon: false, sr_label: "Has sharing link")
 - if can?(:edit, dataset) && dataset.draft?
-  = semantic_badge(kind: :neutral, label: "draft", icon: "file", icon_style: :regular, sr_label: "Draft")
+  = semantic_badge(kind: :neutral, label: "draft", icon: false, sr_label: "Draft")
 
 - if can?(:read, dataset) && dataset.release_date.present? && dataset.publicly_readable_now?
   - release_label = dataset.release_date > Date.current ? "planned publication date" : (dataset.published? ? "published" : "release date")
-  = semantic_badge(kind: :status_ok, tone: "primary", label: "#{release_label}: #{dataset.release_date.iso8601}", icon: "calendar-check", icon_style: :solid, sr_label: "#{release_label.humanize} #{dataset.release_date.iso8601}")
+  = semantic_badge(kind: :status_ok, tone: "primary", label: "#{release_label}: #{dataset.release_date.iso8601}", icon: false, sr_label: "#{release_label.humanize} #{dataset.release_date.iso8601}")
