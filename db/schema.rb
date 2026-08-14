@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_153000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -248,7 +248,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_153000) do
     t.date "tombstone_date"
     t.datetime "updated_at", null: false
     t.text "version_comment"
-    t.index "((date_part('year'::text, COALESCE(published_at, updated_at, created_at)))::integer)", name: "index_datasets_on_effective_publication_year"
+    t.index "((date_part('year'::text, release_date))::integer)", name: "index_datasets_on_release_year"
     t.index ["depositor_email"], name: "index_datasets_on_depositor_email"
     t.index ["hold_state"], name: "index_datasets_on_hold_state"
     t.index ["identifier"], name: "index_datasets_on_identifier", unique: true, where: "(identifier IS NOT NULL)"
