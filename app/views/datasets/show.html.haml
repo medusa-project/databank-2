@@ -15,6 +15,9 @@
 - next_version_material = version_related_materials.find { |material| material.relation_type == RelatedMaterial::VERSION_NEW_RELATION }
 - previous_version_visible = previous_version if previous_version.present? && can?(:read, previous_version)
 - next_version_visible = next_version if next_version.present? && can?(:read, next_version)
+- datafiles = @dataset.datafiles
+- datafile_count = datafiles.length
+- show_bulk_file_actions = can?(:view_files, @dataset) && datafile_count > 1 && @dataset_aggregate_downloadable
 
 %ilw-content.dataset-show-page
   .dataset-show-summary
@@ -179,7 +182,7 @@
                           not yet set
                       %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")
 
-    - if @dataset.datafiles.any? || @dataset.external_files?
+    - if datafile_count.positive? || @dataset.external_files?
       %section.dataset-show-panel.idb-rounded-section{aria: { label: "Files" }}
         %details.idb-section-disclosure.dataset-show-disclosure{open: true}
           %summary
@@ -194,7 +197,7 @@
             = render "file_restriction_alert", dataset: @dataset
             = render "globus_delay_alert", dataset: @dataset
             
-            - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+            - if show_bulk_file_actions
               .dataset-files-controls
                 %form#custom-download-form{data: {controller: "custom-downloader"}, style: "margin: 0"}
                   .dataset-files-controls-row
@@ -223,10 +226,10 @@
                   %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}, aria: {label: "Close download link modal"}} Close
 
             .dataset-files-list
-              - if @dataset.datafiles.count > 0
+              - if datafile_count.positive?
                 .dataset-files-header
                   .dataset-file-col-checkbox
-                    - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                    - if show_bulk_file_actions
                       %span.sr-only Select files
                   .dataset-file-col-name
                     %span File Name
@@ -238,14 +241,14 @@
                     .dataset-file-col-download
                       %span Download
 
-                - @dataset.datafiles.each do |datafile|
+                - datafiles.each do |datafile|
                   - file_size = datafile.binary.attached? ? datafile.binary.byte_size : datafile.binary_size
                   .dataset-file-item
                     .dataset-file-col-checkbox
-                      - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                      - if show_bulk_file_actions
                         %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, data: {action: "custom-downloader#updateTotal"}, class: "dataset-file-checkbox", aria: {label: "Select #{datafile.binary_name.presence || datafile.web_id}"}}
                     .dataset-file-col-name
-                      - if can?(:view_files, @dataset) && @dataset.datafiles.count > 1 && @dataset_aggregate_downloadable
+                      - if show_bulk_file_actions
                         %span= datafile.binary_name.presence || datafile.web_id
                       - else
                         %span= datafile.binary_name.presence || datafile.web_id
@@ -290,12 +293,15 @@
               %p
                 No change log entries available.
 
-  - if logged_in? && can?(:review_versions, @dataset)
+  - if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
     %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator controls" }}
       %details.idb-section-disclosure.dataset-show-disclosure{open: true}
         %summary
           %h2.dataset-show-section-title Curator Controls
         .idb-section-body
+          - if can?(:manage, @dataset)
+            %p
+              = link_to "Suppression Controls", suppression_controls_dataset_path(@dataset), class: "idb-button-danger"
           %p
             = link_to "Version Controls", version_controls_dataset_path(@dataset), class: "idb-button-primary"
           %p

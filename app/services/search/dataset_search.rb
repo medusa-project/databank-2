@@ -19,10 +19,12 @@ module Search
 
     attr_reader :page, :per_page
 
-    def initialize(scope:, query:, filters:, page:, per_page:, role:)
+    def initialize(scope:, query:, filters:, page:, per_page:, role:, current_user: nil)
       @scope = scope
       @query = query.to_s.strip
       @role = role.to_s
+      @current_user_username = current_user&.username.to_s.strip
+      @current_user_email = current_user&.email.to_s.strip
       @filters = normalize_filters(filters)
       @page = normalize_page(page)
       @per_page = normalize_per_page(per_page)
@@ -88,6 +90,7 @@ module Search
 
     def filtered_results_relation
       relation = relation_with_query(@scope)
+      relation = filter_by_editor(relation)
       relation = filter_by_subjects(relation)
       relation = filter_by_licenses(relation)
       relation = filter_by_publication_years(relation)
@@ -101,20 +104,68 @@ module Search
     def relation_with_query(relation)
       return relation if @query.blank?
 
-      q = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
+      query_variants = normalized_identifier_query_variants
+      exact_identifier = normalized_identifier_exact_match_value
+      if exact_identifier.present?
+        exact_match_relation = relation.where(identifier: exact_identifier)
+        return exact_match_relation if exact_match_relation.exists?
+      end
+
+      variant_conditions = query_variants.each_index.map do |index|
+        [
+          "datasets.title ILIKE :q#{index}",
+          "datasets.description ILIKE :q#{index}",
+          "datasets.keywords ILIKE :q#{index}",
+          "datasets.subject ILIKE :q#{index}",
+          "datasets.identifier ILIKE :q#{index}",
+          "funders.name ILIKE :q#{index}"
+        ].join(" OR ")
+      end
+
+      binds = query_variants.each_with_index.each_with_object({}) do |(variant, index), query_binds|
+        query_binds["q#{index}".to_sym] = "%#{ActiveRecord::Base.sanitize_sql_like(variant)}%"
+      end
+
       relation
         .left_joins(:funders)
         .where(
-          "datasets.title ILIKE :q OR datasets.description ILIKE :q OR datasets.keywords ILIKE :q OR datasets.subject ILIKE :q OR funders.name ILIKE :q",
-          q: q
+          variant_conditions.map { |condition| "(#{condition})" }.join(" OR "),
+          binds
         )
         .distinct
+    end
+
+    def normalized_identifier_query_variants
+      variants = [ @query ]
+      stripped = @query.dup
+      stripped.sub!(/\A(?:doi:\s*|https?:\/\/(?:dx\.)?doi\.org\/)/i, "")
+      stripped = stripped.strip.delete_suffix("/")
+      variants << stripped if stripped.present? && stripped != @query
+      variants.uniq
+    end
+
+    def normalized_identifier_exact_match_value
+      normalized_identifier_query_variants.find { |value| doi_like_query?(value: value) }
+    end
+
+    def doi_like_query?(value:)
+      normalized = value.to_s.strip
+      normalized.match?(/\A10\.\d{4,9}\/.+/i)
     end
 
     def filter_by_subjects(relation)
       return relation if @filters[:subjects].empty?
 
       relation.where(subject: @filters[:subjects])
+    end
+
+    def filter_by_editor(relation)
+      return relation if @filters[:editor].blank?
+      return relation unless @role == "depositor"
+      return relation if @current_user_username.blank? || @current_user_email.blank?
+      return relation unless @filters[:editor] == @current_user_username
+
+      relation.where(depositor_email: @current_user_email)
     end
 
     def filter_by_licenses(relation)
@@ -338,6 +389,7 @@ module Search
     def normalize_filters(filters)
       raw = filters || {}
       {
+        editor: normalize_value(raw[:editor] || raw["editor"]),
         subjects: normalize_values(raw[:subjects] || raw["subjects"]),
         licenses: normalize_values(raw[:licenses] || raw["licenses"]),
         funders: normalize_values(raw[:funders] || raw["funders"]),
@@ -350,6 +402,10 @@ module Search
 
     def normalize_values(values)
       Array(values).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    end
+
+    def normalize_value(value)
+      value.to_s.strip.presence
     end
 
     def normalize_int_values(values)

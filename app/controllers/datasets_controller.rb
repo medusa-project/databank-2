@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -15,7 +15,8 @@ class DatasetsController < ApplicationController
       filters: dataset_filter_params,
       page: @page,
       per_page: @per_page,
-      role: current_role
+      role: current_role,
+      current_user: current_user
     )
 
     @datasets = @search.results.includes(:notes, :token, :version_requests, :external_delivery_attempts)
@@ -79,6 +80,13 @@ class DatasetsController < ApplicationController
   def request_review
     authorize! :update, @dataset
     @dataset.update_column(:identifier, @dataset.generate_doi) if @dataset.identifier.blank?
+    review_request = ReviewRequest.create!(
+      dataset: @dataset,
+      requester_name: current_user.name,
+      requester_email: current_user.email,
+      requested_at: Time.zone.now
+    )
+    ReviewRequestMailer.review_requested(review_request: review_request, dataset: @dataset).deliver_now
     render :confirm_review
   end
    def download_link
@@ -178,6 +186,187 @@ class DatasetsController < ApplicationController
     @approved_version_requests = @dataset.version_requests.approved.order(reviewed_at: :desc, updated_at: :desc)
     @rejected_version_requests = @dataset.version_requests.rejected.order(reviewed_at: :desc, updated_at: :desc)
     @title = "Version Controls"
+  end
+
+  def suppression_controls
+    authorize! :manage, @dataset
+    @title = "Suppression Controls"
+  end
+
+  def suppression_action
+    authorize! :manage, @dataset
+
+    action = params[:suppression_action].to_s
+    unless suppression_actions.include?(action)
+      redirect_to suppression_controls_dataset_path(@dataset), alert: "Unknown suppression action."
+      return
+    end
+
+    redirect_to action: action, id: @dataset.key
+  end
+
+  def suppress_changelog
+    authorize! :manage, @dataset
+
+    if @dataset.respond_to?(:suppress_changelog=)
+      @dataset.suppress_changelog = true
+      if @dataset.save
+        redirect_to dataset_path(@dataset), notice: "Dataset changelog has suppressed."
+      else
+        redirect_to dataset_path(@dataset), alert: "Error - see log."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Suppress changelog is not available in this deployment."
+    end
+  end
+
+  def unsuppress_changelog
+    authorize! :manage, @dataset
+
+    if @dataset.respond_to?(:suppress_changelog=)
+      @dataset.suppress_changelog = false
+      if @dataset.save
+        redirect_to dataset_path(@dataset), notice: "Dataset changelog has been unsuppressed."
+      else
+        redirect_to dataset_path(@dataset), alert: "Error - see log."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Suppress changelog is not available in this deployment."
+    end
+  end
+
+  def temporarily_suppress_files
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_TEMP_FILE
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset files have been temporarily suppressed."
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def temporarily_suppress_metadata
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_TEMP_METADATA
+
+    if @dataset.save
+      if doi_suppression_service.suppress_metadata
+        redirect_to dataset_path(@dataset), notice: "Dataset metadata and files have been temporarily suppressed."
+      else
+        redirect_to dataset_path(@dataset), notice: "Dataset metadata and files have been temporarily suppressed in IDB, but DataCite was not updated."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def unsuppress
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_NONE
+
+    if @dataset.save
+      if doi_suppression_service.unsuppress_metadata
+        redirect_to dataset_path(@dataset), notice: "Dataset has been unsuppressed."
+      else
+        redirect_to dataset_path(@dataset), notice: "Dataset has been unsuppressed in IDB, but DataCite was not updated."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def permanently_suppress_files
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_PERM_FILE
+    @dataset.embargo = Dataset::EMBARGO_NONE
+    @dataset.tombstone_date = Date.current
+
+    if @dataset.save
+      if globus_suppression_service.remove_from_public_download
+        redirect_to dataset_path(@dataset), notice: "Dataset files have been permanently suppressed."
+      else
+        redirect_to dataset_path(@dataset), notice: "Failed to remove from Globus Download."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def suppress_review
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_TEMP_VERSION
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset version candidate under curator review."
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def unsuppress_review
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_NONE
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset released for pre-publication review."
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def draft_to_version
+    authorize! :review_versions, @dataset
+
+    unless @dataset.draft?
+      redirect_to dataset_path(@dataset), alert: "Publication state must be draft to designate version-type draft."
+      return
+    end
+
+    @dataset.hold_state = Dataset::HOLD_TEMP_VERSION
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset designated as version-type draft."
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def version_to_draft
+    authorize! :review_versions, @dataset
+
+    unless @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
+      redirect_to dataset_path(@dataset), alert: "Draft/Version toggle requires a version-type draft dataset."
+      return
+    end
+
+    @dataset.hold_state = Dataset::HOLD_NONE
+
+    if @dataset.save
+      redirect_to dataset_path(@dataset), notice: "Dataset designated as standard draft."
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
+  end
+
+  def permanently_suppress_metadata
+    authorize! :manage, @dataset
+    @dataset.hold_state = Dataset::HOLD_PERM_METADATA
+    @dataset.embargo = Dataset::EMBARGO_NONE
+    @dataset.tombstone_date = Date.current
+
+    if @dataset.save
+      doi_ok = doi_suppression_service.suppress_metadata
+      globus_ok = globus_suppression_service.remove_from_public_download
+
+      if doi_ok && globus_ok
+        redirect_to dataset_path(@dataset), notice: "Dataset has been permanently supressed in Illinois Data Bank and DataCite."
+      else
+        redirect_to dataset_path(@dataset), alert: "Failed to remove from DataCite or Globus Download."
+      end
+    else
+      redirect_to dataset_path(@dataset), alert: "Error - see log."
+    end
   end
 
   def submit_version_request
@@ -365,6 +554,11 @@ class DatasetsController < ApplicationController
   def publish
     authorize! :update, @dataset
 
+    if @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
+      redirect_to dataset_path(@dataset), alert: "Version drafts require pre-publication review before publishing."
+      return
+    end
+
     if @dataset.ready_to_publish?
       identifier = Doi::IdentifierService.new(@dataset).mint_for_publish!
 
@@ -485,11 +679,24 @@ class DatasetsController < ApplicationController
   private
 
   def set_dataset
-    @dataset = Dataset.find_by!(key: params[:id])
+    @dataset = dataset_lookup_scope.find_by!(key: params[:id])
 
     unless @dataset.publicly_readable_now? || logged_in?
       redirect_to login_path, alert: "Please sign in to continue."
     end
+  end
+
+  def dataset_lookup_scope
+    return Dataset.all unless action_name == "show"
+
+    Dataset.includes(
+      :contributors,
+      :creators,
+      :funders,
+      :related_materials,
+      :version_requests,
+      datafiles: [ :nested_items, { binary_attachment: :blob } ]
+    )
   end
 
   def build_version_comparison(current:, previous:)
@@ -583,6 +790,7 @@ class DatasetsController < ApplicationController
       :identifier,
       :embargo,
       :release_date,
+      :suppress_changelog,
       :complete,
       :search,
       :dataset_version,
@@ -727,6 +935,7 @@ class DatasetsController < ApplicationController
 
   def dataset_filter_params
     {
+      editor: params[:editor],
       subjects: params[:subjects],
       licenses: params[:licenses],
       funders: params[:funders],
@@ -753,6 +962,7 @@ class DatasetsController < ApplicationController
     {
       q: @query,
       per_page: @per_page,
+      editor: params[:editor],
       subjects: params[:subjects],
       licenses: params[:licenses],
       funders: params[:funders],
@@ -805,5 +1015,27 @@ class DatasetsController < ApplicationController
     return value if ExternalDeliveryAttempt.integrations.key?(value)
 
     nil
+  end
+
+  def suppression_actions
+    %w[
+      suppress_changelog
+      unsuppress_changelog
+      temporarily_suppress_files
+      temporarily_suppress_metadata
+      unsuppress
+      permanently_suppress_files
+      permanently_suppress_metadata
+      suppress_review
+      unsuppress_review
+    ]
+  end
+
+  def doi_suppression_service
+    @doi_suppression_service ||= Doi::SuppressionService.new(@dataset)
+  end
+
+  def globus_suppression_service
+    @globus_suppression_service ||= Globus::SuppressionService.new(@dataset)
   end
 end

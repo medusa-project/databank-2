@@ -49,5 +49,25 @@ FactoryBot.define do
       embargo { Dataset::EMBARGO_METADATA }
       release_date { Date.current - 1 }
     end
+
+    trait :hold_temp_file do
+      hold_state { Dataset::HOLD_TEMP_FILE }
+    end
+
+    trait :hold_temp_metadata do
+      hold_state { Dataset::HOLD_TEMP_METADATA }
+    end
+
+    trait :hold_temp_version do
+      hold_state { Dataset::HOLD_TEMP_VERSION }
+    end
+
+    trait :hold_perm_file do
+      hold_state { Dataset::HOLD_PERM_FILE }
+    end
+
+    trait :hold_perm_metadata do
+      hold_state { Dataset::HOLD_PERM_METADATA }
+    end
   end
 end

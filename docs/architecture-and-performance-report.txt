@@ -1,0 +1,286 @@
+Illinois Data Bank Project Report
+Architecture Differences and Expected Performance Impact
+Date: 2026-08-06
+
+Purpose
+This report summarizes major architecture differences between legacy databank and databank-2, and describes performance improvements that are reasonable to expect from those changes.
+
+1) Core framework and runtime stack
+
+Legacy databank
+- Rails 7.2.x application.
+- Sprockets-era global JavaScript manifest that loads many libraries site-wide (jQuery, jQuery UI, DataTables, bootstrap-sprockets, and multiple custom scripts).
+- Bootstrap-sass based UI layer.
+- Search implemented with Sunspot/Solr (sunspot_rails + sunspot_solr).
+
+Databank-2
+- Rails 8.1.x application.
+- Propshaft asset pipeline with importmap-based JavaScript loading.
+- Hotwire stack (turbo-rails + stimulus-rails), plus focused Stimulus controllers.
+- Tailwindcss-rails available for modern styling patterns, with project CSS based on Illinois brand tokens and componentized page styles.
+- Search implemented in app/service layer with ActiveRecord and PostgreSQL queries.
+- Solid Cache / Solid Queue / Solid Cable included for modern Rails runtime primitives.
+- Thruster included for HTTP asset caching/compression support with Puma.
+
+Reasonable performance expectation
+- Lower frontend bootstrap cost on many pages because databank-2 does not require the large legacy global jQuery/Bootstrap script chain for basic navigation and page behavior.
+- Lower operational complexity for search because the app no longer depends on a separate Solr process for query serving.
+- Better cache/compression behavior in production deployments where Thruster and proxy config are enabled correctly.
+
+2) Search architecture
+
+Legacy databank
+- Dataset search and filtering are routed through Sunspot/Solr.
+- Query behavior and faceting rely on index synchronization and Solr availability.
+- Identifier search logic includes special-case slash handling in search code.
+
+Databank-2
+- Dataset search is in Search::DatasetSearch service and uses relational queries (joins + where + facet aggregation queries).
+- Identifier handling has been modernized to:
+  - match plain identifier strings,
+  - normalize DOI inputs (doi: prefix and doi.org URLs),
+  - use an exact-match fast path for normalized DOI-like values before fuzzy fallback.
+
+Reasonable performance expectation
+- At moderate scales (for example around 1,000 datasets), ActiveRecord/PostgreSQL search should be responsive and simpler to operate than a separate Solr service.
+- Exact identifier fast-path can reduce work for DOI lookups because direct identifier hits short-circuit fuzzy matching.
+- For larger scales, additional indexing and/or specialized text search tuning may still be needed.
+
+3) Guides and policies side navigation
+
+Legacy databank behavior
+- Guides and policies pages use Bootstrap sidebar patterns (bs-docs-sidebar), jQuery scrollspy, and affix behavior.
+- Legacy help.js attaches scrollspy/affix handlers through jQuery.
+- Legacy guides rendering path in controller/view is less eager-load-oriented, and guide tree traversal in views can increase query/render work as content grows.
+
+Databank-2 behavior
+- Guides and policies pages use a dedicated, semantic TOC layout:
+  - sticky TOC container via CSS,
+  - Stimulus toc_controller for hash navigation, active-link state, and lightweight scroll syncing,
+  - passive scroll listener usage in the TOC controller,
+  - accessibility-focused navigation behavior (focus target management, aria-current updates).
+- Guides content is loaded through PagesController with includes on rich text and nested associations (sections -> items -> subitems), reducing query churn risk compared to non-eager traversal.
+
+Reasonable performance expectation for side nav
+- Better interaction smoothness and lower JS overhead for side nav updates versus jQuery scrollspy/affix patterns.
+- More predictable behavior on long guides pages due to sticky TOC + focused Stimulus logic rather than broader Bootstrap/jQuery plugin orchestration.
+- Fewer query spikes during guides rendering due to explicit includes in databank-2 guides loading path.
+
+4) UI and styling system direction
+
+Legacy databank
+- Bootstrap-sass and older component patterns.
+- Navigation and interactive behaviors rely more on legacy JS plugins.
+
+Databank-2
+- Modernized page architecture with explicit section cards, sticky TOC, and reusable CSS token-based styles.
+- Hotwire/Stimulus-first interactions for targeted behavior.
+
+Reasonable performance expectation
+- Faster first interaction on many pages because less legacy plugin initialization is required.
+- Easier incremental UI optimization because component responsibilities are clearer.
+
+5) Practical caveats
+
+- Performance gains depend on deployment configuration (database sizing, HTTP caching, compression, asset hosting, and runtime tuning).
+- Policies/guides content payload size still matters; very large embedded rich text/images can dominate load time regardless of nav controller improvements.
+- Search speed at larger scales will depend on index strategy and query selectivity; current approach is strong for moderate scale and operational simplicity.
+
+6) Summary
+
+The rewrite to databank-2 is aligned goals:
+- improved load-time characteristics from a leaner frontend runtime model,
+- more modern and maintainable UI architecture,
+- a side-nav implementation for guides/policies that is cleaner, lighter, and better structured for long-form content,
+- a simplified search stack that is easier to operate and now includes optimized DOI lookup behavior.
+
+Overall, databank-2 should deliver meaningfully better user-perceived responsiveness for navigation-heavy pages and lower architectural friction for ongoing performance work.
+
+7) Dataset show page load performance (50-200 datafiles)
+
+Why this section matters
+- The dataset show page is one of the highest-impact pages for user perception because it combines metadata, version context, and a potentially large file list in a single render.
+- At 50-200 datafiles, both server render cost and browser layout/paint cost become visible to users.
+
+Current databank-2 behavior
+- The show view currently renders the full datafile list in one response when files are present.
+- The template performs multiple conditional checks based on @dataset.datafiles.count and then iterates all rows.
+- Each row computes preview button state through Datafile::Viewable logic; for some archive scenarios this can include nested item existence checks.
+- The page also renders additional controls for aggregate/custom downloads and optional Globus controls, increasing DOM size and interaction wiring when many files are shown.
+
+Legacy databank comparison
+- Legacy databank also rendered full file rows in the show page and used a large accordion/panel-based UI with legacy JS behaviors.
+- Legacy code included a hard upper guard via max_datafiles and explicit fallback messaging for oversized file lists.
+- databank-2 improves UI clarity and interaction model, but still follows a full-list render approach by default.
+
+Reasonable performance expectations at 50-200 files
+- databank-2 should generally be acceptable at this range on typical infrastructure, but users may notice slower initial paint and interaction compared with smaller datasets.
+- Main contributors to latency at this size are expected to be:
+  - larger HTML payload and DOM complexity,
+  - repeated count checks and per-row method work,
+  - possible row-level association lookups in preview availability edge cases.
+
+Expected improvement versus legacy
+- databank-2 should still feel better than legacy on interaction quality because it avoids older global plugin overhead and uses a cleaner component/layout structure.
+- The largest gains are likely in maintainability and ability to optimize incrementally, rather than guaranteed dramatic speedups for very large per-page file lists without further tuning.
+
+Practical optimization steps (recommended)
+1. Eliminate repeated count queries in the show template.
+  - Compute a local file_count once and reuse it for all conditions.
+
+2. Preload associations needed by file-row rendering.
+  - For example, load datafiles and any associations used by row methods up front to reduce row-level query risk.
+
+3. Add progressive rendering for large file lists.
+  - Introduce server-side pagination, "show more" chunks, or virtualized rendering for file rows.
+  - This is the highest-impact change for perceived load time in the 50-200+ range.
+
+4. Keep the controls, defer the heavy list.
+  - Render metadata and action controls immediately, and load file rows after first paint when appropriate.
+
+5. Add direct instrumentation for this page.
+  - Track server timing, SQL query count/time, rendered HTML size, and browser-side Largest Contentful Paint (LCP) for datasets with 50, 100, and 200 files.
+
+Suggested reporting language for stakeholders
+- "At moderate file counts, databank-2 is expected to be reliable and generally responsive, with clear maintainability advantages over legacy. For the best user experience at higher file counts, pagination/progressive loading of file rows is the next high-value optimization."
+
+8) Measurement plan template (dataset show performance)
+
+How to use this template
+- Run the same scenarios in both environments you care about (local and demo/stage).
+- Capture each scenario at least 3 times and report median values.
+- Keep app version, dataset shape, and browser/device consistent during one test cycle.
+
+Test matrix template
+
+Test window metadata
+- Date/time:
+- App commit/tag:
+- Environment:
+- Browser/version:
+- Device profile (desktop/mobile emulation):
+- Network profile (unthrottled, Fast 3G, etc.):
+
+Scenario A: 50 datafiles
+- Dataset key:
+- File mix summary (text/image/pdf/archive):
+- External files enabled (yes/no):
+- Auth state (guest/depositor/admin):
+
+Scenario B: 100 datafiles
+- Dataset key:
+- File mix summary (text/image/pdf/archive):
+- External files enabled (yes/no):
+- Auth state (guest/depositor/admin):
+
+Scenario C: 200 datafiles
+- Dataset key:
+- File mix summary (text/image/pdf/archive):
+- External files enabled (yes/no):
+- Auth state (guest/depositor/admin):
+
+Metrics to capture per run
+- TTFB (ms)
+- LCP (ms)
+- DOMContentLoaded (ms)
+- Total page weight transferred (KB/MB)
+- HTML document size (KB)
+- Total JS transfer (KB)
+- Total CSS transfer (KB)
+- SQL query count for request
+- SQL total time (ms)
+- Server response/render time (ms)
+
+Optional deep-dive metrics
+- INP or interaction latency when opening file section controls
+- Time to first visible file row (ms)
+- Number of file rows initially rendered
+- Count of lazy/deferred requests after first paint
+
+Data collection template
+
+Run record
+- Scenario:
+- Run number:
+- TTFB:
+- LCP:
+- DOMContentLoaded:
+- Page weight:
+- HTML size:
+- SQL query count:
+- SQL total time:
+- Server render time:
+- Notes (errors/outliers):
+
+Summary table template (median)
+- 50 files: TTFB, LCP, DOMContentLoaded, SQL count, SQL time, HTML size
+- 100 files: TTFB, LCP, DOMContentLoaded, SQL count, SQL time, HTML size
+- 200 files: TTFB, LCP, DOMContentLoaded, SQL count, SQL time, HTML size
+
+Pass/fail threshold template (example, adjust to your goals)
+- Target TTFB: <= 400 ms (local baseline can differ)
+- Target LCP: <= 2500 ms desktop, <= 3000 ms constrained mobile
+- Target SQL query count growth: sub-linear or near-linear with file count
+- Target HTML growth: controlled and proportional to visible rows
+
+Interpretation checklist
+- If TTFB is high but LCP is moderate: investigate server/database first.
+- If TTFB is moderate but LCP is high: investigate payload size and browser rendering.
+- If SQL count rises steeply with file count: investigate row-level association access and preloading.
+- If HTML size dominates at 200 files: prioritize pagination or progressive row loading.
+
+Decision template
+- Keep current rendering model if all thresholds are met at 200 files.
+- If one threshold fails at 200 files but 50/100 pass: implement progressive loading for file rows.
+- If thresholds fail at 100 and 200 files: prioritize both query optimization and reduced initial DOM.
+
+Reporting output template
+- Executive finding:
+- Evidence summary (metrics + scenarios):
+- Primary bottleneck identified:
+- Recommended change:
+- Estimated impact:
+- Re-test date and owner:
+
+9) Example completed measurement section (sample values)
+
+Note
+- The values below are illustrative examples only. Replace with measured values from your environment.
+
+Test window metadata
+- Date/time: 2026-08-06 14:00-15:00 UTC
+- App commit/tag: demo sample run
+- Environment: demo-like staging
+- Browser/version: Chrome 126
+- Device profile: desktop (1920x1080)
+- Network profile: unthrottled
+
+Scenario definitions
+- Scenario A (50 files): mix of text, csv, pdf, and a few archives
+- Scenario B (100 files): similar mix, doubled row count
+- Scenario C (200 files): similar mix, high DOM density
+
+Median results summary
+- 50 files:
+  TTFB 220 ms; LCP 1420 ms; DOMContentLoaded 980 ms; SQL count 34; SQL time 92 ms; HTML size 182 KB
+- 100 files:
+  TTFB 255 ms; LCP 1910 ms; DOMContentLoaded 1330 ms; SQL count 38; SQL time 118 ms; HTML size 331 KB
+- 200 files:
+  TTFB 332 ms; LCP 2840 ms; DOMContentLoaded 2140 ms; SQL count 44; SQL time 173 ms; HTML size 642 KB
+
+Interpretation of sample values
+- Server-side performance appears acceptable through 200 files (TTFB under 400 ms, SQL growth moderate).
+- Largest regressions are browser-facing (LCP and DOMContentLoaded) as HTML/DOM size grows.
+- Most likely bottleneck at 200 files is initial list render size, not raw database time.
+
+Sample decision
+- Keep current rendering for <= 100 files.
+- For >= 150 files, switch to progressive file-row loading (or pagination) to reduce initial HTML and LCP.
+
+Sample stakeholder-ready output
+- Executive finding: databank-2 is performant at moderate file counts and remains stable at 200 files, but user-perceived load time degrades due to initial DOM size.
+- Evidence summary: server timings remain within target while LCP grows from 1.42 s (50 files) to 2.84 s (200 files).
+- Primary bottleneck identified: client-side render cost from full initial file list.
+- Recommended change: progressive loading of file rows after initial metadata render.
+- Estimated impact: reduce initial HTML payload and improve LCP for large datasets.
+- Re-test date and owner: YYYY-MM-DD / <owner>

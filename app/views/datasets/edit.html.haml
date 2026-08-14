@@ -1,4 +1,4 @@
-- content_for :title, "Edit Dataset"
+- content_for :title, @dataset.title.present? ? "Edit Dataset: #{@dataset.title}" : "Edit Dataset"
 - content_for :include_orcid_css, true
 
 - previous_version = @dataset.previous_version_dataset

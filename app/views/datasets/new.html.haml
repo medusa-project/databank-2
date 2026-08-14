@@ -4,28 +4,13 @@
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-content
     %section#deposit-agreement.idb-section-card
-      %h1.idb-section-title Deposit Agreement
+      %h1.idb-section-title Illinois Data Bank Deposit Agreement
       %p
         To start your data deposit, review the agreement and answer all required questions.
-
-      %details.idb-section-disclosure
-        %summary
-          %h2.idb-section-title Illinois Data Bank Deposit Agreement (click to expand)
-        .idb-section-body
-          %p
-            By submitting a dataset, you affirm that you have authority to deposit it, that protected information has been handled appropriately,
-            and that you accept the Illinois Data Bank deposit terms.
-          %p
-            Full policy text is available on the
-            = link_to "Policies page", policies_path(anchor: "deposit_agreement")
-            and can be reviewed before submission.
-
-      - if @dataset.errors.any?
-        .ilw-notice.ilw-notice--error
-          %p Please fix the following errors before continuing:
-          %ul
-            - @dataset.errors.full_messages.each do |message|
-              %li= message
+      %p
+        Full
+        = link_to "Illinois Data Bank Deposit Agreement text", policies_path(anchor: "deposit_agreement")
+        available for review before submission.
 
       %h2 Required Responses
 

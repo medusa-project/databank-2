@@ -1,0 +1,20 @@
+%section.datasets-filters-panel{aria: { labelledby: "datasets-filters-heading" }}
+  .datasets-filter-header
+    %h2#datasets-filters-heading.datasets-section-heading Filters
+    .datasets-filter-actions
+      = link_to "Clear Filters", datasets_path(q: @query, per_page: @per_page), class: "idb-button-secondary datasets-clear-filters"
+      - if @total_count.positive?
+        = link_to "Generate Report from Search Results", datasets_path(index_query_params(report: "generate")), class: "idb-button-primary datasets-generate-report-button"
+
+  - if current_user&.role == "depositor" && current_user.username.present?
+    %fieldset.search-facet
+      %legend.panel-title
+        %h3.filter-heading My Datasets
+      - mine = params[:editor].to_s == current_user.username.to_s
+      .facet-row
+        = check_box_tag "editor", current_user.username, mine, id: "justMine", class: "facet-checkbox"
+        = label_tag "justMine", "Just My Datasets", class: "facet-label"
+
+  - dataset_index_facets.each do |facet|
+    - next unless @available_facets.include?(facet[:key])
+    = render partial: "datasets/index/filter_facet", locals: { facet: facet }
