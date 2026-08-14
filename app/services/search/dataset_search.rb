@@ -251,7 +251,7 @@ module Search
 
     def publication_year_options(relation)
       relation
-        .where("COALESCE(datasets.published_at, datasets.updated_at, datasets.created_at) IS NOT NULL")
+        .where.not(release_date: nil)
         .group(publication_year_sql_expression)
         .order(Arel.sql("#{publication_year_sql_expression} DESC"))
         .count
@@ -259,7 +259,7 @@ module Search
     end
 
     def publication_year_sql_expression
-      "EXTRACT(YEAR FROM COALESCE(datasets.published_at, datasets.updated_at, datasets.created_at))::int"
+      "EXTRACT(YEAR FROM datasets.release_date)::int"
     end
 
     def funder_options(relation)

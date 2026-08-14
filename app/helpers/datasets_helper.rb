@@ -77,7 +77,7 @@ module DatasetsHelper
   end
 
   def dataset_publication_year(dataset:)
-    (dataset.published_at || dataset.updated_at || dataset.created_at)&.year
+    dataset.release_date&.year
   end
 
   def dataset_has_external_files?(dataset:)
