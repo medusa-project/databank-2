@@ -13,8 +13,10 @@ class VersionRequestMailer < ApplicationMailer
     @version_request = version_request
     @dataset = dataset
 
+    recipients = [ version_request.requester_email, dataset.depositor_email ].uniq
+
     mail(
-      to: version_request.requester_email,
+      to: recipients,
       subject: "Your version request was received for #{dataset.key}"
     )
   end

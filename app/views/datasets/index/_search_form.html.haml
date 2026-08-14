@@ -1,0 +1,9 @@
+= form_with url: datasets_path, method: :get, local: true, html: { id: "datasets-search-form", class: "datasets-search-form", role: "search", data: { controller: "facet-autosubmit", action: "change->facet-autosubmit#submitOnChange" }, aria: { label: "Dataset search and filters" } } do |f|
+  = render partial: "datasets/index/toolbar", locals: { f: f }
+
+  .datasets-search-layout
+    = render partial: "datasets/index/filters_panel", locals: { f: f }
+    = render partial: "datasets/index/results_panel"
+
+- if @total_pages > 1
+  = render partial: "datasets/index/pagination", locals: { label: "Results pagination (bottom)" }

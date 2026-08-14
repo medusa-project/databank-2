@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_02_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_175617) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -243,6 +243,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_220000) do
     t.string "removed_private"
     t.string "search"
     t.string "subject"
+    t.boolean "suppress_changelog", default: false, null: false
     t.string "title", null: false
     t.date "tombstone_date"
     t.datetime "updated_at", null: false
@@ -495,6 +496,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_220000) do
     t.index ["dataset_id"], name: "index_related_materials_on_dataset_id"
   end
 
+  create_table "review_requests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.datetime "requested_at", null: false
+    t.string "requester_email", null: false
+    t.string "requester_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dataset_id"], name: "index_review_requests_on_dataset_id"
+  end
+
   create_table "tokens", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "dataset_key", null: false
@@ -556,6 +567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_220000) do
   add_foreign_key "notes", "datasets"
   add_foreign_key "related_material_relationships", "related_materials"
   add_foreign_key "related_materials", "datasets"
+  add_foreign_key "review_requests", "datasets"
   add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"

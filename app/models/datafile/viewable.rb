@@ -144,12 +144,21 @@ module Datafile::Viewable
 
   # @return [Boolean] true when a preview target can be rendered without falling back to placeholders.
   def preview_available?
-    return true if archive? && (peek_content.present? || nested_items.exists?)
+    return true if archive? && (peek_content.present? || archive_nested_items_available?)
     return true if microsoft? && binary.attached?
 
     return false unless text? || pdf? || image?
 
     binary.attached? || preview_storage_reference?
+  end
+
+  # Uses loaded association data when present to avoid per-row existence queries.
+  def archive_nested_items_available?
+    if association(:nested_items).loaded?
+      nested_items.any?
+    else
+      nested_items.exists?
+    end
   end
 
   # @return [String, nil] label for the dataset preview action button.

@@ -90,7 +90,7 @@ RSpec.describe "Metrics", type: :request do
 
     allow(Metric).to receive(:ensure_download_metrics)
     allow(Metric).to receive(:current_calendar_year).and_return(2026)
-    allow(Metric).to receive(:current_fiscal_year).and_return(26)
+    allow(Metric).to receive(:current_fiscal_year).and_return(27)
 
     allow(Metric).to receive(:year_metric_available?) do |metric_type:, year:, slice_type:|
       [
@@ -100,8 +100,8 @@ RSpec.describe "Metrics", type: :request do
         [
           [ :dataset_downloads, 2026, :calendar ],
           [ :dataset_downloads, 2024, :calendar ],
-          [ :dataset_downloads, 25, :fiscal ],
-          [ :datafile_downloads, 26, :fiscal ],
+          [ :dataset_downloads, 26, :fiscal ],
+          [ :datafile_downloads, 27, :fiscal ],
           [ :datafile_downloads, 2023, :calendar ]
         ].include?(triple)
       end
@@ -112,11 +112,11 @@ RSpec.describe "Metrics", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Dataset Downloads 2026 (Calendar Year)")
     expect(response.body).to include("Dataset Downloads 2024 (Calendar Year)")
-    expect(response.body).to include("Dataset Downloads FY25 (Fiscal Year)")
+    expect(response.body).to include("Dataset Downloads FY26 (Fiscal Year)")
     expect(response.body).not_to include("Dataset Downloads 2025 (Calendar Year)")
-    expect(response.body).not_to include("Dataset Downloads FY24 (Fiscal Year)")
+    expect(response.body).not_to include("Dataset Downloads FY25 (Fiscal Year)")
     expect(response.body).to include("Datafile Downloads 2023 (Calendar Year)")
-    expect(response.body).to include("Datafile Downloads FY26 (Fiscal Year)")
+    expect(response.body).to include("Datafile Downloads FY27 (Fiscal Year)")
     expect(response.body).not_to include("Datafile Downloads 2026 (Calendar Year)")
   end
 

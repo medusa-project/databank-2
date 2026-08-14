@@ -69,11 +69,11 @@ RSpec.describe Metric, type: :model do
 
   it "calculates current fiscal year" do
     travel_to(Time.zone.parse("2026-07-15 12:00:00")) do
-      expect(described_class.current_fiscal_year).to eq(26)
+      expect(described_class.current_fiscal_year).to eq(27)
     end
 
     travel_to(Time.zone.parse("2026-06-15 12:00:00")) do
-      expect(described_class.current_fiscal_year).to eq(25)
+      expect(described_class.current_fiscal_year).to eq(26)
     end
   end
 
@@ -110,10 +110,10 @@ RSpec.describe Metric, type: :model do
     FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "f2", filename: "b.csv", download_date: Date.new(2027, 6, 15), tally: 5)
     FileDownloadTally.create!(dataset_key: public_dataset.key, doi: public_dataset.identifier, file_web_id: "f3", filename: "c.csv", download_date: Date.new(2026, 6, 15), tally: 8)
 
-    allow(described_class).to receive(:current_fiscal_year).and_return(26)
-    described_class.write_datafile_downloads_csv_by_year(26, :fiscal)
+    allow(described_class).to receive(:current_fiscal_year).and_return(27)
+    described_class.write_datafile_downloads_csv_by_year(27, :fiscal)
 
-    csv_path = Rails.root.join("public", "datafile_downloads_FY26.csv")
+    csv_path = Rails.root.join("public", "datafile_downloads_FY27.csv")
     rows = CSV.read(csv_path)
 
     expect(rows.first).to eq(%w[file_web_id dataset_key doi download_date tally])

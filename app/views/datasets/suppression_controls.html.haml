@@ -1,0 +1,92 @@
+- content_for :title, "Suppression Controls"
+
+%ilw-content.dataset-show-page
+  .dataset-show-summary
+    .dataset-show-titlebar
+      %p.dataset-show-key= @dataset.key
+      .dataset-show-actions
+        = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-primary"
+
+  .dataset-show-grid
+    %section.dataset-show-panel.dataset-control-panel{aria: { label: "Suppression controls" }}
+      %h2.dataset-show-section-title Suppression Control Buttons
+      %p.dataset-control-intro
+        Review the
+        = link_to "Illinois Data Bank Preservation Review, Revision, Retention, and Withdrawal Procedures", policies_path(anchor: "preservation_review")
+        document.
+
+      = form_tag suppression_action_dataset_path(@dataset), method: :post, id: "suppression_form" do
+        .dataset-show-table-wrap
+          %table.dataset-show-table.dataset-control-matrix
+            %tbody
+              %tr.dataset-control-row
+                %td
+                  - if @dataset.respond_to?(:suppress_changelog?)
+                    - if @dataset.suppress_changelog?
+                      = button_tag "UNSUPPRESS Changelog", id: "suppressChangelogBtn", type: "submit", name: "suppression_action", value: "unsuppress_changelog", class: "idb-button-primary"
+                    - else
+                      = button_tag "Suppress Changelog", id: "suppressChangelogBtn", type: "submit", name: "suppression_action", value: "suppress_changelog", class: "idb-button-primary"
+                  - else
+                    = button_tag "Suppress Changelog", id: "suppressChangelogBtn", type: "button", class: "idb-button-secondary", disabled: true, aria: { disabled: true }
+                %td
+                  %p
+                    Example Issue:
+                    %br/
+                    Sensitive data was in metadata. It has been changed, but the changelog contains sensitive data.
+
+              %tr.dataset-control-row
+                %td
+                  - case @dataset.visibility
+                  - when "Metadata and Files Published", "Metadata and Files Publication Delayed (Embargoed)", "Metadata Published, Files Publication Delayed (Embargoed)"
+                    = button_tag "Temporarily Suppress File(s) Only", id: "tmpSuppressFilesBtn", type: "submit", name: "suppression_action", value: "temporarily_suppress_files", class: "idb-button-secondary"
+                  - when "Metadata Published, Files Temporarily Suppressed"
+                    = button_tag "UNSUPPRESS File(s)", id: "tmpSuppressFilesBtn", type: "submit", name: "suppression_action", value: "unsuppress", class: "idb-button-secondary"
+                  - when "Metadata and Files Temporarily Suppressed", "Metadata Published, Files Withdrawn", "Withdrawn", "Version Candidate Under Curator Review"
+                    = button_tag "Temporarily Suppress File(s) Only", id: "tmpSuppressFilesBtn", type: "button", class: "idb-button-secondary", disabled: true, aria: { disabled: true }
+                %td
+                  %ul
+                    %li Example Issue:
+                    %li A file appears to include sensitive data and should be suppressed while waiting for depositor correction.
+                    %li Visibility: files are suppressed; metadata remains public.
+
+              %tr.dataset-control-row
+                %td
+                  - case @dataset.visibility
+                  - when "Metadata and Files Published", "Metadata and Files Publication Delayed (Embargoed)", "Metadata Published, Files Publication Delayed (Embargoed)", "Metadata Published, Files Withdrawn", "Metadata Published, Files Temporarily Suppressed"
+                    = button_tag "Temporarily Suppress File(s) and Metadata", id: "tmpSuppressMetadataBtn", type: "submit", name: "suppression_action", value: "temporarily_suppress_metadata", class: "idb-button-secondary"
+                  - when "Metadata and Files Temporarily Suppressed"
+                    = button_tag "UNSUPPRESS File(s) and Metadata", id: "tmpSuppressMetadataBtn", type: "submit", name: "suppression_action", value: "unsuppress", class: "idb-button-secondary"
+                  - when "Withdrawn", "Version Candidate Under Curator Review"
+                    = button_tag "Temporarily Suppress File(s) and Metadata", id: "tmpSuppressMetadataBtn", type: "button", class: "idb-button-secondary", disabled: true, aria: { disabled: true }
+                %td
+                  %ul
+                    %li Example Issue:
+                    %li A rare emergency where metadata and files must be hidden while investigation proceeds.
+                    %li Visibility: both files and metadata are not public.
+
+              %tr.dataset-control-warning-row
+                %td{colspan: "2"}
+                  %p
+                    %strong Do not select any of the following without team discussion.
+
+              %tr.dataset-control-row
+                %td
+                  - if [Dataset::HOLD_PERM_METADATA, Dataset::HOLD_PERM_FILE].include?(@dataset.hold_state_mode)
+                    = button_tag "Permanently Suppress File(s) Only", id: "permSuppressFilesBtn", type: "button", class: "idb-button-danger", disabled: true, aria: { disabled: true }
+                  - else
+                    = button_tag "Permanently Suppress File(s) Only", id: "permSuppressFilesBtn", type: "submit", name: "suppression_action", value: "permanently_suppress_files", class: "idb-button-danger", data: { turbo_confirm: "Permanently suppress files for this dataset?" }
+                %td
+                  %ul
+                    %li Visibility: files are suppressed permanently; metadata remains public.
+                    %li Retain copy in preservation systems for provenance.
+
+              %tr.dataset-control-row
+                %td
+                  - if @dataset.hold_state_mode == Dataset::HOLD_PERM_METADATA
+                    = button_tag "Permanently Suppress File(s) and Metadata", id: "permSuppressMetadataBtn", type: "button", class: "idb-button-danger", disabled: true, aria: { disabled: true }
+                  - else
+                    = button_tag "Permanently Suppress File(s) and Metadata", id: "permSuppressMetadataBtn", type: "submit", name: "suppression_action", value: "permanently_suppress_metadata", class: "idb-button-danger", data: { turbo_confirm: "Permanently suppress metadata and files for this dataset?" }
+                %td
+                  %ul
+                    %li High-severity suppression for policy/legal/security issues.
+                    %li Visibility: both files and metadata are suppressed.

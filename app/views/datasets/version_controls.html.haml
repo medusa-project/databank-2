@@ -164,3 +164,38 @@
                 %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
       - else
         %p No rejected version requests yet.
+
+    %section.dataset-show-panel.dataset-control-panel{aria: { label: "Version control buttons" }}
+      %h2.dataset-show-section-title Version Control Buttons
+      %p.dataset-control-intro
+        Use these controls to match legacy curator review and draft/version override behavior.
+      .dataset-show-table-wrap
+        %table.dataset-show-table.dataset-control-matrix
+          %tbody
+            %tr.dataset-control-row
+              %td
+                - if @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
+                  = button_to "Permit Pre-Publication Review", unsuppress_review_dataset_path(@dataset), method: :get, class: "idb-button-primary", id: "suppressReviewBtn"
+                - else
+                  = button_to "Block Pre-Publication Review", suppress_review_dataset_path(@dataset), method: :get, class: "idb-button-secondary", id: "suppressReviewBtn"
+              %td
+                %ul
+                  %li Change hold state to permit or block pre-publication review.
+                  %li All requested versions go through pre-publication review by the curator team.
+                  %li This reveals version-request functionality for the depositor.
+            %tr.dataset-control-row
+              %td
+                - if @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
+                  = button_to version_to_draft_dataset_path(@dataset), method: :get, class: "idb-button-danger", id: "publishOverideBtn" do
+                    Permit Publish without Pre-Publication Review
+                - elsif @dataset.draft?
+                  = button_to "Designate this Draft Dataset a Version (draft)", draft_to_version_dataset_path(@dataset), method: :get, class: "idb-button-primary", id: "publishOverideBtn"
+                - else
+                  = button_tag "Draft/Version toggle", id: "publishOverideBtn", type: "button", class: "idb-button-secondary", disabled: true, aria: { disabled: true }
+                  %p
+                    %em Publication state must be draft or version to use this button.
+              %td
+                %ul
+                  %li Controls the publication-state override between standard draft and version-type draft.
+                  %li Version drafts are required to go through pre-publication review unless explicitly toggled back.
+                  %li Designating a draft as a version draft does not copy metadata or files.

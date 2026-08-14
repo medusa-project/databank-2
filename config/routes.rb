@@ -25,9 +25,22 @@ Rails.application.routes.draw do
     member do
       get :pre_version
       get :version_controls
+      get :suppression_controls
       get :download_metrics, defaults: { format: :json }
       get :record_text
       get :confirm_review
+      post :suppression_action
+      get :suppress_changelog
+      get :unsuppress_changelog
+      get :temporarily_suppress_files
+      get :temporarily_suppress_metadata
+      get :unsuppress
+      get :permanently_suppress_files
+      get :permanently_suppress_metadata
+      get :suppress_review
+      get :unsuppress_review
+      get :draft_to_version
+      get :version_to_draft
       post :get_current_token, defaults: { format: :json }
       post :get_new_token, defaults: { format: :json }
       post :request_review
@@ -134,6 +147,13 @@ Rails.application.routes.draw do
   get "/contact",  to: "pages#contact",  as: :contact
   get "/contact",  to: "pages#contact",  as: :contact_us
   get "/help",     to: "pages#guides",   as: :help
+
+  cookie_asset_sections = /(datasets|guides|policies|contact|help|deposit)/
+
+  # Toolkit cookie notice can request relative paths like "datasets/css/...".
+  # Redirect those section-scoped requests to canonical public asset paths.
+  get "/:section/css/*asset", to: redirect { |params, _req| "/css/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
+  get "/:section/partials/*asset", to: redirect { |params, _req| "/partials/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
 
   # Errors
   post "/", to: "errors#error404"
