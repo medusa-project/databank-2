@@ -911,7 +911,7 @@ class DatasetsController < ApplicationController
   end
 
   def public_datasets
-    return Dataset.all if logged_in? && current_user.curator?
+    return Dataset.all if acting_as_curator_role?
 
     if logged_in?
       owned   = Dataset.where(depositor_email: current_user.email)
@@ -926,11 +926,18 @@ class DatasetsController < ApplicationController
   def current_role
     return "guest" unless logged_in?
 
-    current_user.curator? ? "admin" : "depositor"
+    return "admin" if acting_as_curator_role?
+    return "depositor" if current_user.role == "depositor"
+
+    "guest"
   end
 
   def datasets_for_current_role
     public_datasets
+  end
+
+  def acting_as_curator_role?
+    logged_in? && [ "admin", "curator" ].include?(current_user.role.to_s)
   end
 
   def dataset_filter_params
@@ -940,7 +947,7 @@ class DatasetsController < ApplicationController
       licenses: params[:licenses],
       funders: params[:funders],
       publication_years: params[:publication_years],
-      publication_states: params[:publication_states],
+      visibility_states: params[:visibility_states],
       depositors: params[:depositors],
       external_files: params[:external_files]
     }
@@ -967,7 +974,7 @@ class DatasetsController < ApplicationController
       licenses: params[:licenses],
       funders: params[:funders],
       publication_years: params[:publication_years],
-      publication_states: params[:publication_states],
+      visibility_states: params[:visibility_states],
       depositors: params[:depositors],
       external_files: params[:external_files],
       page: @page

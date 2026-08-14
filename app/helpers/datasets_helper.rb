@@ -1,11 +1,15 @@
 module DatasetsHelper
-  FACET_SECTIONS = [
+  BASE_FACET_SECTIONS = [
     { key: :subjects, title: "Subject Area", param_name: "subjects[]" },
     { key: :funders, title: "Funder", param_name: "funders[]" },
     { key: :publication_years, title: "Publication Year", param_name: "publication_years[]" },
-    { key: :licenses, title: "License", param_name: "licenses[]" },
-    { key: :publication_states, title: "Publication State", param_name: "publication_states[]" },
+    { key: :licenses, title: "License", param_name: "licenses[]" }
+  ].freeze
+
+  CURATOR_FACET_SECTIONS = [
     { key: :depositors, title: "Depositor", param_name: "depositors[]" },
+    *BASE_FACET_SECTIONS,
+    { key: :visibility_states, title: "Visibility", param_name: "visibility_states[]" },
     { key: :external_files, title: "External Files", param_name: "external_files[]" }
   ].freeze
 
@@ -17,12 +21,15 @@ module DatasetsHelper
   end
 
   def dataset_index_facets
-    FACET_SECTIONS
+    role = current_user&.role.to_s
+    return CURATOR_FACET_SECTIONS if [ "admin", "curator" ].include?(role)
+
+    BASE_FACET_SECTIONS
   end
 
   def dataset_facet_value(facet_key:, row:)
     value = row[:value]
-    return value.to_s if [ :publication_years, :publication_states ].include?(facet_key)
+    return value.to_s if [ :publication_years, :visibility_states ].include?(facet_key)
 
     value
   end
@@ -31,8 +38,8 @@ module DatasetsHelper
     case facet_key
     when :funders
       row.fetch(:label, row[:value])
-    when :publication_states
-      row[:value].to_s.humanize
+    when :visibility_states
+      row.fetch(:label, row[:value])
     when :depositors, :external_files
       row[:label]
     else
@@ -54,8 +61,8 @@ module DatasetsHelper
       "publication_year_#{value}"
     when :licenses
       "license_#{value.to_s.parameterize}"
-    when :publication_states
-      "publication_state_#{value.to_s.parameterize}"
+    when :visibility_states
+      "visibility_state_#{value.to_s.parameterize}"
     when :depositors
       "depositor_#{value.to_s.parameterize}"
     when :external_files

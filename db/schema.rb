@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -254,6 +254,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_170000) do
     t.index ["identifier"], name: "index_datasets_on_identifier", unique: true, where: "(identifier IS NOT NULL)"
     t.index ["key"], name: "index_datasets_on_key", unique: true
     t.index ["legacy_publication_state"], name: "index_datasets_on_legacy_publication_state"
+    t.index ["publication_state", "hold_state", "embargo", "release_date"], name: "index_datasets_on_visibility_filter_columns"
     t.index ["tombstone_date"], name: "index_datasets_on_tombstone_date"
   end
 
