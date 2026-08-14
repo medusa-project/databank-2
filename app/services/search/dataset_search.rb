@@ -177,7 +177,7 @@ module Search
     def filter_by_publication_years(relation)
       return relation if @filters[:publication_years].empty?
 
-      relation.where("#{publication_year_sql_expression} IN (?)", @filters[:publication_years])
+      relation.where(Arel.sql(publication_year_sql_expression).in(@filters[:publication_years]))
     end
 
     def filter_by_funders(relation)
