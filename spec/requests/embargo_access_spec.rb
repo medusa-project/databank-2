@@ -195,7 +195,7 @@ RSpec.describe "Embargo access", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Owner Embargo Search Dataset")
-    expect(response.body).to include("Publication State")
+    expect(response.body).not_to include("Publication State")
     expect(response.body).not_to include("Depositor")
   end
 

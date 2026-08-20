@@ -14,6 +14,13 @@
 
       %h2 Required Responses
 
+      - if @dataset.errors.any?
+        .idb-form-error-summary{role: "alert", aria: { live: "assertive" }}
+          %h3 Please correct the following before continuing:
+          %ul
+            - @dataset.errors.full_messages.each do |message|
+              %li= message
+
       = form_with model: @dataset, local: true, html: { data: { controller: "agreement" } } do |f|
         = hidden_field_tag :agreement_submission, "true"
         .idb-agreement-grid

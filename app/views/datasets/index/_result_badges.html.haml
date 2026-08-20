@@ -25,6 +25,11 @@
 - if can?(:edit, dataset) && dataset.has_sharing_link? && !dataset.published?
   = semantic_badge(kind: :status_ok, label: "has sharing link", icon: false, sr_label: "Has sharing link")
 
-- if can?(:read, dataset) && dataset.release_date.present? && dataset.publicly_readable_now?
-  - release_label = dataset.release_date > Date.current ? "planned publication date" : (dataset.published? ? "published" : "release date")
-  = semantic_badge(kind: :status_ok, tone: "primary", label: "#{release_label}: #{dataset.release_date.iso8601}", icon: false, sr_label: "#{release_label.humanize} #{dataset.release_date.iso8601}")
+- if can?(:read, dataset) && dataset.publicly_readable_now?
+  - published_date = dataset.release_date || dataset.published_at&.to_date
+  - if published_date.present?
+    - if dataset.release_date.present?
+      - release_label = dataset.release_date > Date.current ? "planned publication date" : (dataset.published? ? "published" : "release date")
+    - else
+      - release_label = "published"
+    = semantic_badge(kind: :status_ok, tone: "primary", label: "#{release_label}: #{published_date.iso8601}", icon: false, sr_label: "#{release_label.humanize} #{published_date.iso8601}")

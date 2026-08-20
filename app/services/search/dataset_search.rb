@@ -6,7 +6,6 @@ module Search
     OTHER_FUNDER_VALUE = "__other__".freeze
     TOP_FUNDER_CODES = FunderCatalog.known_codes.freeze
     FUNDER_CODE_TO_NAME_MAP = FunderCatalog.code_to_name_map.freeze
-    FUNDER_NAME_TO_CODE_MAP = FunderCatalog.name_to_code_map.freeze
 
     AVAILABLE_FACETS = {
       "guest" => %i[subjects licenses funders publication_years],
@@ -293,7 +292,7 @@ module Search
       other_dataset_ids = {}
 
       funder_rows.each do |row|
-        canonical_code = canonical_top_funder_code(code: row.funder_code, name: row.funder_name)
+        canonical_code = canonical_top_funder_code(code: row.funder_code)
 
         if canonical_code.present?
           grouped_dataset_ids[canonical_code][row.dataset_id] = true
@@ -318,33 +317,23 @@ module Search
       codes = Array(selected_codes).map(&:to_s).reject(&:blank?).uniq
       return relation.none if codes.empty?
 
-      mapped_names = FUNDER_NAME_TO_CODE_MAP.filter_map do |name, code|
-        name if codes.include?(code)
-      end
-
-      by_code = relation.where(funders: { code: codes })
-      return by_code if mapped_names.empty?
-
-      by_name = relation.where(funders: { code: [ nil, "" ], name: mapped_names })
-      by_code.or(by_name)
+      relation.where(funders: { code: codes })
     end
 
     def other_funder_scope(relation:)
-      top_names = FUNDER_NAME_TO_CODE_MAP.keys
       relation
         .where.not(funders: { name: [ nil, "" ] })
         .where(
-          "NOT ((COALESCE(funders.code, '') IN (:top_codes)) OR ((COALESCE(funders.code, '') = '') AND funders.name IN (:top_names)))",
-          top_codes: TOP_FUNDER_CODES,
-          top_names: top_names
+          "COALESCE(funders.code, '') NOT IN (:top_codes)",
+          top_codes: TOP_FUNDER_CODES
         )
     end
 
-    def canonical_top_funder_code(code:, name:)
+    def canonical_top_funder_code(code:)
       normalized_code = code.to_s.strip
       return normalized_code if TOP_FUNDER_CODES.include?(normalized_code)
 
-      FUNDER_NAME_TO_CODE_MAP[name.to_s.strip]
+      nil
     end
 
     def normalize_selected_funder_codes(values:)
@@ -352,11 +341,7 @@ module Search
         normalized_value = value.to_s.strip
         next if normalized_value.blank?
 
-        if TOP_FUNDER_CODES.include?(normalized_value)
-          normalized_value
-        else
-          FUNDER_NAME_TO_CODE_MAP[normalized_value]
-        end
+        TOP_FUNDER_CODES.include?(normalized_value) ? normalized_value : nil
       end.uniq
     end
 
