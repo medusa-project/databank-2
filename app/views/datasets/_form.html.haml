@@ -15,9 +15,6 @@
         %li= message
 
 = form_with model: dataset, local: true, html: form_html do |f|
-  = f.hidden_field :have_permission
-  = f.hidden_field :removed_private
-  = f.hidden_field :agree
   = f.hidden_field :org_creators, data: { deposit_form_target: "orgCreatorsField" }
 
   = render "datasets/core_metadata_fields", f: f, dataset: dataset, creator_mode_org: creator_mode_org, default_creator_type: default_creator_type, orcid_lookup_enabled: orcid_lookup_enabled

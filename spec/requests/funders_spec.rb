@@ -52,6 +52,7 @@ RSpec.describe "Funders", type: :request do
     expect(dataset.funders.count).to eq(1)
     expect(dataset.funders.first.name).to eq("U.S. Department of Energy (DOE)")
     expect(dataset.funders.first.award_number).to eq("DE-12345")
+    expect(dataset.funders.first.code).to eq(FunderCatalog::OTHER_CODE)
   end
 
   it "rejects invalid funder create and returns an alert message" do

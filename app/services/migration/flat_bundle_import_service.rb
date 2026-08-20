@@ -725,10 +725,18 @@ module Migration
 
       funders_data.each_with_index do |attrs, idx|
         position = normalized_position(attrs["row_position"], idx)
-        next if attrs["name"].blank?
+        name = attrs["name"].to_s.strip.presence || attrs["code"].to_s.strip.presence
+        next if name.blank?
 
-        funder = association.find_or_create_by(name: attrs["name"])
+        # Legacy data can contain multiple funders with the same name for a
+        # dataset, distinguished by grant value.
+        funder = association.find_or_create_by(
+          name: name,
+          grant: attrs["grant"]
+        )
         funder.update!(
+          name: name,
+          code: attrs["code"],
           identifier: attrs["identifier"],
           identifier_scheme: attrs["identifier_scheme"],
           grant: attrs["grant"],
