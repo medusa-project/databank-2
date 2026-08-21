@@ -335,3 +335,11 @@ ilw-footer *[slot="actions"] a.footer-action-button:focus-visible {
 	color: #ffffff;
 	text-decoration: none;
 }
+/* Override the default side margin for dataset form pages to ensure proper alignment with the rest of the content. */
+
+ilw-content.dataset-form-page {
+  --ilw-margin--side: 0;
+}
+ilw-page:has(ilw-content.dataset-form-page) {
+  --ilw-page--margin: 0;
+}
