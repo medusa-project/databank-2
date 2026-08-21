@@ -202,7 +202,26 @@ class DatasetsController < ApplicationController
       return
     end
 
-    public_send(action)
+    case action
+    when "suppress_changelog"
+      suppress_changelog
+    when "unsuppress_changelog"
+      unsuppress_changelog
+    when "temporarily_suppress_files"
+      temporarily_suppress_files
+    when "temporarily_suppress_metadata"
+      temporarily_suppress_metadata
+    when "unsuppress"
+      unsuppress
+    when "permanently_suppress_files"
+      permanently_suppress_files
+    when "permanently_suppress_metadata"
+      permanently_suppress_metadata
+    when "suppress_review"
+      suppress_review
+    when "unsuppress_review"
+      unsuppress_review
+    end
   end
 
   def suppress_changelog
