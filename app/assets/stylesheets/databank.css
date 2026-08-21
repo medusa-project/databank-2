@@ -681,6 +681,7 @@
 }
 
 .idb-agreement-grid fieldset {
+	margin: 0;
 	border: 1px solid var(--il-storm-80);
 	border-radius: 0.5rem;
 	padding: 0.75rem;
