@@ -18,7 +18,7 @@ require "json"
 #
 # Recommended import command (matches the export command structure):
 #   After exporting with: RAILS_ENV=demo SEPARATE_NESTED_ITEMS_BUNDLE=true bin/rails migration:legacy:export_all OUTPUT_ROOT=/tmp/databank_exports
-#   Import with:         BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
+#   Import with: RAILS_ENV=demo BUNDLE_ROOT=/tmp/databank_exports SEPARATE_NESTED_ITEMS_IMPORT=true CHUNKED_DATASET_IMPORT=true bundle exec rails cutover:import_all
 #
 # This two-phase protocol:
 #   - Phase 1: Imports all users, then dataset structure (datasets + datafiles only)
