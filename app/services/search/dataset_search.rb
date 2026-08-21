@@ -6,16 +6,36 @@ module Search
     OTHER_FUNDER_VALUE = "__other__".freeze
     TOP_FUNDER_CODES = FunderCatalog.known_codes.freeze
     FUNDER_CODE_TO_NAME_MAP = FunderCatalog.code_to_name_map.freeze
-    FUNDER_NAME_TO_CODE_MAP = FunderCatalog.name_to_code_map.freeze
 
     AVAILABLE_FACETS = {
       "guest" => %i[subjects licenses funders publication_years],
-      "depositor" => %i[subjects licenses funders publication_years publication_states],
-      "admin" => %i[subjects licenses funders publication_years publication_states depositors external_files]
+      "depositor" => %i[subjects licenses funders publication_years],
+      "admin" => %i[subjects licenses funders publication_years visibility_states depositors external_files]
     }.freeze
 
     EXTERNAL_FILES_HAS_VALUE = "has_external_files".freeze
     EXTERNAL_FILES_NONE_VALUE = "no_external_files".freeze
+    VISIBILITY_METADATA_FILES_PUBLISHED = "metadata_files_published".freeze
+    VISIBILITY_DRAFT = "draft".freeze
+    VISIBILITY_METADATA_FILES_TEMP_SUPPRESSED = "metadata_files_temporarily_suppressed".freeze
+    VISIBILITY_WITHDRAWN = "withdrawn".freeze
+    VISIBILITY_METADATA_PUBLISHED_FILES_TEMP_SUPPRESSED = "metadata_published_files_temporarily_suppressed".freeze
+    VISIBILITY_VERSION_CANDIDATE_UNDER_REVIEW = "version_candidate_under_curator_review".freeze
+    VISIBILITY_METADATA_PUBLISHED_FILES_WITHDRAWN = "metadata_published_files_withdrawn".freeze
+    VISIBILITY_METADATA_FILES_EMBARGOED = "metadata_files_embargoed".freeze
+    VISIBILITY_METADATA_PUBLISHED_FILES_EMBARGOED = "metadata_published_files_embargoed".freeze
+
+    VISIBILITY_STATE_OPTIONS = [
+      { value: VISIBILITY_METADATA_FILES_PUBLISHED, label: "Metadata and Files Published" },
+      { value: VISIBILITY_DRAFT, label: "Draft" },
+      { value: VISIBILITY_METADATA_FILES_TEMP_SUPPRESSED, label: "Metadata and Files Temporarily Suppressed" },
+      { value: VISIBILITY_WITHDRAWN, label: "Withdrawn" },
+      { value: VISIBILITY_METADATA_PUBLISHED_FILES_TEMP_SUPPRESSED, label: "Metadata Published, Files Temporarily Suppressed" },
+      { value: VISIBILITY_VERSION_CANDIDATE_UNDER_REVIEW, label: "Version Candidate Under Curator Review" },
+      { value: VISIBILITY_METADATA_PUBLISHED_FILES_WITHDRAWN, label: "Metadata Published, Files Withdrawn" },
+      { value: VISIBILITY_METADATA_FILES_EMBARGOED, label: "Metadata and Files Publication Delayed (Embargoed)" },
+      { value: VISIBILITY_METADATA_PUBLISHED_FILES_EMBARGOED, label: "Metadata Published, Files Publication Delayed (Embargoed)" }
+    ].freeze
 
     attr_reader :page, :per_page
 
@@ -70,8 +90,8 @@ module Search
           funders: funder_options(relation)
         }
 
-        if available_facets.include?(:publication_states)
-          options[:publication_states] = publication_state_options(relation)
+        if available_facets.include?(:visibility_states)
+          options[:visibility_states] = visibility_state_options(relation)
         end
 
         if available_facets.include?(:depositors)
@@ -95,7 +115,7 @@ module Search
       relation = filter_by_licenses(relation)
       relation = filter_by_publication_years(relation)
       relation = filter_by_funders(relation)
-      relation = filter_by_publication_states(relation)
+      relation = filter_by_visibility_states(relation)
       relation = filter_by_depositors(relation)
       relation = filter_by_external_files(relation)
       relation.order(created_at: :desc)
@@ -198,11 +218,11 @@ module Search
       end
     end
 
-    def filter_by_publication_states(relation)
-      return relation if @filters[:publication_states].empty?
-      return relation unless available_facets.include?(:publication_states)
+    def filter_by_visibility_states(relation)
+      return relation if @filters[:visibility_states].empty?
+      return relation unless available_facets.include?(:visibility_states)
 
-      relation.where(publication_state: @filters[:publication_states])
+      relation.where(Arel.sql(visibility_state_sql_expression).in(@filters[:visibility_states]))
     end
 
     def filter_by_depositors(relation)
@@ -272,7 +292,7 @@ module Search
       other_dataset_ids = {}
 
       funder_rows.each do |row|
-        canonical_code = canonical_top_funder_code(code: row.funder_code, name: row.funder_name)
+        canonical_code = canonical_top_funder_code(code: row.funder_code)
 
         if canonical_code.present?
           grouped_dataset_ids[canonical_code][row.dataset_id] = true
@@ -297,33 +317,23 @@ module Search
       codes = Array(selected_codes).map(&:to_s).reject(&:blank?).uniq
       return relation.none if codes.empty?
 
-      mapped_names = FUNDER_NAME_TO_CODE_MAP.filter_map do |name, code|
-        name if codes.include?(code)
-      end
-
-      by_code = relation.where(funders: { code: codes })
-      return by_code if mapped_names.empty?
-
-      by_name = relation.where(funders: { code: [ nil, "" ], name: mapped_names })
-      by_code.or(by_name)
+      relation.where(funders: { code: codes })
     end
 
     def other_funder_scope(relation:)
-      top_names = FUNDER_NAME_TO_CODE_MAP.keys
       relation
         .where.not(funders: { name: [ nil, "" ] })
         .where(
-          "NOT ((COALESCE(funders.code, '') IN (:top_codes)) OR ((COALESCE(funders.code, '') = '') AND funders.name IN (:top_names)))",
-          top_codes: TOP_FUNDER_CODES,
-          top_names: top_names
+          "COALESCE(funders.code, '') NOT IN (:top_codes)",
+          top_codes: TOP_FUNDER_CODES
         )
     end
 
-    def canonical_top_funder_code(code:, name:)
+    def canonical_top_funder_code(code:)
       normalized_code = code.to_s.strip
       return normalized_code if TOP_FUNDER_CODES.include?(normalized_code)
 
-      FUNDER_NAME_TO_CODE_MAP[name.to_s.strip]
+      nil
     end
 
     def normalize_selected_funder_codes(values:)
@@ -331,33 +341,45 @@ module Search
         normalized_value = value.to_s.strip
         next if normalized_value.blank?
 
-        if TOP_FUNDER_CODES.include?(normalized_value)
-          normalized_value
-        else
-          FUNDER_NAME_TO_CODE_MAP[normalized_value]
-        end
+        TOP_FUNDER_CODES.include?(normalized_value) ? normalized_value : nil
       end.uniq
     end
 
-    def publication_state_options(relation)
-      relation
-        .group(:publication_state)
-        .order(:publication_state)
-        .count
-        .map do |value, count|
-          key = publication_state_key(value)
-          { value: key, count: count }
-        end
+    def visibility_state_options(relation)
+      visibility_counts = relation.group(Arel.sql(visibility_state_sql_expression)).count
+
+      VISIBILITY_STATE_OPTIONS.filter_map do |option|
+        count = visibility_counts[option[:value]]
+        next unless count.to_i.positive?
+
+        { value: option[:value], label: option[:label], count: count }
+      end
     end
 
-    def publication_state_key(value)
-      normalized = value.to_s.strip
-
-      if Dataset.publication_states.key?(normalized)
-        normalized
-      else
-        Dataset.publication_states.key(value.to_i) || normalized
-      end
+    def visibility_state_sql_expression
+      <<~SQL.squish
+        CASE
+          WHEN LOWER(COALESCE(NULLIF(datasets.hold_state, ''), 'none')) = 'metadata temporarily suppressed'
+            THEN '#{VISIBILITY_METADATA_FILES_TEMP_SUPPRESSED}'
+          WHEN LOWER(COALESCE(NULLIF(datasets.hold_state, ''), 'none')) = 'files temporarily suppressed'
+            THEN '#{VISIBILITY_METADATA_PUBLISHED_FILES_TEMP_SUPPRESSED}'
+          WHEN LOWER(COALESCE(NULLIF(datasets.hold_state, ''), 'none')) = 'files permanently suppressed'
+            THEN '#{VISIBILITY_METADATA_PUBLISHED_FILES_WITHDRAWN}'
+          WHEN LOWER(COALESCE(NULLIF(datasets.hold_state, ''), 'none')) = 'metadata permanently suppressed'
+            THEN '#{VISIBILITY_WITHDRAWN}'
+          WHEN LOWER(COALESCE(NULLIF(datasets.hold_state, ''), 'none')) = 'version candidate under curator review'
+            THEN '#{VISIBILITY_VERSION_CANDIDATE_UNDER_REVIEW}'
+          WHEN datasets.publication_state = #{Dataset.publication_states.fetch('draft')}
+            THEN '#{VISIBILITY_DRAFT}'
+          WHEN COALESCE(NULLIF(datasets.embargo, ''), '#{Dataset::EMBARGO_NONE}') = '#{Dataset::EMBARGO_METADATA}'
+            AND (datasets.release_date IS NULL OR datasets.release_date > CURRENT_DATE)
+            THEN '#{VISIBILITY_METADATA_FILES_EMBARGOED}'
+          WHEN COALESCE(NULLIF(datasets.embargo, ''), '#{Dataset::EMBARGO_NONE}') = '#{Dataset::EMBARGO_FILE}'
+            AND (datasets.release_date IS NULL OR datasets.release_date > CURRENT_DATE)
+            THEN '#{VISIBILITY_METADATA_PUBLISHED_FILES_EMBARGOED}'
+          ELSE '#{VISIBILITY_METADATA_FILES_PUBLISHED}'
+        END
+      SQL
     end
 
     def depositor_options(relation)
@@ -398,7 +420,7 @@ module Search
         licenses: normalize_values(raw[:licenses] || raw["licenses"]),
         funders: normalize_values(raw[:funders] || raw["funders"]),
         publication_years: normalize_int_values(raw[:publication_years] || raw["publication_years"]),
-        publication_states: normalize_values(raw[:publication_states] || raw["publication_states"]),
+        visibility_states: normalize_values(raw[:visibility_states] || raw["visibility_states"]),
         depositors: normalize_values(raw[:depositors] || raw["depositors"]),
         external_files: normalize_values(raw[:external_files] || raw["external_files"])
       }

@@ -321,6 +321,84 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(Dataset.find_by(key: valid_key)).to be_present
   end
 
+  it "imports funder code from flat dataset records" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Funder Code Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none",
+        funders: [
+          {
+            name: "National Science Foundation",
+            code: "NSF",
+            grant: "NSF-123"
+          }
+        ]
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(key: dataset_key)
+    expect(dataset.funders.count).to eq(1)
+    expect(dataset.funders.first.code).to eq("NSF")
+  end
+
+  it "keeps multiple same-name funders when grants differ" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Duplicate Name Funder Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft",
+        embargo: "none",
+        funders: [
+          {
+            name: "National Science Foundation",
+            code: "NSF",
+            grant: "NSF-111"
+          },
+          {
+            name: "National Science Foundation",
+            code: "NSF",
+            grant: "NSF-222"
+          }
+        ]
+      }
+    ]
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+
+    dataset = Dataset.find_by!(key: dataset_key)
+    expect(dataset.funders.count).to eq(2)
+    expect(dataset.funders.order(:grant).pluck(:name, :grant)).to eq(
+      [
+        [ "National Science Foundation", "NSF-111" ],
+        [ "National Science Foundation", "NSF-222" ]
+      ]
+    )
+  end
+
   it "remaps colliding valid web_ids that belong to another dataset" do
     existing_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
     import_dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"

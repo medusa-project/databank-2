@@ -190,7 +190,7 @@ RSpec.describe "Datasets search", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include(own_draft.title)
     expect(response.body).not_to include("Other User Draft Dataset")
-    expect(response.body).to include("Publication State")
+    expect(response.body).to include("My Datasets")
     expect(response.body).not_to include("Depositor")
   end
 
@@ -466,7 +466,7 @@ RSpec.describe "Datasets search", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Other (1)")
-    expect(response.body).to include("U.S. Department of Energy (DOE) (1)")
+    expect(response.body).to include("#{FunderCatalog.code_to_name_map.fetch('DOE')} (1)")
     expect(response.body).to include('id="funder_doe" value="DOE"')
     expect(response.body).not_to include("Alfred P. Sloan Foundation (1)")
   end
@@ -535,7 +535,7 @@ RSpec.describe "Datasets search", type: :request do
     expect(response.body).not_to include("Code Filter Other Dataset")
   end
 
-  it "accepts legacy name-based funder filter values" do
+  it "requires code-based funder filter values" do
     top_dataset = Dataset.create!(
       title: "Legacy Name Filter Top Dataset",
       description: "Top legacy filter result",
@@ -563,7 +563,7 @@ RSpec.describe "Datasets search", type: :request do
     get datasets_path, params: { q: "legacy-name-filter", funders: [ "U.S. Department of Energy (DOE)" ] }
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Legacy Name Filter Top Dataset")
+    expect(response.body).not_to include("Legacy Name Filter Top Dataset")
     expect(response.body).not_to include("Legacy Name Filter Other Dataset")
   end
 
@@ -583,8 +583,37 @@ RSpec.describe "Datasets search", type: :request do
     get datasets_path, params: { q: "renamed-funder" }
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("U.S. Department of Energy (DOE) (1)")
+    expect(response.body).to include("#{FunderCatalog.code_to_name_map.fetch('DOE')} (1)")
     expect(response.body).not_to include("Other (1)")
+  end
+
+  it "uses current catalog label while keeping code-based filtering stable" do
+    original_label = Search::DatasetSearch::FUNDER_CODE_TO_NAME_MAP.fetch("DOE")
+    updated_label = "Department of Energy (Updated Label)"
+
+    dataset = Dataset.create!(
+      title: "Catalog Label Stability Dataset",
+      description: "Catalog label override result",
+      keywords: "catalog-label-stability",
+      subject: "Data Science",
+      owner_uid: "owner-catalog-label-stability",
+      depositor_name: "Owner Catalog Label",
+      depositor_email: "owner-catalog-label-stability@example.edu",
+      publication_state: :published
+    )
+    dataset.funders.create!(code: "DOE", name: "Department of Energy (Legacy Name)")
+
+    stub_const(
+      "Search::DatasetSearch::FUNDER_CODE_TO_NAME_MAP",
+      Search::DatasetSearch::FUNDER_CODE_TO_NAME_MAP.merge("DOE" => updated_label).freeze
+    )
+
+    get datasets_path, params: { q: "catalog-label-stability", funders: [ "DOE" ] }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Catalog Label Stability Dataset")
+    expect(response.body).to include("#{updated_label} (1)")
+    expect(response.body).not_to include("#{original_label} (1)")
   end
 
   it "matches text query by funder name" do
@@ -652,6 +681,12 @@ RSpec.describe "Datasets search", type: :request do
       publication_state: :draft
     )
     draft_with_share.create_token!(identifier: Token.generate_auth_token)
+    draft_with_share.version_requests.create!(
+      requester_email: "depositor-draft@example.edu",
+      requester_name: "Depositor Draft",
+      requested_at: Time.zone.parse("2026-01-11"),
+      status: :pending
+    )
 
     get datasets_path, params: { q: "curator-badges" }
 
@@ -663,7 +698,7 @@ RSpec.describe "Datasets search", type: :request do
     expect(response.body).to include("released:")
     expect(response.body).to include("released: 2026-01-15")
     expect(response.body).to include("published: 2026-01-15")
-    expect(response.body).to include("version candidate under review")
+    expect(response.body).to include("Version candidate under review")
     expect(response.body).to include("has sharing link")
     expect(response.body).to include("draft")
     expect(response.body).to include("Earth Systems")

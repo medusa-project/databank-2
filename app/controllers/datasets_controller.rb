@@ -1,7 +1,7 @@
 class DatasetsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
 
   def index
     @query = params[:q].to_s
@@ -202,7 +202,26 @@ class DatasetsController < ApplicationController
       return
     end
 
-    redirect_to action: action, id: @dataset.key
+    case action
+    when "suppress_changelog"
+      suppress_changelog
+    when "unsuppress_changelog"
+      unsuppress_changelog
+    when "temporarily_suppress_files"
+      temporarily_suppress_files
+    when "temporarily_suppress_metadata"
+      temporarily_suppress_metadata
+    when "unsuppress"
+      unsuppress
+    when "permanently_suppress_files"
+      permanently_suppress_files
+    when "permanently_suppress_metadata"
+      permanently_suppress_metadata
+    when "suppress_review"
+      suppress_review
+    when "unsuppress_review"
+      unsuppress_review
+    end
   end
 
   def suppress_changelog
@@ -911,7 +930,7 @@ class DatasetsController < ApplicationController
   end
 
   def public_datasets
-    return Dataset.all if logged_in? && current_user.curator?
+    return Dataset.all if acting_as_curator_role?
 
     if logged_in?
       owned   = Dataset.where(depositor_email: current_user.email)
@@ -926,11 +945,18 @@ class DatasetsController < ApplicationController
   def current_role
     return "guest" unless logged_in?
 
-    current_user.curator? ? "admin" : "depositor"
+    return "admin" if acting_as_curator_role?
+    return "depositor" if current_user.role == "depositor"
+
+    "guest"
   end
 
   def datasets_for_current_role
     public_datasets
+  end
+
+  def acting_as_curator_role?
+    logged_in? && [ "admin", "curator" ].include?(current_user.role.to_s)
   end
 
   def dataset_filter_params
@@ -940,7 +966,7 @@ class DatasetsController < ApplicationController
       licenses: params[:licenses],
       funders: params[:funders],
       publication_years: params[:publication_years],
-      publication_states: params[:publication_states],
+      visibility_states: params[:visibility_states],
       depositors: params[:depositors],
       external_files: params[:external_files]
     }
@@ -967,7 +993,7 @@ class DatasetsController < ApplicationController
       licenses: params[:licenses],
       funders: params[:funders],
       publication_years: params[:publication_years],
-      publication_states: params[:publication_states],
+      visibility_states: params[:visibility_states],
       depositors: params[:depositors],
       external_files: params[:external_files],
       page: @page

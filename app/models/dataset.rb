@@ -232,7 +232,23 @@ class Dataset < ApplicationRecord
     create_token!(identifier: Token.generate_auth_token)
   end
 
+  def creator_list
+    creator_display_names(separator: "; ")
+  end
+
+  def bibtex_creator_list
+    creator_display_names(separator: " and ")
+  end
+
+  def publication_year
+    release_date&.year || Time.zone.now.year
+  end
+
   private
+
+  def creator_display_names(separator:)
+    creators.map(&:display_name).map(&:to_s).map(&:strip).reject(&:blank?).join(separator)
+  end
 
   def creator_names_for_record_text
     names = creators.map(&:name).reject(&:blank?)
