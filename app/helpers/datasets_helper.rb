@@ -1,18 +1,4 @@
 module DatasetsHelper
-  BASE_FACET_SECTIONS = [
-    { key: :subjects, title: "Subject Area", param_name: "subjects[]" },
-    { key: :funders, title: "Funder", param_name: "funders[]" },
-    { key: :publication_years, title: "Publication Year", param_name: "publication_years[]" },
-    { key: :licenses, title: "License", param_name: "licenses[]" }
-  ].freeze
-
-  CURATOR_FACET_SECTIONS = [
-    { key: :depositors, title: "Depositor", param_name: "depositors[]" },
-    *BASE_FACET_SECTIONS,
-    { key: :visibility_states, title: "Visibility", param_name: "visibility_states[]" },
-    { key: :external_files, title: "External Files", param_name: "external_files[]" }
-  ].freeze
-
   def dataset_results_count_text(search:, datasets:, total_count:)
     start_item = search.offset_value + 1
     end_item = [ search.offset_value + datasets.length, total_count ].min
@@ -22,9 +8,7 @@ module DatasetsHelper
 
   def dataset_index_facets
     role = current_user&.role.to_s
-    return CURATOR_FACET_SECTIONS if [ "admin", "curator" ].include?(role)
-
-    BASE_FACET_SECTIONS
+    Dataset.facets_for_role(role)
   end
 
   def dataset_facet_value(facet_key:, row:)
@@ -80,15 +64,15 @@ module DatasetsHelper
   end
 
   def dataset_creator_list(dataset:)
-    dataset.creators.map(&:name).reject(&:blank?).join("; ")
+    dataset.creator_list
   end
 
   def dataset_publication_year(dataset:)
-    dataset.release_date&.year
+    dataset.publication_year
   end
 
   def dataset_has_external_files?(dataset:)
-    dataset.external_files_note.to_s.strip.present? || dataset.external_files_link.to_s.strip.present?
+    dataset.has_external_files?
   end
 
   def dataset_hold_state(dataset:)
@@ -96,11 +80,6 @@ module DatasetsHelper
   end
 
   def dataset_suppressed_by_curator?(dataset:)
-    hold_state = dataset_hold_state(dataset: dataset)
-    return false if hold_state.blank?
-    return false if hold_state == "none"
-    return false if hold_state == "version"
-
-    true
+    dataset.suppressed_by_curator?
   end
 end

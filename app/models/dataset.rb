@@ -3,6 +3,7 @@ class Dataset < ApplicationRecord
   include Dataset::Globusable
   include Dataset::Versionable
   include Dataset::Publishable
+  include Dataset::Searchable
 
   class << self
     def citation_report(datasets:, request_url:, current_user:)
@@ -16,7 +17,7 @@ class Dataset < ApplicationRecord
       report_text << "\n"
 
       datasets.each do |dataset|
-        report_text << "\n\n#{citation_line(dataset: dataset)}"
+        report_text << "\n\n#{dataset.plain_text_citation}"
 
         if dataset.funders.any?
           dataset.funders.each do |funder|
@@ -35,20 +36,6 @@ class Dataset < ApplicationRecord
     end
 
     private
-
-    def citation_line(dataset:)
-      publication_year = (dataset.published_at || dataset.updated_at || dataset.created_at).year
-      creator_names = dataset.creators.map(&:name).reject(&:blank?)
-
-      parts = []
-      parts << creator_names.join("; ") if creator_names.any?
-      parts << "(#{publication_year})"
-      parts << "#{dataset.title}." if dataset.title.present?
-      parts << dataset.publisher if dataset.publisher.present?
-      parts << "https://doi.org/#{dataset.identifier}" if dataset.identifier.present?
-
-      parts.join(" ")
-    end
   end
 
   KEY_PREFIX = IdbConfig.fetch(:dataset, :key_prefix, default: "IDB").freeze
@@ -108,6 +95,63 @@ class Dataset < ApplicationRecord
     "https://doi.org/#{identifier}"
   end
 
+  def creators_citation_format
+    creator_names = creators.map { |c| format_creator_for_citation(c) }.reject(&:blank?)
+    return "[Creators Not Yet Added]" if creator_names.empty?
+    return creator_names.first if creator_names.size == 1
+    return "#{creator_names[0]} & #{creator_names[1]}" if creator_names.size == 2
+
+    # 3+ creators: "First, Second, & Third"
+    "#{creator_names[0..-2].join(", ")} & #{creator_names[-1]}"
+  end
+
+  def format_creator_for_citation(creator)
+    # Institution creators: use institution_name only
+    return creator.institution_name if creator.institution_name.present?
+
+    # Individual creators: format as "Family, Given"
+    return nil if creator.family_name.blank?
+
+    given_name = creator.given_name.to_s.strip
+    return creator.family_name if given_name.blank?
+
+    "#{creator.family_name}, #{given_name}"
+  end
+
+  def citation_minus_title
+    citation_parts = []
+    citation_parts << creators_citation_format
+
+    year = published_at&.year || updated_at&.year || created_at&.year
+    citation_parts << "(#{year})." if year.present?
+    citation_parts << publisher if publisher.present?
+    citation_parts << "https://doi.org/#{identifier}" if identifier.present?
+
+    citation_parts.join(" ")
+  end
+
+  def citation_with_title
+    return citation_minus_title if title.blank?
+
+    citation_parts = []
+    citation_parts << creators_citation_format
+
+    year = published_at&.year || updated_at&.year || created_at&.year
+    citation_parts << "(#{year})." if year.present?
+
+    citation_parts << "*#{title}* (Version 1.0)"
+    citation_parts << "[Data set]."
+    citation_parts << publisher if publisher.present?
+    citation_parts << "https://doi.org/#{identifier}" if identifier.present?
+
+    citation_parts.join(" ")
+  end
+
+  def plain_text_citation
+    citation_with_title
+  end
+
+
   def individual_creators
     creators.select { |creator| creator.type_of != CREATOR_TYPE_INSTITUTION }
   end
@@ -164,7 +208,7 @@ class Dataset < ApplicationRecord
     content += "[ #{'Creator'.pluralize(creators.count)}: ] #{creator_names_for_record_text}\n"
     content += "[ Publisher: ] #{publisher}\n"
     content += "[ Publication Year: ] #{publication_year_for_record_text}\n\n"
-    content += "[ Citation: ] #{plain_text_citation_for_record_text}\n\n"
+    content += "[ Citation: ] #{plain_text_citation}\n\n"
 
     content += "[ Description: ] #{description}\n\n" if description.present?
     content += "[ Keywords: ] #{keywords}\n" if keywords.present?
@@ -241,7 +285,7 @@ class Dataset < ApplicationRecord
   end
 
   def publication_year
-    release_date&.year || Time.zone.now.year
+    release_date&.year
   end
 
   private
@@ -259,17 +303,6 @@ class Dataset < ApplicationRecord
 
   def publication_year_for_record_text
     (published_at || updated_at || created_at).year
-  end
-
-  def plain_text_citation_for_record_text
-    citation_parts = []
-    creator_names = creators.map(&:name).reject(&:blank?)
-    citation_parts << creator_names.join("; ") if creator_names.any?
-    citation_parts << "(#{publication_year_for_record_text})"
-    citation_parts << "#{title}." if title.present?
-    citation_parts << publisher if publisher.present?
-    citation_parts << "https://doi.org/#{identifier}" if identifier.present?
-    citation_parts.join(" ")
   end
 
   def license_line_for_record_text
