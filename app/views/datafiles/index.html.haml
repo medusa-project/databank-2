@@ -1,0 +1,49 @@
+- if current_user && can?(:manage, @dataset)
+  .curator-only
+    %h3
+      Files for
+      = link_to(@dataset.plain_text_citation.presence || @dataset.title, dataset_path(@dataset.key))
+
+    %hr
+
+    - if @datafiles.any?
+      %table.table.table-striped.table-hover
+        %thead
+          %tr
+            %th Filename
+            %th Storage Status
+            %th Size
+            %th.text-nowrap Web ID
+            %th Actions
+        %tbody
+          - @datafiles.each do |datafile|
+            %tr
+              %td
+                = link_to(datafile.binary_name.presence || datafile.web_id, view_dataset_datafile_path(@dataset, datafile))
+              %td
+                - if datafile.binary.attached?
+                  %span.badge.badge-success Attached
+                - elsif datafile.exists_on_storage?
+                  %span.badge.badge-success exists in storage
+                - else
+                  %span.badge.badge-danger does NOT exist in storage
+              %td
+                = number_to_human_size(datafile.binary_size || 0)
+              %td.text-nowrap
+                = datafile.web_id
+              %td
+                = link_to "Preview", view_dataset_datafile_path(@dataset, datafile), class: "btn btn-secondary btn-sm"
+                = link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "btn btn-primary btn-sm"
+
+    - else
+      %p No files in this dataset.
+
+- else
+  .dialog.text-center
+    %h2 The page you were looking for doesn't exist.
+    %hr
+    %p You may have mistyped the address or the page may have moved.
+    %p
+      Please
+      = link_to "contact the Research Data Service Team", "/contact", target: "_blank"
+      with questions.

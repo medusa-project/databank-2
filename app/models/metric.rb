@@ -293,7 +293,7 @@ class Metric
               non_version_relationship_count(dataset).to_s,
               dataset.creators.count.to_s,
               dataset.subject.to_s,
-              plain_text_citation(dataset)
+              dataset.plain_text_citation
             ]
 
             file.puts(values.join("\t"))
@@ -505,7 +505,7 @@ class Metric
               ]
 
               text_file.puts("Key: #{dataset.key}")
-              text_file.puts("Citation: #{plain_text_citation(dataset)}")
+              text_file.puts("Citation: #{dataset.plain_text_citation}")
               text_file.puts("Description: #{dataset.description}")
               text_file.puts("----------------------------------------\n\n")
             end
@@ -672,20 +672,6 @@ class Metric
       dataset.related_materials.count do |material|
         !material.version_relation?
       end
-    end
-
-    def plain_text_citation(dataset)
-      citation_parts = []
-      creator_names = dataset.creators.map(&:name).reject(&:blank?)
-
-      citation_parts << creator_names.join("; ") if creator_names.any?
-      year = dataset.published_at&.year || dataset.updated_at&.year || dataset.created_at&.year
-      citation_parts << "(#{year})" if year.present?
-      citation_parts << "#{dataset.title}." if dataset.title.present?
-      citation_parts << dataset.publisher if dataset.publisher.present?
-      citation_parts << "https://doi.org/#{dataset.identifier}" if dataset.identifier.present?
-
-      citation_parts.join(" ")
     end
 
     def content_type_for(datafile)

@@ -1,0 +1,85 @@
+%section#dataset-files.idb-section-card
+  %details.idb-section-disclosure{open: true}
+    %summary
+      %h2.idb-section-title Files
+    .idb-section-body
+      - can_edit = can?(:manage, dataset) || can?(:update, dataset)
+
+      - if can?(:manage, dataset)
+        .idb-file-metadata-actions
+          = link_to "Advanced File Management", dataset_datafiles_path(dataset), class: "idb-button-primary"
+
+      - if dataset.datafiles.count <= 500
+        - if dataset.datafiles.any?
+          - if can_edit && dataset.datafiles.count > 1
+            .idb-file-metadata-actions{data: { controller: "bulk-file-actions" }}
+              = form_with url: bulk_destroy_dataset_datafiles_path(dataset), method: :post, local: true, id: "bulk-file-delete-form" do
+                %label
+                  %input{type: "checkbox", data: { action: "change->bulk-file-actions#toggleSelectAll", bulk_file_actions_target: "selectAll" }, aria: { label: "Select all files" }}
+                  Select all
+                %button.idb-button-danger{type: "button", disabled: true, data: { action: "click->bulk-file-actions#requestBulkDelete", bulk_file_actions_target: "deleteButton" }} Delete selected
+                %span{data: { bulk_file_actions_target: "count" }} (0 selected)
+
+          %ul.idb-file-metadata-list
+            - dataset.datafiles.each do |datafile|
+              %li.idb-file-metadata-item
+                - if can_edit && dataset.datafiles.count > 1
+                  .idb-file-metadata-actions
+                    %label
+                      %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, form: "bulk-file-delete-form", data: { action: "change->bulk-file-actions#updateState", bulk_file_actions_target: "fileCheckbox" }, aria: { label: "Select #{datafile.binary_name.presence || datafile.web_id}" }}
+                      Select
+
+                = form_with model: [dataset, datafile], local: true, class: "idb-file-metadata-form" do |df|
+                  .idb-nested-grid
+                    .idb-grid-col-3
+                      = df.label :binary, "Replace file"
+                      = df.file_field :binary
+
+                    .idb-grid-col-3
+                      = df.label :binary_name, "Filename"
+                      = df.text_field :binary_name
+
+                    .idb-grid-col-2
+                      = df.label :binary_size, "Size (bytes)"
+                      = df.number_field :binary_size, min: 0
+
+                    .idb-grid-col-3
+                      = df.label :description, "Description"
+                      = df.text_field :description
+
+                    .idb-grid-col-1.idb-row-actions-inline
+                      = df.submit "Update", class: "idb-button-primary"
+
+                .idb-file-metadata-actions
+                  = button_to "Remove", dataset_datafile_path(dataset, datafile), method: :delete, class: "idb-button-danger"
+                  = link_to "Download", download_dataset_datafile_path(dataset, datafile), class: "idb-button-primary"
+
+        - if can_edit
+          .idb-file-upload-section{data: { controller: "file-upload" }}
+            .idb-file-upload-container
+              .idb-file-upload-area{id: "file-select-area", data: { file_upload_target: "dropZone", action: "dragover->file-upload#handleDragOver dragout->file-upload#handleDragOut drop->file-upload#handleDrop click->file-upload#selectFiles" }}
+                %i.fa.fa-cloud-upload-alt.fa-2x
+                %p Drop files here or
+                %button.idb-button-upload{type: "button"}
+                  %span.fa.fa-laptop
+                  Select files from your computer
+              %input{type: "file", multiple: true, style: "display: none;", data: { file_upload_target: "fileInput", action: "change->file-upload#handleFileSelect" }}
+
+              %ul.idb-file-upload-guidelines
+                %li
+                  Use our
+                  = link_to "File Grouping guide", "/guides#group", class: "idb-link"
+                  for folders or more than 12 files.
+                %li
+                  Drag-and-drop and file selector are reliable for files
+                  %strong up to 4 GB.
+                %li
+                  %strong Limit 100 files per dataset;
+                  fewer is better for usability.
+                %li For larger files or command line tools, contact the Research Data Service.
+
+      - else
+        %p
+          Error displaying files, please
+          = link_to "contact", "/contact"
+          the Research Data Service.

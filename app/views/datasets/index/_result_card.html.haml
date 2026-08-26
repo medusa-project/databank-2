@@ -5,8 +5,7 @@
     %h3.dataset-title
       %a(href="/datasets/#{dataset.key}" class="dataset-link" id="link#{dataset.key}")
         %strong= dataset.title.present? ? dataset.title : "(Untitled)"
-    = dataset_creator_list(dataset: dataset)
-    = "(#{dataset_publication_year(dataset: dataset)})"
+    = dataset.citation_minus_title
 
   = render partial: "datasets/index/result_description", locals: { dataset: dataset }
 

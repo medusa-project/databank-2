@@ -6,6 +6,11 @@ class DatafilesController < ApplicationController
   before_action :set_dataset
   before_action :set_datafile, only: %i[update destroy download view]
 
+  def index
+    authorize! :update, @dataset
+    @datafiles = @dataset.datafiles.order(:binary_name)
+  end
+
   def create
     @datafile = @dataset.datafiles.build(datafile_params)
     @datafile.sync_metadata_from_attachment!
@@ -31,6 +36,46 @@ class DatafilesController < ApplicationController
   def destroy
     @datafile.destroy!
     redirect_to edit_dataset_path(@dataset), notice: "File metadata removed."
+  end
+
+  def bulk_create
+    uploaded_files = params.fetch(:datafiles, [])
+
+    if uploaded_files.empty?
+      return render json: { error: "No files were selected for upload." }, status: :bad_request
+    end
+
+    created = 0
+    errors = []
+
+    Array(uploaded_files).each do |file|
+      datafile = @dataset.datafiles.build(binary: file, binary_name: file.original_filename)
+      datafile.sync_metadata_from_attachment!
+
+      if datafile.save
+        created += 1
+      else
+        errors << "#{file.original_filename}: #{datafile.errors.full_messages.to_sentence}"
+      end
+    end
+
+    if errors.empty?
+      render json: { success: true, message: "Uploaded #{created} file#{created == 1 ? '' : 's'} successfully.", count: created }, status: :created
+    else
+      render json: { success: false, message: "Uploaded #{created} file#{created == 1 ? '' : 's'}, but #{errors.length} failed.", errors: errors }, status: :ok
+    end
+  end
+
+  def bulk_destroy
+    selected_ids = selected_datafile_ids
+
+    if selected_ids.empty?
+      redirect_to edit_dataset_path(@dataset), alert: "No files were selected for removal."
+      return
+    end
+
+    removed_count = @dataset.datafiles.where(web_id: selected_ids).destroy_all.size
+    redirect_to edit_dataset_path(@dataset), notice: "Removed #{removed_count} file metadata entr#{removed_count == 1 ? 'y' : 'ies'}."
   end
 
   def download
@@ -132,6 +177,11 @@ class DatafilesController < ApplicationController
 
   def datafile_params
     params.require(:datafile).permit(:binary_name, :binary_size, :description, :binary, :storage_root, :storage_key, :medusa_id, :position, :row_position)
+  end
+
+  def selected_datafile_ids
+    ids = params.fetch(:selected_files, [])
+    Array(ids).map(&:to_s).reject(&:blank?)
   end
 
   def render_text_preview

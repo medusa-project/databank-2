@@ -1,3 +1,7 @@
+- creator_mode_org = local_assigns.fetch(:creator_mode_org) { ActiveModel::Type::Boolean.new.cast(dataset.org_creators) }
+- default_creator_type = local_assigns.fetch(:default_creator_type) { creator_mode_org ? Dataset::CREATOR_TYPE_INSTITUTION : Dataset::CREATOR_TYPE_PERSON }
+- orcid_lookup_enabled = local_assigns.fetch(:orcid_lookup_enabled) { dataset.persisted? }
+
 #dataset-creators.idb-core-subsection{data: { deposit_form_target: "creatorDisclosure" }}
   %h3.idb-creators-subheading
     Author List
@@ -6,7 +10,7 @@
   .idb-section-body
     - if can?(:manage, dataset)
       .idb-curator-only-section
-        %p.idb-curator-only-kicker Curator and admin only
+        %p.idb-curator-only-kicker Curator Only
         %p
           %button.idb-button-secondary{type: "button", data: { action: "deposit-form#switchCreatorMode", mode: "person" }}
             Use Individual Creators
@@ -143,3 +147,52 @@
                   = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
       .idb-creator-add-row
         = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", title: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
+
+%template{data: { deposit_form_target: "creatorTemplate" }}
+  - if creator_mode_org
+    = f.fields_for :creators, Creator.new(type_of: Dataset::CREATOR_TYPE_INSTITUTION), child_index: "NEW_CREATOR" do |cf|
+      %tr.idb-nested-row{data: { deposit_form_target: "creatorRow" }}
+        %td.idb-drag-cell
+          %span{aria: { hidden: true }} ≡
+        %td
+          = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
+          = cf.hidden_field :row_position, value: 999
+          = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
+          = cf.hidden_field :contact, value: false, data: { contactField: true }
+          = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.text_field :institution_name, placeholder: "[Organization Name]", required: true
+        %td
+          = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
+        %td.idb-contact-cell
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+        %td.idb-row-actions.idb-creator-row-actions
+          = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
+          = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
+          = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
+  - else
+    = f.fields_for :creators, Creator.new(type_of: Dataset::CREATOR_TYPE_PERSON), child_index: "NEW_CREATOR" do |cf|
+      %tr.idb-nested-row{data: { deposit_form_target: "creatorRow" }}
+        %td.idb-drag-cell
+          %span{aria: { hidden: true }} ≡
+        %td
+          = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
+          = cf.hidden_field :row_position, value: 999
+          = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
+          = cf.hidden_field :contact, value: false, data: { contactField: true }
+          = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
+        %td
+          = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
+        %td
+          = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
+          = cf.hidden_field :identifier_scheme, value: "ORCID"
+        %td
+          %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
+        %td
+          = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
+        %td.idb-contact-cell
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+        %td.idb-row-actions.idb-creator-row-actions
+          = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
+          = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
+          = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
