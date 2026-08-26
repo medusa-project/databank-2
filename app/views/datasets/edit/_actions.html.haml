@@ -1,0 +1,17 @@
+%section.idb-workflow-strip{aria: { label: "Edit dataset workflow actions" }}
+  .idb-workflow-actions-right
+    - if dataset.draft?
+      %button.idb-button-primary{type: "submit", form: form_id}
+        Save & Continue
+
+      %button.idb-button-secondary{type: "submit", form: form_id, name: "save_and_exit", value: "true"}
+        Save & Exit
+
+      = link_to dataset_path(dataset), method: :delete, data: { turbo_confirm: "Are you sure?" }, class: "idb-button-danger" do
+        Delete
+    - else
+      %button.idb-button-primary{type: "submit", form: form_id}
+        Confirm
+
+      = link_to datasets_path, class: "idb-button-danger" do
+        Cancel

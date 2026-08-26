@@ -1,0 +1,29 @@
+%section#dataset-advanced-upload.idb-section-card
+	%details.idb-section-disclosure
+		%summary
+			%h2.idb-section-title Advanced Upload Options
+		.idb-section-body
+			- can_edit = can?(:manage, dataset) || can?(:update, dataset)
+
+			- if dataset.draft? && can_edit
+				.idb-metadata-grid
+					.idb-grid-col-5
+						.idb-row-actions-inline{data: { controller: "api-token", api_token_current_url_value: get_current_token_dataset_path(dataset), api_token_renew_url_value: get_new_token_dataset_path(dataset), api_token_dataset_key_value: dataset.key }}
+							%button.idb-button-secondary{type: "button", data: { action: "api-token#open" }} Get token for command line tools
+							= render "datasets/api_modal", dataset: dataset
+					.idb-grid-col-7
+						%p
+							For Illinois Data Bank, cURL can be used only for files
+							%strong up to 4 GB.
+						%p
+							The API, as used in the included Python script, can be used for files
+							%strong up to 50 GB.
+
+				.idb-metadata-grid
+					.idb-grid-col-5
+						= link_to "Request large file transfer", "https://forms.illinois.edu/sec/1813779862", class: "idb-button-secondary", target: "_blank", rel: "noopener noreferrer"
+					.idb-grid-col-7
+						%p Files larger than 50GB require special handling.
+						%p See the large file transfer request form for details.
+			- else
+				%p Advanced upload options are available for draft datasets you can edit.

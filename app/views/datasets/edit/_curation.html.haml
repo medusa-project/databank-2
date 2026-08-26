@@ -1,0 +1,78 @@
+%section#dataset-curation.idb-section-card
+  %details.idb-section-disclosure{open: false}
+    %summary
+      %h2.idb-section-title
+        %span.fa.fa-cog
+        Curation     
+    .idb-section-body
+      .idb-grid-col-12
+        .idb-curator-only-section
+          %p.idb-curator-only-kicker Curator only
+          .idb-metadata-grid
+            .idb-grid-col-6
+              = f.label :identifier, "Specified DOI"
+              = f.text_field :identifier, placeholder: "Leave blank for auto-generate"
+
+            .idb-grid-col-3.idb-grid-checkbox
+              = f.check_box :is_import
+              = f.label :is_import, "Imported DOI"
+
+            .idb-grid-col-3.idb-grid-checkbox
+              = f.check_box :is_test
+              = f.label :is_test, "Test DOI"
+
+            .idb-grid-col-2
+              = f.label :dataset_version, "Version"
+              = f.text_field :dataset_version
+
+            .idb-grid-col-10
+              = f.label :version_comment, "Version Comment"
+              = f.text_field :version_comment
+
+            .idb-grid-col-6
+              = f.label :external_files_link, "Link to Externally Stored Files"
+              = f.text_field :external_files_link, placeholder: "https://example.edu/path"
+
+            .idb-grid-col-6
+              = f.label :medusa_dataset_dir, "URL in Medusa"
+              = f.text_field :medusa_dataset_dir, placeholder: "/cfs_directories/number"
+
+            .idb-grid-col-12
+              = f.label :external_files_note, "Access Notes for Externally Stored Files"
+              = f.text_area :external_files_note, rows: 2
+
+            .idb-grid-col-12
+              %h2 Dataset Access
+              %p Grant dataset-specific review or edit access by email address.
+
+              = form_with model: [@dataset, DatasetAccessGrant.new], local: true do |f|
+                .idb-metadata-grid
+                  .idb-grid-col-8
+                    = f.label :email, "Grant recipient email"
+                    = f.email_field :email, required: true, autocomplete: "email"
+                  .idb-grid-col-2
+                    = f.label :access_level, "Access level"
+                    = f.select :access_level, options_for_select([["Viewer", "viewer"], ["Editor", "editor"]], "viewer")
+                  .idb-grid-col-2.idb-row-actions-inline
+                    = f.submit "Grant Access", class: "idb-button-primary"
+
+              - if @dataset.dataset_access_grants.any?
+                - creator_emails = @dataset.creators.map(&:email).to_set
+                %table.idb-compact-table
+                  %thead
+                    %tr
+                      %th Email
+                      %th Access Level
+                      %th Actions
+                  %tbody
+                    - @dataset.dataset_access_grants.each do |grant|
+                      %tr
+                        %td= grant.email
+                        %td= grant.access_level.humanize
+                        %td
+                          - if creator_emails.include?(grant.email)
+                            %em creator editor access cannot be removed
+                          - else
+                            = button_to "Remove", dataset_dataset_access_grant_path(@dataset, grant), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Remove access for #{grant.email}?" } }
+              - else
+                %p No dataset-specific access grants configured.
