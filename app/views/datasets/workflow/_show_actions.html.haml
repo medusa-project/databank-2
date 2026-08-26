@@ -1,7 +1,7 @@
 - return unless logged_in? && can?(:update, dataset)
 
 %section.idb-workflow-strip{aria: { label: "Dataset workflow actions" }}
-  .idb-workflow-actions-right
+  %nav.idb-workflow-actions-right{aria: { label: "Dataset workflow actions" }}
     = link_to edit_dataset_path(dataset), class: "idb-button-success" do
       Edit Dataset
 

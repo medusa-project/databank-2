@@ -11,128 +11,29 @@
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-layout
     .idb-sections-content
-      = render "form", dataset: @dataset, submit_label: "Update Dataset", form_id: "dataset-edit-form"
-      = render "datasets/workflow/edit_actions", dataset: @dataset, form_id: "dataset-edit-form", placement: "bottom"
-      - if can?(:manage_access, @dataset)
-        %section#dataset-access-grants.idb-section-card
-          %h2.idb-section-title Dataset Access
-          %p Grant dataset-specific review or edit access by email address.
+      - orcid_lookup_url = @dataset.persisted? ? orcid_lookup_dataset_creators_path(@dataset) : ""
+      - form_id = "dataset-edit-form"
+      - form_html = { class: "idb-legacy-compact-form", data: { controller: "deposit-form", orcid_lookup_url: orcid_lookup_url }, id: form_id }
 
-          = form_with model: [@dataset, DatasetAccessGrant.new], local: true do |f|
-            .idb-metadata-grid
-              .idb-grid-col-8
-                = f.label :email, "Grant recipient email"
-                = f.email_field :email, required: true, autocomplete: "email"
-              .idb-grid-col-2
-                = f.label :access_level, "Access level"
-                = f.select :access_level, options_for_select([["Viewer", "viewer"], ["Editor", "editor"]], "viewer")
-              .idb-grid-col-2.idb-row-actions-inline
-                = f.submit "Grant Access", class: "idb-button-primary"
+      - if @dataset.errors.any?
+        %div.ilw-notice.ilw-notice--error
+          %p Please fix the following errors:
+          %ul
+            - @dataset.errors.full_messages.each do |message|
+              %li
+                = message
 
-          - if @dataset.dataset_access_grants.any?
-            %table.idb-compact-table
-              %thead
-                %tr
-                  %th Email
-                  %th Access Level
-                  %th Actions
-              %tbody
-                - @dataset.dataset_access_grants.each do |grant|
-                  %tr
-                    %td= grant.email
-                    %td= grant.access_level.humanize
-                    %td
-                      = button_to "Remove", dataset_dataset_access_grant_path(@dataset, grant), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Remove access for #{grant.email}?" } }
-          - else
-            %p No dataset-specific access grants configured.
+      = form_with model: @dataset, local: true, html: form_html do |f|
+        = f.hidden_field :org_creators, data: { deposit_form_target: "orgCreatorsField" }
+        = render "datasets/edit/description", f: f, dataset: @dataset
+        - if can?(:manage, @dataset)
+          = render "datasets/edit/curation", f: f, dataset: @dataset
+        = render "datasets/edit/funders", f: f, dataset: @dataset
+        = render "datasets/edit/related_materials", f: f, dataset: @dataset
+        = render "datasets/edit/files", f: f, dataset: @dataset
+        - if @dataset.draft?
+          = render "datasets/edit/advanced_upload", f: f, dataset: @dataset
+        - if can?(:update, @dataset)
+          = render "datasets/edit/actions", dataset: @dataset, form_id: form_id
+        = render "datasets/edit/orcid_lookup_modal"
 
-      - if previous_version_visible.present? || next_version_visible.present? || previous_version_material.present? || next_version_material.present?
-        %section#dataset-version-lineage.idb-section-card
-          %h2.idb-section-title Version Lineage
-          %dl.idb-lineage-grid
-            %dt Current Version
-            %dd= "#{@dataset.title} (#{@dataset.key})"
-
-            - if previous_version_visible.present?
-              %dt Previous Version
-              %dd= link_to "#{previous_version_visible.title} (#{previous_version_visible.key})", dataset_path(previous_version_visible)
-            - elsif previous_version_material&.uri.present?
-              %dt Previous Version
-              %dd= link_to(previous_version_material.title, previous_version_material.uri)
-
-            - if next_version_visible.present?
-              %dt Next Version
-              %dd= link_to "#{next_version_visible.title} (#{next_version_visible.key})", dataset_path(next_version_visible)
-            - elsif next_version.nil? && next_version_material&.uri.present?
-              %dt Next Version
-              %dd= link_to(next_version_material.title, next_version_material.uri)
-
-      %section#dataset-files.idb-section-card
-        %details.idb-section-disclosure{open: true}
-          %summary
-            %h2.idb-section-title Files
-          .idb-section-body
-            - if @dataset.draft? && can?(:update, @dataset)
-              %section#dataset-cli-upload
-                %h3 Command Line Tools
-                %p Generate a token to upload files to this draft dataset with command line tools.
-                .idb-row-actions-inline{data: { controller: "api-token", api_token_current_url_value: get_current_token_dataset_path(@dataset), api_token_renew_url_value: get_new_token_dataset_path(@dataset), api_token_dataset_key_value: @dataset.key }}
-                  %button.idb-button-secondary{type: "button", data: { action: "api-token#open" }} Get token for command line tools
-                  = render "api_modal", dataset: @dataset
-
-            - if @dataset.draft? && @dataset.previous_version_dataset.present? && can?(:update, @dataset)
-              %p
-                = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(@dataset), method: :post, class: "idb-button-primary"
-
-            - if @dataset.datafiles.any?
-              %ul.idb-file-metadata-list
-                - @dataset.datafiles.each do |datafile|
-                  %li.idb-file-metadata-item
-                    = form_with model: [@dataset, datafile], local: true, class: "idb-file-metadata-form" do |f|
-                      .idb-nested-grid
-                        .idb-grid-col-3
-                          = f.label :binary, "Replace file"
-                          = f.file_field :binary
-
-                        .idb-grid-col-3
-                          = f.label :binary_name, "Filename"
-                          = f.text_field :binary_name
-
-                        .idb-grid-col-2
-                          = f.label :binary_size, "Size (bytes)"
-                          = f.number_field :binary_size, min: 0
-
-                        .idb-grid-col-3
-                          = f.label :description, "Description"
-                          = f.text_field :description
-
-                        .idb-grid-col-1.idb-row-actions-inline
-                          = f.submit "Update", class: "idb-button-primary"
-
-                    .idb-file-metadata-actions
-                      = button_to "Remove", dataset_datafile_path(@dataset, datafile), method: :delete, class: "idb-button-danger"
-                      = link_to "Download", download_dataset_datafile_path(@dataset, datafile), class: "idb-button-primary"
-            - else
-              %p No file metadata added yet.
-
-            %h3 Add File Metadata
-            = form_with model: [@dataset, Datafile.new], local: true, class: "idb-file-metadata-form" do |f|
-              .idb-nested-grid
-                .idb-grid-col-3
-                  = f.label :binary, "Select file"
-                  = f.file_field :binary
-
-                .idb-grid-col-3
-                  = f.label :binary_name, "Filename"
-                  = f.text_field :binary_name
-
-                .idb-grid-col-2
-                  = f.label :binary_size, "Size (bytes)"
-                  = f.number_field :binary_size, min: 0
-
-                .idb-grid-col-3
-                  = f.label :description, "Description"
-                  = f.text_field :description
-
-                .idb-grid-col-1.idb-row-actions-inline
-                  = f.submit "Add File Metadata", class: "idb-button-primary"
