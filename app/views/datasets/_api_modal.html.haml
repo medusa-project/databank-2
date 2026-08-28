@@ -24,6 +24,55 @@
           The API, as used in the included Python script, can be used for files
           %strong up to 50 GB.
 
+    %h3 Notes
+
+    %details
+      %summary Use VPN in Tunnel All mode to use the file upload API from off campus. (click to expand)
+      %p
+        To use the file upload API from off campus (i.e., when you are not connected to the University of Illinois Urbana-Champaign network),
+        you need to connect to the
+        = link_to "University of Illinois VPN", "https://www.techservices.illinois.edu/services/vpn-essentials/", target: "_blank", rel: "noopener"
+        in
+        %strong Tunnel All
+        mode.
+
+    %details
+      %summary Zip or tar any folders or subdirectories before uploading them. (click to expand)
+      %p The Data Bank lets you upload files but not entire folders.
+      %p If your data is organized in folders, and you want to preserve that structure, you will need to zip or tar your files before uploading them.
+      %p
+        See our Data Nudge on
+        = link_to "Common zipped file formats used in research", "https://go.illinois.edu/2018-08", target: "_blank", rel: "noopener"
+        for tips
+
+    %details
+      %summary Organize your dataset, especially if it has more than a few files. (click to expand)
+      %p Uploading lots and lots of files in a single dataset can make it more difficult to curate, upload/download, understand, and reuse your data.
+      %p
+        See our
+        = link_to "guide on File Grouping", "/guides#group", target: "_blank", rel: "noopener"
+        for tips
+
+    %details
+      %summary Notes on using our Python script on campus systems. (click to expand)
+      %h4
+        %strong Institute for Genomic Biology
+      %p
+        The
+        %em IllinoisDataBank
+        module on biocluster2, available to any user of the system, ensures a python environment with the modules needed to upload files using our custom Python script, as further described in the above section.
+      %pre
+        %code module load IllinoisDataBank
+      %h4
+        %strong AWS
+      %p The default Linux system in AWS already has Python along with the 'requests' and 'urllib3' modules installed, so only the 'tuspy' module would need to be installed, as in the instructions in the section above.
+      %h4
+        %strong Virtual Hosting Group at Technology Services
+      %p Since the OS installation and component parts are handled by the tenant, tenant owners have full administrative rights to follow the instructions in the section above.
+      %p
+        For more help,
+        = link_to "Contact Us", "/contact"
+
     %h3 Options: Python, cURL, or custom script
 
     %details
@@ -31,26 +80,45 @@
       %p
         Download our sample python client
         = link_to "databank_api_client_v2.py", "/databank_api_client_v2.py", target: "_blank", rel: "noopener"
-      %p Requires recent version of Python 2 or 3.
+      %p
+        Requires recent version of
+        = link_to "Python 2 or 3", "https://www.python.org/", target: "_blank", rel: "noopener"
       %p
         Works for files
         %strong up to 50 GB.
       %p Required modules
       %pre
-        %code pip install tuspy requests urllib3[secure]
-      %p Copy and paste this command example. Change myfile.csv to your own data file's name.
+        %code
+          = simple_format("pip install tuspy\npip install requests\npip install urllib3[secure]")
+      %p Copy and paste this command example. Just change "myfile.csv" to your own data file's name.
       %pre
         %code{data: { api_token_target: "pythonCommand" }}
+          = "python databank_api_client_v2.py #{dataset.key} [TOKEN] myfile.csv"
+      %p
+        For more help, and for notes on using this script on
+        %strong biocluster2
+        = ",AWS, or the Virtual Hosting Group on campus"
+        see the
+        = link_to "Command Line Tools / API Reference", "/guides#api", target: "_blank", rel: "noopener"
+        or
+        = link_to "Contact Us", "/contact"
 
     %details
       %summary Execute a cURL command.
-      %p Requires cURL.
+      %p
+        Requires
+        = link_to "cURL", "https://curl.haxx.se/", target: "_blank", rel: "noopener"
       %p
         For our pipeline, cURL method only works on files
         %strong up to 4 GB.
-      %p Copy and paste this command example. Replace my_datafile.csv with your file name, and keep binary=@ unchanged.
+      %p Copy and paste this command example. Where it says "binary=@myfile.csv", replace myfile.csv with your data file's name. Keep "binary=@" as it is.
       %pre
         %code{data: { api_token_target: "curlCommand" }}
+      %p
+        For more help, see the
+        = link_to "Command Line Tools / API Reference", "/guides#api", target: "_blank", rel: "noopener"
+        or
+        = link_to "Contact Us", "/contact"
 
     %details
       %summary Create your own custom script using our API.
@@ -58,12 +126,12 @@
         %em Size constraints depend on implementation details.
       %p
         See the
-        = link_to "Command Line Tools / API Reference", "/guides#api"
+        = link_to "Command Line Tools / API Reference", "/guides#api", target: "_blank", rel: "noopener"
         or
         = link_to "Contact Us", "/contact"
 
     %p{data: { api_token_target: "error" }, hidden: true, role: "alert"}
 
     %footer.idb-row-actions-inline
-      %button.idb-button-secondary{type: "button", data: { action: "api-token#renew" }} Get new token
+      %button.idb-button-primary{type: "button", data: { action: "api-token#renew" }} Get new token
       %button.idb-button-danger{type: "button", data: { action: "api-token#close" }} Close

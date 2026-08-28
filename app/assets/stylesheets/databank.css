@@ -340,8 +340,16 @@
 	grid-column: span 10;
 }
 
+.idb-grid-col-7 {
+	grid-column: span 7;
+}
+
 .idb-grid-col-6 {
 	grid-column: span 6;
+}
+
+.idb-grid-col-5 {
+	grid-column: span 5;
 }
 
 .idb-grid-col-4 {
@@ -517,9 +525,55 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-end;
-	align-items: stretch;
+	align-items: flex-end;
 	gap: 0.25rem;
-	height: 100%;
+	height: auto;
+}
+
+.idb-section-body .idb-row-actions-inline {
+	flex-direction: row !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	gap: 0.5rem !important;
+	flex-wrap: wrap !important;
+}
+
+.idb-section-body .idb-row-actions-inline button {
+	white-space: nowrap !important;
+	padding: 0.5rem 1rem !important;
+	font-size: 1rem !important;
+	line-height: 1.2 !important;
+	min-height: 2.4rem !important;
+	width: 32ch !important;
+	text-align: center !important;
+}
+
+.idb-section-body .idb-row-actions-inline .idb-button-secondary,
+.idb-section-body .idb-row-actions-inline .idb-button-danger,
+.idb-section-body .idb-row-actions-inline .idb-button-success {
+	width: 32ch !important;
+	padding: 0.5rem 1rem !important;
+	min-height: 2.4rem !important;
+	font-size: 1rem !important;
+	line-height: 1.2 !important;
+}
+
+.idb-section-body .idb-grid-col-5 a.idb-button-secondary {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	white-space: nowrap !important;
+	padding: 0.5rem 1rem !important;
+	font-size: 1rem !important;
+	line-height: 1.2 !important;
+	min-height: 2.4rem !important;
+	text-decoration: none !important;
+}
+
+#api-token-dialog footer.idb-row-actions-inline button {
+	max-width: 100%;
+	padding: 0.4rem 0.8rem;
+	font-size: 0.9rem;
 }
 
 
@@ -746,6 +800,81 @@
 .idb-orcid-modal-body,
 .idb-orcid-modal-footer {
 	padding-inline: var(--idb-page-gutter);
+}
+
+#api-token-dialog {
+	position: fixed;
+	inset: 0;
+	width: min(68rem, calc(100vw - (var(--idb-page-gutter) * 2)));
+	max-height: min(90vh, calc(100vh - (var(--idb-page-gutter) * 2)));
+	margin: auto;
+	padding: 0;
+	border: 1px solid var(--il-storm-70);
+	border-radius: 0.4rem;
+	overflow: auto;
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+	background: #ffffff;
+}
+
+#api-token-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.45);
+}
+
+#api-token-dialog > article {
+	padding: 0;
+}
+
+#api-token-dialog > article > header {
+	padding: 1rem var(--idb-page-gutter);
+	border-bottom: 1px solid var(--il-storm-20);
+}
+
+#api-token-dialog > article > footer {
+	padding: 0.75rem var(--idb-page-gutter);
+	border-top: 1px solid var(--il-storm-20);
+}
+
+#api-token-dialog > article > :not(header):not(footer) {
+	padding: 1rem var(--idb-page-gutter);
+}
+
+#api-token-dialog p {
+	margin: 0.5rem 0;
+}
+
+#api-token-dialog h3 {
+	margin: 1rem 0 0.5rem 0;
+}
+
+#api-token-dialog h4 {
+	margin: 0.75rem 0 0.25rem 0;
+}
+
+#api-token-dialog details {
+	margin: 0 !important;
+}
+
+#api-token-dialog details + details {
+	margin-top: 0 !important;
+}
+
+#api-token-dialog summary {
+	cursor: pointer;
+	margin: 0 !important;
+	padding: 0.25rem 0 !important;
+}
+
+#api-token-dialog ul {
+	margin: 0.5rem 0;
+	padding-left: 1.5rem;
+}
+
+#api-token-dialog li {
+	margin: 0.25rem 0;
+}
+
+#api-token-dialog pre {
+	margin: 0.5rem 0;
 }
 
 .idb-orcid-modal-header {
@@ -1112,6 +1241,23 @@ code {
 	border-radius: 3px;
 	color: var(--il-blue-10);
 }
+
+/*
+ * Test classes for debugging layout
+ * ----------------------------------------------------------------------- */
+.test-red {
+	background-color: rgba(255, 0, 0, 0.1) !important;
+}
+
+.test-blue {
+	background-color: rgba(0, 0, 255, 0.1) !important;
+}
+
+.test-green {
+	background-color: rgba(0, 255, 0, 0.1) !important;
+}
+
+
 
 /* -----------------------------------------------------------------------
  * WCAG 2.2 AA: Ensure semantic HTML & keyboard accessibility
