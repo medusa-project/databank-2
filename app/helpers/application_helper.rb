@@ -21,6 +21,12 @@ module ApplicationHelper
       icon: "thumbtack",
       icon_style: :solid
     },
+    update: {
+      label: "Update",
+      variant: "primary",
+      icon: "check",
+      icon_style: :solid
+    },
     edit: {
       label: "Edit",
       variant: "success",
