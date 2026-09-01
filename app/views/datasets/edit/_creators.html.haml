@@ -114,8 +114,8 @@
               %span.sr-only required
               .idb-inline-help-row
                 = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
-            %th.idb-actions-header-cell
-              %span.sr-only Actions
+            %th
+              Actions
         %tbody.idb-nested-rows{id: "creator-rows"}
           - creators_for_mode.each_with_index do |creator, index|
             = f.fields_for :creators, creator do |cf|
