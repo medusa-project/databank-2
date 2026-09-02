@@ -11,41 +11,40 @@
 
       - if dataset.datafiles.count <= 500
         - if dataset.datafiles.any?
-          - if can_edit && dataset.datafiles.count > 1
-            .idb-file-metadata-actions{data: { controller: "bulk-file-actions" }}
-              = form_with url: bulk_destroy_dataset_datafiles_path(dataset), method: :post, local: true, id: "bulk-file-delete-form" do
-                %label
-                  %input{type: "checkbox", data: { action: "change->bulk-file-actions#toggleSelectAll", bulk_file_actions_target: "selectAll" }, aria: { label: "Select all files" }}
-                  Select all
-                %button.idb-button-danger{type: "button", disabled: true, data: { action: "click->bulk-file-actions#requestBulkDelete", bulk_file_actions_target: "deleteButton" }} Delete selected
-                %span{data: { bulk_file_actions_target: "count" }} (0 selected)
+          .idb-file-metadata-container{data: { controller: "bulk-file-actions" }}
+            = form_with url: bulk_destroy_dataset_datafiles_path(dataset), method: :post, local: true, id: "bulk-file-delete-form" do
+              %span
 
-          %ul.idb-file-metadata-list
-            - dataset.datafiles.each do |datafile|
-              %li.idb-file-metadata-item
-                - if can_edit && dataset.datafiles.count > 1
-                  .idb-file-metadata-actions
-                    %label
-                      %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, form: "bulk-file-delete-form", data: { action: "change->bulk-file-actions#updateState", bulk_file_actions_target: "fileCheckbox" }, aria: { label: "Select #{datafile.binary_name.presence || datafile.web_id}" }}
-                      Select
+            - if can_edit && dataset.datafiles.count > 1
+              .idb-file-bulk-header
+                .idb-file-bulk-actions
+                  %button.idb-button-danger{type: "button", disabled: true, data: { action: "click->bulk-file-actions#requestBulkDelete", bulk_file_actions_target: "deleteButton" }}
+                    Delete Selected
+                    %span{data: { bulk_file_actions_target: "count" }} (0)
+                    %i.fa-solid.fa-trash-can
 
-                .idb-file-metadata-display
-                  .idb-nested-grid
-                    .idb-grid-col-3
-                      %span.idb-metadata-label Filename
-                      %p= datafile.binary_name.presence || datafile.web_id
+                .idb-select-all-bar
+                  %label.idb-select-all-label
+                    %input{type: "checkbox", data: { action: "change->bulk-file-actions#toggleSelectAll", bulk_file_actions_target: "selectAll" }, aria: { label: "Select all files" }}
+                    Select all
+                    %span.idb-file-count-total= "( #{dataset.datafiles.count} )"
 
-                    .idb-grid-col-2
-                      %span.idb-metadata-label Size (bytes)
-                      %p= number_to_human_size(datafile.binary_size || 0)
-
-                    .idb-grid-col-3
-                      %span.idb-metadata-label Description
-                      %p= datafile.description.presence || "—"
-
-                    .idb-grid-col-1.idb-row-actions-inline
-                      = semantic_action_button action: :delete, url: dataset_datafile_path(dataset, datafile), method: :delete
-                      = semantic_action_button action: :download, url: download_dataset_datafile_path(dataset, datafile)
+            %table.table.table-striped.idb-file-table#datafiles
+              %tbody
+                - dataset.datafiles.each do |datafile|
+                  %tr
+                    %td.idb-file-name-cell
+                      - if can_edit && dataset.datafiles.count > 1
+                        %label.idb-file-checkbox-label
+                          %input{type: "checkbox", name: "selected_files[]", value: datafile.web_id, form: "bulk-file-delete-form", data: { action: "change->bulk-file-actions#updateState", bulk_file_actions_target: "fileCheckbox" }, aria: { label: "Select #{datafile.binary_name.presence || datafile.web_id}" }}
+                          = datafile.binary_name.presence || datafile.web_id
+                      - else
+                        = datafile.binary_name.presence || datafile.web_id
+                    %td.idb-file-size-cell
+                      = number_to_human_size(datafile.binary_size || 0)
+                    %td.idb-file-actions-cell
+                      - if can_edit
+                        = semantic_action_button action: :delete, url: dataset_datafile_path(dataset, datafile), method: :delete
 
         - if can_edit
           .idb-file-upload-section{data: { controller: "file-upload" }}
@@ -57,6 +56,17 @@
                   %span.fa.fa-laptop
                   Select files from your computer
               %input{type: "file", multiple: true, style: "display: none;", data: { file_upload_target: "fileInput", action: "change->file-upload#handleFileSelect" }}
+
+              .idb-progress-container{data: { file_upload_target: "progressContainer" }, hidden: true}
+                .idb-progress-header
+                  .idb-progress-info
+                    %span.idb-progress-status{data: { file_upload_target: "statusText" }, aria: { live: "polite" }} Preparing upload...
+                    %span.idb-progress-percentage{data: { file_upload_target: "percentageText" }} 0%
+                  %button.idb-button-cancel-upload{type: "button", data: { file_upload_target: "cancelButton", action: "click->file-upload#cancelUpload" }}
+                    Cancel upload
+
+                .idb-progress-track{data: { file_upload_target: "progressBar" }, role: "progressbar", aria: { valuemin: "0", valuemax: "100", valuenow: "0", label: "File upload progress" }}
+                  .idb-progress-fill{data: { file_upload_target: "progressFill" }, style: "width: 0%;"}
 
               %ul.idb-file-upload-guidelines
                 %li

@@ -159,3 +159,204 @@
   border: 1px solid #f5c6cb;
 }
 
+/* Progress Bar Component Styles */
+
+.idb-progress-container {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.idb-progress-container[hidden] {
+  display: none !important;
+}
+
+.idb-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.idb-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.idb-progress-status {
+  font-weight: 500;
+  color: #212529;
+}
+
+.idb-progress-percentage {
+  font-weight: 600;
+  color: #0066cc;
+}
+
+.idb-button-cancel-upload {
+  padding: 0.25rem 0.65rem;
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.idb-button-cancel-upload:hover {
+  background-color: #dc3545;
+  color: #ffffff;
+}
+
+.idb-button-cancel-upload:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+.idb-progress-track {
+  width: 100%;
+  height: 0.875rem;
+  background-color: #e9ecef;
+  border-radius: 0.4375rem;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.idb-progress-fill {
+  height: 100%;
+  width: 0%;
+  background-color: #0066cc;
+  border-radius: 0.4375rem;
+  transition: width 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.idb-progress-fill--success {
+  background-color: #28a745;
+}
+
+.idb-progress-fill--error {
+  background-color: #dc3545;
+}
+
+/* File Table Component Styles (dataset edit) */
+
+.idb-file-metadata-container {
+  margin-bottom: 1.5rem;
+}
+
+.idb-file-bulk-header {
+  margin-bottom: 0.5rem;
+}
+
+.idb-file-bulk-actions {
+  margin-bottom: 0.75rem;
+}
+
+.idb-file-bulk-actions .idb-button-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.idb-select-all-bar {
+  padding: 0.5rem 0;
+  border-bottom: none;
+}
+
+.idb-select-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #333;
+  cursor: pointer;
+}
+
+.idb-file-count-total {
+  color: #666;
+}
+
+.idb-file-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.idb-file-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: middle;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.idb-file-name-cell {
+  text-align: left;
+  word-break: break-word;
+  padding-left: 1.5rem !important;
+}
+
+.idb-file-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.idb-file-size-cell {
+  width: 120px;
+  white-space: nowrap;
+  color: #555;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.idb-file-actions-cell {
+  width: 100px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.idb-file-actions-cell form {
+  display: inline-block;
+  margin: 0;
+}
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.idb-file-actions-cell {
+  width: 100px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.idb-file-actions-cell form {
+  display: inline-block;
+  margin: 0;
+}
+

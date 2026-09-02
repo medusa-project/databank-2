@@ -102,8 +102,8 @@ module ApplicationHelper
     delete: {
       label: "Delete",
       variant: "danger",
-      icon: "trash",
-      icon_style: :regular
+      icon: "trash-can",
+      icon_style: :solid
     },
     up: {
       label: "Up",
@@ -325,8 +325,8 @@ module ApplicationHelper
     content = safe_join(ordered_content.compact, " ")
 
     if url.present?
-      if method.to_sym == :post
-        button_to(content, url, method: :post, **html_options)
+      if method.to_sym != :get
+        button_to(content, url, method: method.to_sym, **html_options)
       else
         link_to(content, url, html_options)
       end

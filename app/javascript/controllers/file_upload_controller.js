@@ -1,10 +1,20 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["dropZone", "fileInput"];
+  static targets = [
+    "dropZone",
+    "fileInput",
+    "progressContainer",
+    "progressBar",
+    "progressFill",
+    "percentageText",
+    "statusText",
+    "cancelButton",
+  ];
 
   connect() {
     this.dragCounter = 0;
+    this.activeXhr = null;
   }
 
   selectFiles(event) {
@@ -44,12 +54,27 @@ export default class extends Controller {
     this.processFiles(files);
   }
 
+  cancelUpload(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (this.activeXhr) {
+      this.activeXhr.abort();
+      this.activeXhr = null;
+    }
+  }
+
   processFiles(files) {
-    if (files.length === 0) return;
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    const fileCount = fileList.length;
+    const totalBytes = fileList.reduce((acc, f) => acc + (f.size || 0), 0);
 
     // Create a FormData object with the files
     const formData = new FormData();
-    Array.from(files).forEach((file) => {
+    fileList.forEach((file) => {
       formData.append("datafiles[]", file);
     });
 
@@ -64,40 +89,187 @@ export default class extends Controller {
 
     const url = `/datasets/${datasetKey}/datafiles/bulk_create`;
 
-    // Disable button during upload
+    // Disable upload button during upload
     const uploadButton = this.dropZoneTarget.querySelector("button");
     if (uploadButton) uploadButton.disabled = true;
 
-    fetch(url, {
-      method: "POST",
-      body: formData,
-      headers: {
-        "X-CSRF-Token": this.getCSRFToken(),
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
+    // Reveal and initialize progress container if available
+    this.startProgressUI(fileCount, totalBytes);
+
+    const xhr = new XMLHttpRequest();
+    this.activeXhr = xhr;
+
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("X-CSRF-Token", this.getCSRFToken());
+
+    if (xhr.upload) {
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          this.updateProgressUI(percent, event.loaded, event.total, fileCount);
+        }
+      });
+    }
+
+    xhr.onload = () => {
+      this.activeXhr = null;
+      let data = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (e) {
+        console.error("Failed to parse JSON response:", e);
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300 && data) {
         if (data.success || (data.count && data.count > 0)) {
+          this.completeProgressUI(data.message || "Upload completed!");
           this.showSuccess(data.message);
           this.resetFileInput();
-          // Reload the page after a short delay to show new files
           setTimeout(() => location.reload(), 1500);
-        } else {
-          this.showError(data.message || data.error);
-          if (data.errors && data.errors.length > 0) {
-            data.errors.forEach((error) => console.error(error));
-          }
+          return;
         }
-      })
-      .catch((error) => {
-        console.error("Upload error:", error);
-        this.showError(
-          "An error occurred during file upload. Please try again.",
-        );
-      })
-      .finally(() => {
-        if (uploadButton) uploadButton.disabled = false;
-      });
+      }
+
+      const errorMessage =
+        (data && (data.message || data.error)) ||
+        "An error occurred during file upload. Please try again.";
+      this.errorProgressUI(errorMessage);
+      this.showError(errorMessage);
+      if (uploadButton) uploadButton.disabled = false;
+    };
+
+    xhr.onerror = () => {
+      this.activeXhr = null;
+      const msg =
+        "Network error occurred during file upload. Please check your connection.";
+      this.errorProgressUI(msg);
+      this.showError(msg);
+      if (uploadButton) uploadButton.disabled = false;
+    };
+
+    xhr.onabort = () => {
+      this.activeXhr = null;
+      this.abortProgressUI();
+      this.showError("Upload was canceled.");
+      if (uploadButton) uploadButton.disabled = false;
+      this.resetFileInput();
+    };
+
+    xhr.send(formData);
+  }
+
+  startProgressUI(fileCount, totalBytes) {
+    if (!this.hasProgressContainerTarget) return;
+
+    this.progressContainerTarget.hidden = false;
+    if (this.hasProgressFillTarget) {
+      this.progressFillTarget.style.width = "0%";
+      this.progressFillTarget.classList.remove(
+        "idb-progress-fill--success",
+        "idb-progress-fill--error",
+      );
+    }
+    if (this.hasProgressBarTarget) {
+      this.progressBarTarget.setAttribute("aria-valuenow", "0");
+    }
+    if (this.hasPercentageTextTarget) {
+      this.percentageTextTarget.textContent = "0%";
+    }
+    if (this.hasStatusTextTarget) {
+      const fileLabel = fileCount === 1 ? "1 file" : `${fileCount} files`;
+      this.statusTextTarget.textContent = `Uploading ${fileLabel} (0 B of ${this.formatBytes(totalBytes)})...`;
+    }
+    if (this.hasCancelButtonTarget) {
+      this.cancelButtonTarget.disabled = false;
+      this.cancelButtonTarget.hidden = false;
+    }
+  }
+
+  updateProgressUI(percent, loadedBytes, totalBytes, fileCount) {
+    if (!this.hasProgressContainerTarget) return;
+
+    if (this.hasProgressFillTarget) {
+      this.progressFillTarget.style.width = `${percent}%`;
+    }
+    if (this.hasProgressBarTarget) {
+      this.progressBarTarget.setAttribute("aria-valuenow", percent.toString());
+    }
+    if (this.hasPercentageTextTarget) {
+      this.percentageTextTarget.textContent = `${percent}%`;
+    }
+    if (this.hasStatusTextTarget) {
+      const fileLabel = fileCount === 1 ? "1 file" : `${fileCount} files`;
+      this.statusTextTarget.textContent = `Uploading ${fileLabel}: ${this.formatBytes(loadedBytes)} of ${this.formatBytes(totalBytes)}`;
+    }
+  }
+
+  completeProgressUI(message) {
+    if (!this.hasProgressContainerTarget) return;
+
+    if (this.hasProgressFillTarget) {
+      this.progressFillTarget.style.width = "100%";
+      this.progressFillTarget.classList.add("idb-progress-fill--success");
+      this.progressFillTarget.classList.remove("idb-progress-fill--error");
+    }
+    if (this.hasProgressBarTarget) {
+      this.progressBarTarget.setAttribute("aria-valuenow", "100");
+    }
+    if (this.hasPercentageTextTarget) {
+      this.percentageTextTarget.textContent = "100%";
+    }
+    if (this.hasStatusTextTarget) {
+      this.statusTextTarget.textContent = "Upload complete! Processing...";
+    }
+    if (this.hasCancelButtonTarget) {
+      this.cancelButtonTarget.disabled = true;
+    }
+  }
+
+  errorProgressUI(message) {
+    if (!this.hasProgressContainerTarget) return;
+
+    if (this.hasProgressFillTarget) {
+      this.progressFillTarget.classList.add("idb-progress-fill--error");
+      this.progressFillTarget.classList.remove("idb-progress-fill--success");
+    }
+    if (this.hasStatusTextTarget) {
+      this.statusTextTarget.textContent = "Upload failed.";
+    }
+    if (this.hasCancelButtonTarget) {
+      this.cancelButtonTarget.disabled = true;
+    }
+  }
+
+  abortProgressUI() {
+    if (!this.hasProgressContainerTarget) return;
+
+    if (this.hasProgressFillTarget) {
+      this.progressFillTarget.style.width = "0%";
+      this.progressFillTarget.classList.remove(
+        "idb-progress-fill--success",
+        "idb-progress-fill--error",
+      );
+    }
+    if (this.hasProgressBarTarget) {
+      this.progressBarTarget.setAttribute("aria-valuenow", "0");
+    }
+    if (this.hasPercentageTextTarget) {
+      this.percentageTextTarget.textContent = "0%";
+    }
+    if (this.hasStatusTextTarget) {
+      this.statusTextTarget.textContent = "Upload canceled.";
+    }
+    if (this.hasCancelButtonTarget) {
+      this.cancelButtonTarget.disabled = true;
+    }
+  }
+
+  formatBytes(bytes) {
+    if (bytes === 0 || !bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }
 
   resetFileInput() {

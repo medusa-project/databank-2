@@ -467,6 +467,11 @@ input.legacy-btn:disabled:focus-visible {
 	white-space: nowrap;
 }
 
+form.button_to, .button_to {
+	display: inline-block;
+	margin: 0;
+}
+
 .dataset-form-page .idb-button-primary,
 .dataset-form-page .idb-button-secondary,
 .dataset-form-page .idb-button-danger,
