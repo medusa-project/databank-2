@@ -146,8 +146,33 @@
 	gap: 0.5rem;
 	cursor: pointer;
 	list-style: none;
-	padding: 0;
+	padding: 0.65rem 1rem;
+	margin: -0.85rem -1rem 0.35rem -1rem;
+	background-color: var(--il-blue-90);
+	border-bottom: 1px solid var(--il-storm-80);
+	border-top-left-radius: 0.45rem;
+	border-top-right-radius: 0.45rem;
+}
+
+.idb-section-disclosure:not([open]) > summary {
+	border-bottom: none;
+	border-bottom-left-radius: 0.45rem;
+	border-bottom-right-radius: 0.45rem;
+	margin-bottom: -0.85rem;
+}
+
+.idb-section-disclosure > summary .idb-section-title,
+.idb-section-disclosure > summary .pre-deposit-accordion-title {
 	margin: 0;
+}
+
+.dataset-form-page .idb-section-disclosure > summary {
+	padding: 0.55rem 0.85rem;
+	margin: -0.7rem -0.85rem 0.35rem -0.85rem;
+}
+
+.dataset-form-page .idb-section-disclosure:not([open]) > summary {
+	margin-bottom: -0.7rem;
 }
 
 .idb-section-disclosure > summary::-webkit-details-marker {
@@ -1187,6 +1212,16 @@ th {
 	padding: 0.75rem;
 	text-align: left;
 	border: 1px solid var(--il-storm-80);
+}
+
+.idb-license-infographic-table thead th {
+	background-color: var(--il-blue);
+	color: #ffffff;
+}
+
+.idb-license-infographic-table thead th h3,
+.idb-license-infographic-table thead th p {
+	color: #ffffff;
 }
 
 td {
