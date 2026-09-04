@@ -130,6 +130,7 @@ module Migration
           when "datafile"
             batches[:datafiles] << record
             if batches[:datafiles].size >= batch_size
+              flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
               batch_counts[:datafiles] += 1
               timed_flush(phase: :datafiles, batch_index: batch_counts[:datafiles], record_count: batches[:datafiles].size) do
                 flush_datafiles_batch(batches[:datafiles], summary, dry_run)
@@ -175,13 +176,7 @@ module Migration
       end
 
       # Flush remaining batches
-      if batches[:datasets].any?
-        batch_counts[:datasets] += 1
-        timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
-          flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
-        end
-        pause_between_batches!
-      end
+      flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
 
       if batches[:datafiles].any?
         batch_counts[:datafiles] += 1
@@ -521,6 +516,17 @@ module Migration
         datafile.save!
         summary[:record_counts][:datafiles] += 1
       end
+    end
+
+    def flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
+      return unless batches[:datasets].any?
+
+      batch_counts[:datasets] += 1
+      timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
+        flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+      end
+      batches[:datasets] = []
+      pause_between_batches!
     end
 
     def flush_nested_items_batch(records, summary, dry_run, nested_item_lookup: nil)

@@ -101,6 +101,39 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(datafile.nested_items.pluck(:id)).to include(nested_item_id)
   end
 
+  it "imports a full Datafile batch whose dataset is in a partial dataset batch" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Interleaved Flat Bundle Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft"
+      }
+    ]
+
+    100.times do |index|
+      records << {
+        type: "datafile",
+        dataset_id: dataset_key,
+        datafile_id: "a#{index.to_s.rjust(4, '0')}",
+        binary_name: "file-#{index}.txt",
+        binary_size: index + 1
+      }
+    end
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+    expect(summary[:record_counts]).to include(datasets: 1, datafiles: 100)
+    expect(Dataset.find_by!(key: dataset_key).datafiles.count).to eq(100)
+  end
+
   it "supports dry-run mode without writing database records" do
     records = [
       {

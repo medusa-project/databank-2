@@ -1,0 +1,23 @@
+%section.idb-section-card{aria: { label: "Change log" }}
+  %details.idb-section-disclosure
+    %summary
+      %h2.idb-section-title Change Log
+    .idb-section-body
+      - if version_request_history.present?
+        %ul.dataset-show-list
+          - version_request_history.each do |request|
+            %li
+              %span.dataset-show-list-primary= "#{request.status.titleize} request from #{request.requester_name}"
+              = semantic_status_badge(status: request.status, sr_label: "Version request status #{request.status}")
+              %span.dataset-show-list-secondary= "Submitted #{request.requested_at.utc.iso8601}"
+              - if request.comment.present?
+                %span.dataset-show-list-tertiary= request.comment
+              - if request.reviewed_at.present?
+                %span.dataset-show-list-tertiary= "Reviewed #{request.reviewed_at.utc.iso8601}"
+              - if request.review_note.present?
+                %span.dataset-show-list-tertiary= "Review note: #{request.review_note}"
+              - if request.approved_dataset.present?
+                %span.dataset-show-list-tertiary= link_to("Draft created: #{request.approved_dataset.key}", edit_dataset_path(request.approved_dataset))
+      - else
+        .dataset-show-table-wrap
+          %p No change log entries available.

@@ -1,0 +1,38 @@
+- if version_group.latest_published_version.present? && version_group.latest_published_version != dataset
+  .dataset-show-status
+    %p
+      %strong A newer version of this dataset is available.
+      = " "
+      = link_to "View the latest version.", dataset_path(version_group.latest_published_version)
+
+.dataset-show-titlebar
+  = render "datasets/workflow/show_actions", dataset: dataset
+- if citation_text.present? || doi_url.present?
+  .dataset-show-citation
+    - if citation_text.present?
+      .dataset-show-citation-copy
+        %p.dataset-show-eyebrow Cite this dataset:
+        %p.dataset-show-citation-text= citation_text
+
+    - if doi_url.present?
+      .dataset-show-persistent-link
+        %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
+        .dataset-show-persistent-controls
+          %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
+          = semantic_action_button(action: :copy, style: :idb, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
+          %span#copy-status.sr-only{aria: { live: "polite" }}
+
+- if logged_in? && can?(:update, dataset)
+  - missing = dataset.missing_publish_fields
+  .dataset-show-status
+    - if missing.any?
+      %p
+        %strong Publish requirements missing:
+        = " #{missing.join(', ')}"
+    - else
+      %p
+        %strong This dataset is ready to publish.
+
+    - unless dataset.published?
+      = button_to "Request Pre-Publication Review", request_review_dataset_path(dataset), method: :post, class: "idb-button-secondary"
+      = button_to "Publish", publish_dataset_path(dataset), method: :post, class: "idb-button-primary"
