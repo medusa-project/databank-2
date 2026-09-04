@@ -61,10 +61,10 @@
           = button_to "Publish", publish_dataset_path(@dataset), method: :post, class: "idb-button-primary"
 
   .dataset-show-grid
-    %section.dataset-show-panel.idb-rounded-section{aria: { label: "Dataset metadata" }}
-      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+    %section.idb-section-card{aria: { label: "Dataset metadata" }}
+      %details.idb-section-disclosure{open: true}
         %summary
-          %h2.dataset-show-section-title Metadata
+          %h2.idb-section-title Metadata
         .idb-section-body
           %dl.dataset-show-metadata
             - if @dataset.description.present?
@@ -159,10 +159,10 @@
 
     - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:review_versions, @dataset) }
     - if visible_version_entries.any?
-      %section.dataset-show-panel.idb-rounded-section{aria: { label: "Versions in Illinois Data Bank" }}
-        %details.idb-section-disclosure.dataset-show-disclosure{open: (visible_version_entries.length > 1)}
+      %section.idb-section-card{aria: { label: "Versions in Illinois Data Bank" }}
+        %details.idb-section-disclosure{open: (visible_version_entries.length > 1)}
           %summary
-            %h2.dataset-show-section-title= visible_version_entries.length > 1 ? "Versions in Illinois Data Bank" : "Versions"
+            %h2.idb-section-title= visible_version_entries.length > 1 ? "Versions in Illinois Data Bank" : "Versions"
           .idb-section-body
             .dataset-show-table-wrap
               %table.dataset-show-table
@@ -183,13 +183,13 @@
                       %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")
 
     - if datafile_count.positive? || @dataset.external_files?
-      %section.dataset-show-panel.idb-rounded-section{aria: { label: "Files" }}
-        %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+      %section.idb-section-card{aria: { label: "Files" }}
+        %details.idb-section-disclosure{open: true}
           %summary
             - if @dataset.external_files?
-              %h2.dataset-show-section-title Files - Subset
+              %h2.idb-section-title Files - Subset
             - else
-              %h2.dataset-show-section-title Files
+              %h2.idb-section-title Files
           .idb-section-body
             - if @dataset.external_files?
               = render "show_external_files", dataset: @dataset
@@ -268,10 +268,10 @@
                 %p No files available.
 
 
-    %section.dataset-show-panel.idb-rounded-section{aria: { label: "Change log" }}
-      %details.idb-section-disclosure.dataset-show-disclosure
+    %section.idb-section-card{aria: { label: "Change log" }}
+      %details.idb-section-disclosure
         %summary
-          %h2.dataset-show-section-title Change Log
+          %h2.idb-section-title Change Log
         .idb-section-body
           - if @version_request_history.present?
             %ul.dataset-show-list
@@ -294,10 +294,10 @@
                 No change log entries available.
 
   - if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
-    %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator controls" }}
-      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+    %section.idb-section-card{aria: { label: "Curator controls" }}
+      %details.idb-section-disclosure{open: true}
         %summary
-          %h2.dataset-show-section-title Curator Controls
+          %h2.idb-section-title Curator Controls
         .idb-section-body
           - if can?(:manage, @dataset)
             %p
@@ -308,10 +308,10 @@
             = link_to "Curator Notes", dataset_notes_path(@dataset), class: "idb-button-secondary"
 
   - if logged_in? && can?(:manage, Dataset)
-    %section.dataset-show-panel.idb-rounded-section{aria: { label: "External delivery" }}
-      %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+    %section.idb-section-card{aria: { label: "External delivery" }}
+      %details.idb-section-disclosure{open: true}
         %summary
-          %h2.dataset-show-section-title External Delivery
+          %h2.idb-section-title External Delivery
         .idb-section-body
           %p
             = link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: @dataset.key), class: "idb-button-primary"
