@@ -106,7 +106,8 @@ a.idb-button-primary:active {
 	color: #ffffff;
 }
 
-/* Success — legacy effective override */
+/* Secondary and success share the legacy Bootstrap success action style. */
+.idb-button-secondary,
 .idb-button-success {
 	background-color: #488222;
 	border-color: #488222;
@@ -135,13 +136,6 @@ a.idb-button-primary:active {
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
-/* Secondary maps to legacy neutral action style */
-.idb-button-secondary {
-	background-color: #d9e3f2;
-	border-color: #5c78a6;
-	color: #183153;
-}
-
 .idb-button-danger:hover,
 .idb-button-danger:focus,
 .idb-button-danger:focus-visible {
@@ -150,6 +144,9 @@ a.idb-button-primary:active {
 	color: #ffffff;
 }
 
+.idb-button-secondary:hover,
+.idb-button-secondary:focus,
+.idb-button-secondary:focus-visible,
 .idb-button-success:hover,
 .idb-button-success:focus,
 .idb-button-success:focus-visible {
@@ -182,14 +179,6 @@ a.idb-button-primary:active {
 	color: #1f1f1f;
 }
 
-.idb-button-secondary:hover,
-.idb-button-secondary:focus,
-.idb-button-secondary:focus-visible {
-	background-color: #c7d6ec;
-	border-color: #466490;
-	color: #102746;
-}
-
 a.idb-button-danger,
 a.idb-button-danger:visited {
 	background-color: #c02c2c;
@@ -208,6 +197,12 @@ a.idb-button-danger:active {
 	text-decoration: none;
 }
 
+a.idb-button-secondary,
+a.idb-button-secondary:visited,
+a.idb-button-secondary:hover,
+a.idb-button-secondary:focus,
+a.idb-button-secondary:focus-visible,
+a.idb-button-secondary:active,
 a.idb-button-success,
 a.idb-button-success:visited,
 a.idb-button-success:hover,

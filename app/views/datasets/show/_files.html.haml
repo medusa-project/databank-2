@@ -72,9 +72,9 @@
                   - if can?(:view_files, dataset)
                     - preview_label = datafile.preview_button_label
                     - if preview_label.present?
-                      = link_to preview_label, view_dataset_datafile_path(dataset, datafile), target: "_blank", rel: "noopener noreferrer", class: "idb-button-secondary idb-button-sm", aria: {label: "#{preview_label} #{datafile.binary_name.presence || datafile.web_id}"}
+                      = semantic_action_button(action: :preview, url: view_dataset_datafile_path(dataset, datafile), label: preview_label, style: :idb, target: "_blank", rel: "noopener noreferrer", aria_label: "#{preview_label} #{datafile.binary_name.presence || datafile.web_id}", class: "idb-button-sm")
                 .dataset-file-col-download
                   - if can?(:view_files, dataset)
-                    = link_to "Download", download_dataset_datafile_path(dataset, datafile), class: "idb-button-primary idb-button-sm", aria: {label: "Download #{datafile.binary_name.presence || datafile.web_id}"}
+                    = semantic_action_button(action: :download, url: download_dataset_datafile_path(dataset, datafile), style: :idb, aria_label: "Download #{datafile.binary_name.presence || datafile.web_id}", class: "idb-button-sm")
           - else
             %p No files available.

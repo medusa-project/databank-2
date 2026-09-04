@@ -35,7 +35,7 @@ module ApplicationHelper
     },
     search: {
       label: "Search",
-      variant: "success",
+      variant: "info",
       icon: "magnifying-glass",
       icon_style: :solid
     },

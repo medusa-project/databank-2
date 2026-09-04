@@ -19,7 +19,7 @@
         %label.dataset-show-eyebrow{for: "persistent-url"} Use this persistent URL to link to this dataset:
         .dataset-show-persistent-controls
           %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
-          = semantic_action_button(action: :copy, style: :idb, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
+          = semantic_action_button(action: :copy, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
           %span#copy-status.sr-only{aria: { live: "polite" }}
 
 - if logged_in? && can?(:update, dataset)
