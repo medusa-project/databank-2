@@ -9,6 +9,10 @@
         .idb-file-metadata-actions
           = link_to "Advanced File Management", dataset_datafiles_path(dataset), class: "idb-button-primary"
 
+      - if dataset.draft? && dataset.previous_version_dataset.present? && can?(:update, dataset)
+        .idb-file-metadata-actions
+          = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(dataset), method: :post, class: "idb-button-primary"
+
       - if dataset.datafiles.count <= 500
         - if dataset.datafiles.any?
           .idb-file-metadata-container{data: { controller: "bulk-file-actions" }}

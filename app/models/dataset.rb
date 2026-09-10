@@ -110,12 +110,13 @@ class Dataset < ApplicationRecord
     return creator.institution_name if creator.institution_name.present?
 
     # Individual creators: format as "Family, Given"
-    return nil if creator.family_name.blank?
+    if creator.family_name.present?
+      given_name = creator.given_name.to_s.strip
+      return given_name.blank? ? creator.family_name : "#{creator.family_name}, #{given_name}"
+    end
 
-    given_name = creator.given_name.to_s.strip
-    return creator.family_name if given_name.blank?
-
-    "#{creator.family_name}, #{given_name}"
+    # Fall back to the plain name field when given/family name aren't split out
+    creator.name.presence
   end
 
   def citation_minus_title
