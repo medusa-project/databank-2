@@ -93,6 +93,7 @@ module Migration
       dataset.is_test = ActiveModel::Type::Boolean.new.cast(payload["is_test"]) || false
       dataset.is_import = ActiveModel::Type::Boolean.new.cast(payload["is_import"]) || false
       dataset.all_globus = ActiveModel::Type::Boolean.new.cast(payload["all_globus"]) || false
+      dataset.all_medusa = ActiveModel::Type::Boolean.new.cast(payload["all_medusa"]) || false
       dataset.complete = ActiveModel::Type::Boolean.new.cast(payload["complete"]) || false
       dataset.org_creators = ActiveModel::Type::Boolean.new.cast(payload["org_creators"]) || false
       dataset.suppress_changelog = ActiveModel::Type::Boolean.new.cast(payload["suppress_changelog"]) || false

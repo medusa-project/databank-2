@@ -444,6 +444,7 @@ module Migration
             is_test: boolean_or_false(record["is_test"]),
             is_import: boolean_or_false(record["is_import"]),
             all_globus: boolean_or_false(record["all_globus"]),
+            all_medusa: boolean_or_false(record["all_medusa"]),
             complete: boolean_or_false(record["complete"]),
             org_creators: boolean_or_false(record["org_creators"]),
             suppress_changelog: boolean_or_false(record["suppress_changelog"]),

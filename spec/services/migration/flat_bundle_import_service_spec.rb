@@ -26,6 +26,7 @@ RSpec.describe Migration::FlatBundleImportService do
         publication_state: "released",
         embargo: "none",
         all_globus: true,
+        all_medusa: true,
         complete: true,
         org_creators: true,
         suppress_changelog: true,
@@ -95,6 +96,7 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset).to be_published
     expect(dataset.all_globus).to be true
+    expect(dataset.all_medusa).to be true
     expect(dataset.complete).to be true
     expect(dataset.org_creators).to be true
     expect(dataset.suppress_changelog).to be true
