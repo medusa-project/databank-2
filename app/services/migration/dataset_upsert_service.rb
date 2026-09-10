@@ -93,6 +93,16 @@ module Migration
       dataset.is_test = ActiveModel::Type::Boolean.new.cast(payload["is_test"]) || false
       dataset.is_import = ActiveModel::Type::Boolean.new.cast(payload["is_import"]) || false
       dataset.all_globus = ActiveModel::Type::Boolean.new.cast(payload["all_globus"]) || false
+      dataset.complete = ActiveModel::Type::Boolean.new.cast(payload["complete"]) || false
+      dataset.org_creators = ActiveModel::Type::Boolean.new.cast(payload["org_creators"]) || false
+      dataset.suppress_changelog = ActiveModel::Type::Boolean.new.cast(payload["suppress_changelog"]) || false
+      dataset.external_files_link = payload["external_files_link"].presence
+      dataset.external_files_note = payload["external_files_note"].presence
+      dataset.medusa_dataset_dir = payload["medusa_dataset_dir"].presence
+      dataset.version_comment = payload["version_comment"].presence
+      dataset.have_permission = payload["have_permission"].presence
+      dataset.removed_private = payload["removed_private"].presence
+      dataset.agree = payload["agree"].presence
       dataset.embargo = normalized_embargo(raw: payload["embargo"]) || derived_embargo_from_legacy_state(legacy_publication_state: legacy_publication_state)
       dataset.legacy_publication_state = legacy_publication_state
       dataset.publication_state = publication_state_value(raw: legacy_publication_state)

@@ -444,9 +444,20 @@ module Migration
             is_test: boolean_or_false(record["is_test"]),
             is_import: boolean_or_false(record["is_import"]),
             all_globus: boolean_or_false(record["all_globus"]),
+            complete: boolean_or_false(record["complete"]),
+            org_creators: boolean_or_false(record["org_creators"]),
+            suppress_changelog: boolean_or_false(record["suppress_changelog"]),
+            external_files_link: record["external_files_link"],
+            external_files_note: record["external_files_note"],
+            medusa_dataset_dir: record["medusa_dataset_dir"],
+            version_comment: record["version_comment"],
+            have_permission: record["have_permission"],
+            removed_private: record["removed_private"],
+            agree: record["agree"],
             tombstone_date: record["tombstone_date"],
             dataset_version: record["dataset_version"],
-            nested_updated_at: record["nested_updated_at"]
+            nested_updated_at: record["nested_updated_at"],
+            legacy_publication_state: record["publication_state"]
           }
           attributes[:publication_state] = normalized_publication_state if normalized_publication_state.present?
           dataset.assign_attributes(assignable_attributes(dataset, attributes))

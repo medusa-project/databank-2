@@ -26,6 +26,16 @@ RSpec.describe Migration::FlatBundleImportService do
         publication_state: "released",
         embargo: "none",
         all_globus: true,
+        complete: true,
+        org_creators: true,
+        suppress_changelog: true,
+        external_files_link: "https://example.edu/external",
+        external_files_note: "See external repository for raw data.",
+        medusa_dataset_dir: "legacy/medusa/dir",
+        version_comment: "Initial legacy version.",
+        have_permission: "yes",
+        removed_private: "no",
+        agree: "yes",
         creators: [
           {
             given_name: "Alex",
@@ -85,6 +95,17 @@ RSpec.describe Migration::FlatBundleImportService do
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset).to be_published
     expect(dataset.all_globus).to be true
+    expect(dataset.complete).to be true
+    expect(dataset.org_creators).to be true
+    expect(dataset.suppress_changelog).to be true
+    expect(dataset.external_files_link).to eq("https://example.edu/external")
+    expect(dataset.external_files_note).to eq("See external repository for raw data.")
+    expect(dataset.medusa_dataset_dir).to eq("legacy/medusa/dir")
+    expect(dataset.version_comment).to eq("Initial legacy version.")
+    expect(dataset.have_permission).to eq("yes")
+    expect(dataset.removed_private).to eq("no")
+    expect(dataset.agree).to eq("yes")
+    expect(dataset.legacy_publication_state).to eq("released")
 
     creator = dataset.creators.first
     expect(creator.position).to eq(1)
