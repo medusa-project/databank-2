@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_134015) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_142200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -213,6 +213,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_134015) do
   create_table "datasets", force: :cascade do |t|
     t.string "agree"
     t.boolean "all_globus", default: false, null: false
+    t.boolean "all_medusa", default: false, null: false
     t.boolean "complete"
     t.string "corresponding_creator_email"
     t.string "corresponding_creator_name"

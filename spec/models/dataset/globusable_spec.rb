@@ -31,4 +31,22 @@ RSpec.describe Dataset::Globusable, type: :model do
       expect(dataset.globus_downloadable?).to be true
     end
   end
+
+  describe "#fileset_preserved?" do
+    it "is false when the dataset is not published" do
+      dataset.update!(publication_state: :draft, all_medusa: true)
+
+      expect(dataset.fileset_preserved?).to be false
+    end
+
+    it "is false when all_medusa has not been set" do
+      expect(dataset.fileset_preserved?).to be false
+    end
+
+    it "is true when the dataset is published and all_medusa is true" do
+      dataset.update!(all_medusa: true)
+
+      expect(dataset.fileset_preserved?).to be true
+    end
+  end
 end

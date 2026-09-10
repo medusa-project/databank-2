@@ -2,14 +2,12 @@ module Dataset::Globusable
   extend ActiveSupport::Concern
 
   # Check if dataset files are preserved/available in the preservation system
-  # Files must be ingested successfully to be downloadable
+  # Requires: published status + all datafiles switched to the Medusa storage root
+  # (all_medusa is set by Medusa::FinalizeIngestService, avoiding a storage check on every page load)
   def fileset_preserved?
     return @fileset_preserved if defined?(@fileset_preserved)
 
-    @fileset_preserved = external_delivery_attempts.exists?(
-      integration: :ingest,
-      status: :succeeded
-    )
+    @fileset_preserved = published? && all_medusa?
   end
 
   # Check if dataset files are available via Globus download
