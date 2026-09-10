@@ -443,6 +443,7 @@ module Migration
             embargo: normalize_embargo(record["embargo"]),
             is_test: boolean_or_false(record["is_test"]),
             is_import: boolean_or_false(record["is_import"]),
+            all_globus: boolean_or_false(record["all_globus"]),
             tombstone_date: record["tombstone_date"],
             dataset_version: record["dataset_version"],
             nested_updated_at: record["nested_updated_at"]

@@ -92,6 +92,7 @@ module Migration
       dataset.dataset_version = payload["dataset_version"].presence
       dataset.is_test = ActiveModel::Type::Boolean.new.cast(payload["is_test"]) || false
       dataset.is_import = ActiveModel::Type::Boolean.new.cast(payload["is_import"]) || false
+      dataset.all_globus = ActiveModel::Type::Boolean.new.cast(payload["all_globus"]) || false
       dataset.embargo = normalized_embargo(raw: payload["embargo"]) || derived_embargo_from_legacy_state(legacy_publication_state: legacy_publication_state)
       dataset.legacy_publication_state = legacy_publication_state
       dataset.publication_state = publication_state_value(raw: legacy_publication_state)

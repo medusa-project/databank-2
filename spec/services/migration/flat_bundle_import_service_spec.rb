@@ -25,6 +25,7 @@ RSpec.describe Migration::FlatBundleImportService do
         depositor_email: "legacy@example.edu",
         publication_state: "released",
         embargo: "none",
+        all_globus: true,
         creators: [
           {
             given_name: "Alex",
@@ -83,6 +84,7 @@ RSpec.describe Migration::FlatBundleImportService do
     dataset = Dataset.find_by!(key: dataset_key)
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset).to be_published
+    expect(dataset.all_globus).to be true
 
     creator = dataset.creators.first
     expect(creator.position).to eq(1)
