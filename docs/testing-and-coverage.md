@@ -12,6 +12,49 @@ Run the full test suite:
 bundle exec rspec
 ```
 
+### Datafile request coverage
+
+```sh
+RAILS_ENV=test bundle exec rspec spec/requests/datafiles_spec.rb
+```
+
+These specs cover single and bulk file operations, partial upload failures,
+dataset-scoped removal, authorization boundaries, and cached/attachment/storage
+preview behavior. MedusaStorage roots are mocked for storage-backed previews;
+no live storage access is required. Assertions check response bodies, metadata,
+counts, inline MIME types, and preview sanitization rather than status alone.
+Unused archive-tree helpers are not exercised solely to increase coverage.
+
+### Metric export coverage
+
+```sh
+RAILS_ENV=test bundle exec rspec spec/models/metric_spec.rb
+```
+
+Metric specs run the actual TSV/CSV writers and verify exact headers, rows,
+aggregates, CSV quoting, relationship expansion, and public visibility filtering.
+Calendar/fiscal download exports test inclusive year boundaries and file-access
+restrictions. Failure tests verify that locks are cleared, archival removes local
+files only after a successful storage copy, and failed copies preserve local data.
+ZIP tests verify entry names and contents.
+
+Export files and year-specific files under `public/` are redirected to a temporary
+directory for these model specs. MedusaStorage report roots are mocked, so the
+tests do not overwrite real exports or access live archive storage.
+
+### Configuration contract task coverage
+
+```sh
+RAILS_ENV=test bundle exec rspec spec/tasks/config_contract_tasks_spec.rb
+```
+
+These tests invoke `config:contract` and `config:contract_report` with isolated
+configuration and credentials. They verify required storage roots, enabled
+integration requirements, aggregated failure messages and exit status, Amazon
+Active Storage requirements/IAM warnings, and source precedence without revealing
+secret values. Environment presence checks and storage YAML reads are mocked;
+no deployed credentials, environment variables, or storage services are changed.
+
 ## Coverage baseline and rationale
 
 This project uses SimpleCov and generates coverage output in `coverage/`.

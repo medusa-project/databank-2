@@ -416,6 +416,298 @@ RSpec.describe "Datafiles", type: :request do
     expect(flash[:notice]).to eq("Preview not available for this file type. Downloading instead.")
   end
 
+  describe "bulk uploads" do
+    before { sign_in_as(email: owner_email, name: "Owner User", role: "depositor") }
+
+    it "rejects a request without files" do
+      expect do
+        post bulk_create_dataset_datafiles_path(dataset)
+      end.not_to change(Datafile, :count)
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body).to eq("error" => "No files were selected for upload.")
+    end
+
+    [ 1, 2 ].each do |count|
+      it "uploads #{count} files with exact counts and synchronized metadata" do
+        files = count.times.map { |n| uploaded_file("row #{n}\n", filename: "file-#{n}.csv") }
+
+        expect do
+          post bulk_create_dataset_datafiles_path(dataset), params: { datafiles: files }
+        end.to change { dataset.datafiles.count }.by(count)
+
+        expect(response).to have_http_status(:created)
+        expect(response.parsed_body).to eq(
+          "success" => true, "count" => count,
+          "message" => "Uploaded #{count} file#{count == 1 ? '' : 's'} successfully."
+        )
+        dataset.datafiles.order(:binary_name).each_with_index do |datafile, n|
+          expect(datafile.binary_name).to eq("file-#{n}.csv")
+          expect(datafile.binary_size).to eq("row #{n}\n".bytesize)
+          expect(datafile.binary.download).to eq("row #{n}\n")
+        end
+      end
+    end
+
+    it "reports partial failure while retaining the successful upload" do
+      allow_any_instance_of(Datafile).to receive(:save).and_wrap_original do |original, *args|
+        if original.receiver.binary_name == "bad.csv"
+          original.receiver.errors.add(:binary, "is invalid")
+          false
+        else
+          original.call(*args)
+        end
+      end
+
+      expect do
+        post bulk_create_dataset_datafiles_path(dataset), params: {
+          datafiles: [
+            uploaded_file("good\n", filename: "good.csv"),
+            uploaded_file("bad\n", filename: "bad.csv")
+          ]
+        }
+      end.to change { dataset.datafiles.count }.by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq(
+        "success" => false,
+        "message" => "Uploaded 1 file, but 1 failed.",
+        "errors" => [ "bad.csv: Binary is invalid" ]
+      )
+      expect(dataset.datafiles.pluck(:binary_name)).to eq([ "good.csv" ])
+    end
+  end
+
+  describe "bulk removal" do
+    before { sign_in_as(email: owner_email, name: "Owner User", role: "depositor") }
+
+    it "does not remove files when the selection is empty or blank" do
+      datafile = create(:datafile, dataset: dataset)
+
+      expect do
+        post bulk_destroy_dataset_datafiles_path(dataset), params: { selected_files: [ "", " " ] }
+      end.not_to change(Datafile, :count)
+
+      expect(response).to redirect_to(edit_dataset_path(dataset))
+      expect(flash[:alert]).to eq("No files were selected for removal.")
+      expect(datafile.reload).to be_persisted
+    end
+
+    it "removes only selected files belonging to the dataset" do
+      selected = create(:datafile, dataset: dataset)
+      retained = create(:datafile, dataset: dataset)
+      foreign = create(:datafile)
+
+      expect do
+        post bulk_destroy_dataset_datafiles_path(dataset), params: {
+          selected_files: [ selected.web_id, selected.web_id, foreign.web_id, "missing", "" ]
+        }
+      end.to change(Datafile, :count).by(-1)
+
+      expect(response).to redirect_to(edit_dataset_path(dataset))
+      expect(flash[:notice]).to eq("Removed 1 file metadata entry.")
+      expect(dataset.datafiles.reload).to contain_exactly(retained)
+      expect(foreign.reload).to be_persisted
+    end
+
+    it "accepts a scalar file ID" do
+      datafile = create(:datafile, dataset: dataset)
+
+      expect do
+        post bulk_destroy_dataset_datafiles_path(dataset), params: { selected_files: datafile.web_id }
+      end.to change(Datafile, :count).by(-1)
+
+      expect(flash[:notice]).to eq("Removed 1 file metadata entry.")
+    end
+
+    it "reports the number of files removed for multiple selections" do
+      files = create_list(:datafile, 2, dataset: dataset)
+
+      expect do
+        post bulk_destroy_dataset_datafiles_path(dataset), params: { selected_files: files.map(&:web_id) }
+      end.to change(Datafile, :count).by(-2)
+
+      expect(flash[:notice]).to eq("Removed 2 file metadata entries.")
+    end
+  end
+
+  describe "access boundaries" do
+    it "redirects a guest away from a private preview without reading or counting content" do
+      datafile = create(:datafile, dataset: dataset)
+      expect_any_instance_of(Datafile).not_to receive(:record_download)
+      expect_any_instance_of(Datafile).not_to receive(:with_input_io)
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+
+    it "forbids a guest preview of embargoed files" do
+      embargoed = create(:dataset, :published, :embargo_file_unreleased)
+      datafile = create(:datafile, dataset: embargoed)
+      expect_any_instance_of(Datafile).not_to receive(:record_download)
+
+      get view_dataset_datafile_path(embargoed, datafile)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.body).to be_blank
+    end
+
+    it "forbids a signed-in non-owner's private preview" do
+      datafile = create(:datafile, dataset: dataset)
+      sign_in_as(email: "viewer@example.edu", name: "Viewer User", role: "depositor")
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "prevents a non-owner from uploading or removing files in bulk" do
+      datafile = create(:datafile, dataset: dataset)
+      sign_in_as(email: "viewer@example.edu", name: "Viewer User", role: "depositor")
+
+      expect do
+        post bulk_create_dataset_datafiles_path(dataset), params: { datafiles: [ uploaded_file("blocked\n") ] }
+      end.not_to change(Datafile, :count)
+      expect(response).to redirect_to(root_path)
+
+      expect do
+        post bulk_destroy_dataset_datafiles_path(dataset), params: { selected_files: [ datafile.web_id ] }
+      end.not_to change(Datafile, :count)
+      expect(response).to redirect_to(root_path)
+    end
+
+    it "does not resolve another dataset's file through the requested dataset" do
+      foreign = create(:datafile)
+      sign_in_as(email: owner_email, name: "Owner User", role: "depositor")
+
+      get view_dataset_datafile_path(dataset, foreign)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "file index" do
+    it "lists the dataset's files sorted by name for a curator" do
+      sign_in_as(email: "curator@example.edu", name: "Curator User", role: "curator")
+      create(:datafile, dataset: dataset, attach_binary: false, binary_name: "z-last.csv")
+      create(:datafile, dataset: dataset, attach_binary: false, binary_name: "a-first.csv")
+      foreign = create(:datafile, attach_binary: false, binary_name: "foreign.csv")
+
+      get dataset_datafiles_path(dataset)
+
+      expect(response).to have_http_status(:ok)
+      names = Nokogiri::HTML(response.body).css("input[name='datafile[binary_name]']").map { |input| input["value"] }
+      expect(names).to eq(%w[a-first.csv z-last.csv])
+      expect(response.body).not_to include(foreign.web_id)
+    end
+  end
+
+  describe "uncached previews" do
+    before { sign_in_as(email: owner_email, name: "Owner User", role: "depositor") }
+
+    it "renders attachment text when persisted preview content is absent" do
+      datafile = create(:datafile, dataset: dataset, peek_type: Datafile::PeekType::ALL_TEXT)
+      datafile.update_columns(peek_content: nil)
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("column_a,column_b")
+    end
+
+    it "reads uncached text from MedusaStorage and escapes HTML" do
+      datafile = create(:datafile, dataset: dataset, attach_binary: false,
+        binary_name: "notes.txt", peek_type: Datafile::PeekType::ALL_TEXT,
+        storage_root: "medusa", storage_key: "notes.txt")
+      root = instance_double(StorageManager.instance.medusa_root.class)
+      allow(StorageManager.instance.root_set).to receive(:at).with("medusa").and_return(root)
+      allow(root).to receive(:exist?).with("notes.txt").and_return(true)
+      allow(root).to receive(:with_input_io).with("notes.txt").and_yield(StringIO.new("<script>alert('x')</script>notes"))
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:ok)
+      preview = Nokogiri::HTML(response.body).at_css(".dataset-text-content")
+      expect(preview.text).to eq("<script>alert('x')</script>notes")
+      expect(preview.css("script")).to be_empty
+      expect(root).to have_received(:with_input_io).with("notes.txt")
+    end
+
+    it "shows the unavailable text preview message when no binary exists" do
+      datafile = create(:datafile, dataset: dataset, attach_binary: false, peek_type: Datafile::PeekType::ALL_TEXT)
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("(Preview not available)")
+    end
+
+    it "shows an explicit warning when reading a text preview raises an encoding error" do
+      datafile = create(:datafile, dataset: dataset, attach_binary: false,
+        peek_type: Datafile::PeekType::ALL_TEXT, storage_root: "medusa", storage_key: "invalid.txt")
+      root = instance_double(StorageManager.instance.medusa_root.class)
+      io = instance_double(StringIO)
+      allow(StorageManager.instance.root_set).to receive(:at).with("medusa").and_return(root)
+      allow(root).to receive(:exist?).with("invalid.txt").and_return(true)
+      allow(root).to receive(:with_input_io).with("invalid.txt").and_yield(io)
+      allow(io).to receive(:read).and_raise(Encoding::InvalidByteSequenceError, "invalid byte sequence")
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:ok)
+      warning = Nokogiri::HTML(response.body).at_css("[role='alert']")
+      expect(warning.text).to include("File contains invalid UTF-8 characters and cannot be displayed")
+    end
+
+    {
+      Datafile::PeekType::PDF => [ "report.pdf", "application/pdf", "%PDF-1.7 preview" ],
+      Datafile::PeekType::IMAGE => [ "figure.png", "image/png", "image bytes" ]
+    }.each do |peek_type, (filename, content_type, content)|
+      it "serves a storage-backed #{peek_type} inline with its filename and MIME type" do
+        datafile = create(:datafile, dataset: dataset, attach_binary: false,
+          binary_name: filename, peek_type: peek_type, storage_root: "medusa", storage_key: filename)
+        root = instance_double(StorageManager.instance.medusa_root.class)
+        allow(StorageManager.instance.root_set).to receive(:at).with("medusa").and_return(root)
+        allow(root).to receive(:exist?).with(filename).and_return(true)
+        allow(root).to receive(:with_input_io).with(filename).and_yield(StringIO.new(content))
+
+        get view_dataset_datafile_path(dataset, datafile)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to eq(content)
+        expect(response.headers["Content-Type"]).to include(content_type)
+        expect(response.headers["Content-Disposition"]).to include("inline", filename)
+        expect(root).to have_received(:with_input_io).with(filename)
+      end
+
+      it "returns not found for a #{peek_type} without a binary" do
+        datafile = create(:datafile, dataset: dataset, attach_binary: false,
+          binary_name: filename, peek_type: peek_type)
+
+        get view_dataset_datafile_path(dataset, datafile)
+
+        expect(response).to have_http_status(:not_found)
+        expect(response.body).to be_blank
+      end
+    end
+
+    it "sanitizes archive listings without preserving interactive or executable markup" do
+      datafile = create(:datafile, dataset: dataset, attach_binary: false,
+        peek_type: Datafile::PeekType::LISTING,
+        peek_content: '<div class="indent" onclick="alert(1)">file.txt<script>alert(1)</script><a href="https://example.test">link</a></div>')
+
+      get view_dataset_datafile_path(dataset, datafile)
+
+      expect(response).to have_http_status(:ok)
+      listing = Nokogiri::HTML(response.body).at_css(".idb-archive-legacy-listing")
+      expect(listing.text).to include("file.txt")
+      expect(listing.at_css("div")["class"]).to eq("indent")
+      expect(listing.css("script, a, [onclick]")).to be_empty
+    end
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",
@@ -432,11 +724,11 @@ RSpec.describe "Datafiles", type: :request do
     expect(response).to have_http_status(:redirect)
   end
 
-  def uploaded_file(contents)
+  def uploaded_file(contents, filename: "upload.csv")
     file = Tempfile.new([ "upload", ".csv" ])
     file.write(contents)
     file.rewind
-    Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: "upload.csv")
+    Rack::Test::UploadedFile.new(file.path, "text/csv", original_filename: filename)
   ensure
     file&.close
   end

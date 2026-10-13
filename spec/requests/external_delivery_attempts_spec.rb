@@ -95,6 +95,21 @@ RSpec.describe "External delivery attempts index", type: :request do
     expect(response.body).to include("Curator visible")
   end
 
+  it "preserves the original file and key for an individual ingest replay" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    datafile = create(:datafile, dataset: dataset_one, attach_binary: false)
+    key = "dataset.published:#{dataset_one.id}:file-replay:datafile:#{datafile.id}"
+    attempt = ExternalDeliveryAttempt.create!(
+      dataset: dataset_one, integration: :ingest, event_name: "dataset.published",
+      status: :failed, attempt: 1, idempotency_key: key,
+      details: { datafile_id: datafile.id }
+    )
+
+    expect do
+      post replay_admin_external_delivery_attempt_path(attempt)
+    end.to have_enqueued_job(Ingest::PublishDatasetEventJob).with(dataset_one.id, key, datafile.id)
+  end
+
   it "blocks non-admin users" do
     sign_in_as(email: "owner-a@example.edu", name: "Owner A", role: "depositor")
 

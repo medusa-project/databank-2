@@ -3,31 +3,59 @@ module Ingest
     queue_as :default
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
 
-    def perform(dataset_id, replay_idempotency_key = nil)
+    def perform(dataset_id, replay_idempotency_key = nil, datafile_id = nil)
       dataset = Dataset.find_by(id: dataset_id)
       return unless dataset
 
       key = idempotency_key_for(dataset, replay_idempotency_key)
-      if already_succeeded?(dataset: dataset, idempotency_key: key)
+      if datafile_id && already_succeeded?(dataset: dataset, idempotency_key: key)
         build_attempt(
           dataset: dataset,
           status: :skipped,
           idempotency_key: key,
           correlation_key: key,
-          details: { reason: "already_succeeded" }
+          details: { reason: "already_succeeded", datafile_id: datafile_id }
         )
         return
       end
 
       publisher = RabbitmqEventPublisher.new
-      attempt_record = build_attempt(dataset: dataset, status: :started, idempotency_key: key, correlation_key: key)
-
       unless publisher.enabled?
+        attempt_record = build_attempt(dataset: dataset, status: :started, idempotency_key: key, correlation_key: key)
         attempt_record.update!(status: :skipped, details: { reason: "integration_disabled" })
         return
       end
 
-      success = publisher.publish_dataset_published(dataset, correlation_key: key)
+      files = dataset.datafiles.where.not(storage_root: "medusa").or(dataset.datafiles.where(storage_root: nil))
+      files = files.where(id: datafile_id) if datafile_id
+      if files.empty?
+        raise ArgumentError, "Requested datafile is unavailable for ingest" if datafile_id
+
+        build_attempt(
+          dataset: dataset, status: :skipped, idempotency_key: key, correlation_key: key,
+          details: { reason: "no_files_to_ingest" }
+        )
+        return
+      end
+      names = dataset.datafiles.pluck(:binary_name)
+      raise ArgumentError, "Datafiles have duplicate Medusa target names" unless names.uniq.size == names.size
+
+      files.order(:id).each do |datafile|
+        file_key = datafile_id ? key : "#{key}:datafile:#{datafile.id}"
+        next if already_succeeded?(dataset: dataset, idempotency_key: file_key)
+
+        publish_file!(publisher, dataset, datafile, file_key)
+      end
+    end
+
+    private
+
+    def publish_file!(publisher, dataset, datafile, key)
+      attempt_record = build_attempt(
+        dataset: dataset, status: :started, idempotency_key: key, correlation_key: key,
+        details: { datafile_id: datafile.id, datafile_web_id: datafile.web_id }
+      )
+      success = publisher.publish_datafile(datafile, correlation_key: key)
       if success
         attempt_record.update!(status: :succeeded)
         return
@@ -43,7 +71,7 @@ module Ingest
         {
           event: "ingest.publish_dataset_event.failed",
           job_id: job_id,
-          dataset_id: dataset_id,
+          dataset_id: dataset.id,
           dataset_key: dataset.key,
           executions: executions,
           message: message
@@ -51,8 +79,6 @@ module Ingest
       )
       raise StandardError, message
     end
-
-    private
 
     def build_attempt(dataset:, status:, idempotency_key:, correlation_key:, details: {})
       ExternalDeliveryAttempt.create!(

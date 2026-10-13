@@ -19,13 +19,19 @@ Delivery jobs use an idempotency key format:
 
 - `dataset.published:<dataset_id>:<published_at>`
 
+Ingest requests append `:datafile:<datafile_id>` and store `datafile_id` and
+`datafile_web_id` in attempt details. Each file therefore has an independent
+delivery/response state, and retries skip files whose delivery was confirmed.
+
 When a prior successful attempt exists for the same dataset/integration/event/idempotency key, repeat delivery is skipped.
 
 ## Replay behavior
 
 Replay enqueues one job per failed integration/idempotency-key pair.
 
-Ingest replay enqueues `Ingest::PublishDatasetEventJob` with the original idempotency context.
+Ingest replay enqueues `Ingest::PublishDatasetEventJob` with the original idempotency
+context and, for per-file attempts, the original datafile ID. Only that file is
+replayed. Legacy attempts without a datafile ID expand into per-file requests.
 
 ## Dataset replay API
 

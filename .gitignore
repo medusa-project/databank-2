@@ -45,8 +45,7 @@
 /working/*
 !/working/.keep
 /migration_bundles/*
-/databank_exports/*
-!/databank_exports/.keep
+/databank_exports/
 /storage/
 /test_bundle/*
 !/test_bundle/.keep
