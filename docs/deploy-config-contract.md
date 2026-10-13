@@ -31,7 +31,7 @@ The following must resolve to non-blank values for `demo` and `production`:
 
 3. Feature-conditional requirements
 - If `IDB_CONFIG.doi.strict` is true: `doi.api_base_url`, `doi.username`, `doi.password`
-- If `IDB_CONFIG.ingest.events_enabled` is true: `ingest.rabbitmq_url`, `ingest.events_exchange`, `ingest.events_routing_key`
+- If `IDB_CONFIG.ingest.events_enabled` is true: `ingest.rabbitmq_url`, `ingest.requests_queue` (Medusa's incoming queue for client `idb`)
 - If `IDB_CONFIG.globus.transfer_enabled` is true: `globus.transfer_endpoint`, `globus.transfer_token`, `globus.source_collection`, `globus.destination_collection`
 
 4. Active Storage (`amazon`)

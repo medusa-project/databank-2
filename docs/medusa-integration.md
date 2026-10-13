@@ -11,7 +11,7 @@ reference: https://www.library.illinois.edu/digital-strategies/medusa-digital-pr
 Medusa integration in `databank-2` has two related parts:
 
 - storage roots (where files live and are referenced), and
-- ingest event delivery/response tracking (publish notifications to Medusa and response reconciliation).
+- per-file ingest request delivery/response tracking.
 
 Related docs:
 
@@ -48,9 +48,11 @@ Datafile location is tracked by:
 Typical flow:
 
 1. Upload API writes depositor uploads to the `draft` root.
-2. Medusa ingest pipeline processes published datasets.
-3. Responses can include Medusa keys/UUIDs; app stores those in delivery attempt response fields.
-4. Download service can use `storage_key` metadata for Medusa-backed files.
+2. Browser uploads initially use Active Storage. Before ingest, they are streamed into the MedusaStorage `draft` root and their location metadata is updated.
+3. Publishing sends one Medusa `operation: ingest` request per file, using the prefixed draft storage key and `dataset.key/binary_name` as the preservation target. Medusa's IDB staging root must point to the matching bucket/key namespace.
+4. Responses can include Medusa keys/UUIDs; app stores those in per-file delivery attempt response fields.
+5. Finalization promotes available preserved files to the MedusaStorage `medusa` root and removes matching draft copies. The existing Active Storage attachment is retained.
+6. Download service can use `storage_key` metadata for Medusa-backed files.
 
 ## Configuration
 
@@ -119,4 +121,3 @@ Common failure modes:
 - missing/invalid RabbitMQ config: publisher/consumer unavailable.
 - unmatched response correlation keys: events recorded as `unmatched`.
 - Medusa response indicates error: attempts transition to `failed` with error details.
-

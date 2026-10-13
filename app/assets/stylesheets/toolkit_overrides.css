@@ -1,6 +1,18 @@
 /* Toolkit-specific overrides live here for easier maintenance. */
 
 /* -----------------------------------------------------------------------
+ * Form controls
+ * The toolkit sets a fixed `width: 200px` on `ilw-content select|textarea`,
+ * which outranks our element-level rules and truncates long option labels.
+ * ----------------------------------------------------------------------- */
+ilw-content select,
+ilw-content textarea {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+/* -----------------------------------------------------------------------
  * Legacy header styling parity (production il-header + il-header-nav)
  * The legacy header component styles slotted content from page CSS.
  * ----------------------------------------------------------------------- */

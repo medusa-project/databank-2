@@ -95,6 +95,21 @@ RSpec.describe "External delivery replay", type: :request do
     expect(globus_jobs).to be_empty
   end
 
+  it "preserves the original file and key when replaying a per-file ingest failure" do
+    sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")
+    datafile = create(:datafile, dataset: dataset, attach_binary: false)
+    key = "dataset.published:#{dataset.id}:file-replay:datafile:#{datafile.id}"
+    ExternalDeliveryAttempt.create!(
+      dataset: dataset, integration: :ingest, event_name: "dataset.published",
+      status: :failed, attempt: 1, idempotency_key: key,
+      details: { datafile_id: datafile.id }
+    )
+
+    expect do
+      post replay_failed_deliveries_dataset_path(dataset), params: { integration: "ingest" }
+    end.to have_enqueued_job(Ingest::PublishDatasetEventJob).with(dataset.id, key, datafile.id)
+  end
+
   it "blocks dataset-level replay for response-acknowledged ingest failures unless forced" do
     clear_enqueued_jobs
     sign_in_as(email: "admin@example.edu", name: "Admin User", role: "admin")

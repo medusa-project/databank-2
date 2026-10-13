@@ -25,6 +25,18 @@ RSpec.describe Migration::FlatBundleImportService do
         depositor_email: "legacy@example.edu",
         publication_state: "released",
         embargo: "none",
+        all_globus: true,
+        all_medusa: true,
+        complete: true,
+        org_creators: true,
+        suppress_changelog: true,
+        external_files_link: "https://example.edu/external",
+        external_files_note: "See external repository for raw data.",
+        medusa_dataset_dir: "legacy/medusa/dir",
+        version_comment: "Initial legacy version.",
+        have_permission: "yes",
+        removed_private: "no",
+        agree: "yes",
         creators: [
           {
             given_name: "Alex",
@@ -83,6 +95,19 @@ RSpec.describe Migration::FlatBundleImportService do
     dataset = Dataset.find_by!(key: dataset_key)
     expect(dataset.owner_uid).to eq("legacy-owner")
     expect(dataset).to be_published
+    expect(dataset.all_globus).to be true
+    expect(dataset.all_medusa).to be true
+    expect(dataset.complete).to be true
+    expect(dataset.org_creators).to be true
+    expect(dataset.suppress_changelog).to be true
+    expect(dataset.external_files_link).to eq("https://example.edu/external")
+    expect(dataset.external_files_note).to eq("See external repository for raw data.")
+    expect(dataset.medusa_dataset_dir).to eq("legacy/medusa/dir")
+    expect(dataset.version_comment).to eq("Initial legacy version.")
+    expect(dataset.have_permission).to eq("yes")
+    expect(dataset.removed_private).to eq("no")
+    expect(dataset.agree).to eq("yes")
+    expect(dataset.legacy_publication_state).to eq("released")
 
     creator = dataset.creators.first
     expect(creator.position).to eq(1)
@@ -99,6 +124,39 @@ RSpec.describe Migration::FlatBundleImportService do
     datafile = dataset.datafiles.find_by!(web_id: "ab123")
     expect(datafile.binary_name).to eq("results.csv")
     expect(datafile.nested_items.pluck(:id)).to include(nested_item_id)
+  end
+
+  it "imports a full Datafile batch whose dataset is in a partial dataset batch" do
+    dataset_key = "IDB-#{SecureRandom.random_number(9_000_000) + 1_000_000}"
+    records = [
+      {
+        type: "dataset",
+        dataset_id: dataset_key,
+        title: "Interleaved Flat Bundle Dataset",
+        owner_uid: "legacy-owner",
+        depositor_name: "Legacy User",
+        depositor_email: "legacy@example.edu",
+        publication_state: "draft"
+      }
+    ]
+
+    100.times do |index|
+      records << {
+        type: "datafile",
+        dataset_id: dataset_key,
+        datafile_id: "a#{index.to_s.rjust(4, '0')}",
+        binary_name: "file-#{index}.txt",
+        binary_size: index + 1
+      }
+    end
+
+    File.write(bundle_path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+
+    summary = described_class.new(bundle_path: bundle_path.to_s).call
+
+    expect(summary[:failed]).to eq(0)
+    expect(summary[:record_counts]).to include(datasets: 1, datafiles: 100)
+    expect(Dataset.find_by!(key: dataset_key).datafiles.count).to eq(100)
   end
 
   it "supports dry-run mode without writing database records" do

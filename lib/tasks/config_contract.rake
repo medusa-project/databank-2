@@ -58,8 +58,7 @@ namespace :config do
 
     if bool.call(IDB_CONFIG.dig("ingest", "events_enabled"))
       require_value.call("IDB_CONFIG.ingest.rabbitmq_url", IDB_CONFIG.dig("ingest", "rabbitmq_url"))
-      require_value.call("IDB_CONFIG.ingest.events_exchange", IDB_CONFIG.dig("ingest", "events_exchange"))
-      require_value.call("IDB_CONFIG.ingest.events_routing_key", IDB_CONFIG.dig("ingest", "events_routing_key"))
+      require_value.call("IDB_CONFIG.ingest.requests_queue", IDB_CONFIG.dig("ingest", "requests_queue"))
     end
 
     if bool.call(IDB_CONFIG.dig("globus", "transfer_enabled"))

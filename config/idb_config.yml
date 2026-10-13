@@ -28,8 +28,7 @@ default: &default
   ingest:
     events_enabled: <%= ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
     rabbitmq_url: <%= ENV.fetch("RABBITMQ_URL", "") %>
-    events_exchange: <%= ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
-    events_routing_key: <%= ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+    requests_queue: <%= ENV.fetch("INGEST_REQUESTS_QUEUE", "") %>
     responses_enabled: <%= ENV.fetch("ENABLE_INGEST_RESPONSES", "false") %>
     responses_queue: <%= ENV.fetch("INGEST_RESPONSES_QUEUE", "medusa_to_databank") %>
     response_batch_size: <%= ENV.fetch("INGEST_RESPONSE_BATCH_SIZE", "50") %>
@@ -102,8 +101,7 @@ demo:
   ingest:
     events_enabled: <%= Rails.application.credentials.dig(:ingest, :events_enabled) || ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
     rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
-    events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
-    events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+    requests_queue: <%= Rails.application.credentials.dig(:ingest, :requests_queue) || ENV.fetch("INGEST_REQUESTS_QUEUE", "") %>
   extractor:
     enabled: <%= Rails.application.credentials.dig(:extractor, :enabled) || ENV.fetch("ENABLE_ARCHIVE_EXTRACTOR", "false") %>
     use_mocks: <%= Rails.application.credentials.dig(:extractor, :use_mocks) || ENV.fetch("ARCHIVE_EXTRACTOR_USE_MOCKS", "false") %>
@@ -149,8 +147,7 @@ production:
   ingest:
     events_enabled: <%= Rails.application.credentials.dig(:ingest, :events_enabled) || ENV.fetch("ENABLE_INGEST_EVENTS", "false") %>
     rabbitmq_url: <%= Rails.application.credentials.dig(:ingest, :rabbitmq_url) || ENV.fetch("RABBITMQ_URL", "") %>
-    events_exchange: <%= Rails.application.credentials.dig(:ingest, :events_exchange) || ENV.fetch("INGEST_EVENTS_EXCHANGE", "databank.ingest") %>
-    events_routing_key: <%= Rails.application.credentials.dig(:ingest, :events_routing_key) || ENV.fetch("INGEST_EVENTS_ROUTING_KEY", "dataset.published") %>
+    requests_queue: <%= Rails.application.credentials.dig(:ingest, :requests_queue) || ENV.fetch("INGEST_REQUESTS_QUEUE", "") %>
   extractor:
     enabled: <%= Rails.application.credentials.dig(:extractor, :enabled) || ENV.fetch("ENABLE_ARCHIVE_EXTRACTOR", "false") %>
     use_mocks: <%= Rails.application.credentials.dig(:extractor, :use_mocks) || ENV.fetch("ARCHIVE_EXTRACTOR_USE_MOCKS", "false") %>

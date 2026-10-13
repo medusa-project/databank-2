@@ -60,6 +60,8 @@ class ExternalDeliveryAttempt < ApplicationRecord
     end
 
     update!(attrs)
+
+    Medusa::FinalizeIngestService.new(dataset).call if response_state == :succeeded && integration == "ingest"
   end
 
   private

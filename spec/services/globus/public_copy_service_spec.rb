@@ -79,4 +79,36 @@ RSpec.describe Globus::PublicCopyService, type: :service do
     expect(result[:records].last[:status]).to eq(:would_copy)
     expect(download_root).not_to have_received(:copy_content_to)
   end
+
+  it "marks the dataset all_globus true once every datafile is present in the download root" do
+    allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(true)
+
+    described_class.new(dataset_key: dataset.key).call
+
+    expect(dataset.reload.all_globus).to be true
+  end
+
+  it "does not mark all_globus in dry-run mode" do
+    allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(true)
+
+    described_class.new(dataset_key: dataset.key, dry_run: true).call
+
+    expect(dataset.reload.all_globus).to be false
+  end
+
+  it "does not mark all_globus when some datafiles are missing from the download root" do
+    dataset.datafiles.create!(
+      web_id: "fghij",
+      binary_name: "other.csv",
+      binary_size: 32,
+      storage_root: "draft",
+      storage_key: "IDB-2222222/other.csv"
+    )
+    allow(download_root).to receive(:exist?).with("IDB-2222222/analysis.csv").and_return(true)
+    allow(download_root).to receive(:exist?).with("IDB-2222222/other.csv").and_return(false)
+
+    described_class.new(dataset_key: dataset.key).call
+
+    expect(dataset.reload.all_globus).to be false
+  end
 end

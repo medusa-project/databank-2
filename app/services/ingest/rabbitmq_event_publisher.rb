@@ -13,21 +13,25 @@ module Ingest
     end
 
     def enabled?
-      ingest_events_enabled? && rabbitmq_url.present? && defined?(Bunny)
+      ingest_events_enabled? && rabbitmq_url.present? && requests_queue.present? && defined?(Bunny)
     end
 
-    def publish_dataset_published(dataset, correlation_key: nil)
+    def publish_datafile(datafile, correlation_key:)
       return false unless enabled?
 
+      payload = ingest_payload(datafile, correlation_key: correlation_key)
       session = Bunny.new(rabbitmq_url)
       session.start
 
       channel = session.create_channel
-      exchange = channel.topic(exchange_name, durable: true)
-      exchange.publish(JSON.generate(event_payload(dataset, correlation_key: correlation_key)),
-                       routing_key: routing_key,
+      channel.queue(requests_queue, durable: true)
+      channel.confirm_select
+      channel.default_exchange.publish(JSON.generate(payload),
+                       routing_key: requests_queue,
                        content_type: "application/json",
                        persistent: true)
+      raise IOError, "Medusa ingest request was not confirmed by RabbitMQ" unless channel.wait_for_confirms
+
       true
     rescue StandardError => e
       @logger.warn("Ingest::RabbitmqEventPublisher failed: #{e.class}: #{e.message}")
@@ -38,41 +42,51 @@ module Ingest
 
     private
 
-    def event_payload(dataset, correlation_key: nil)
+    def ingest_payload(datafile, correlation_key:)
+      raise ArgumentError, "Ingest correlation key is missing" if correlation_key.blank?
+      raise ArgumentError, "Datafile name is missing" if datafile.binary_name.blank?
+
+      stage_datafile!(datafile)
+      dataset = datafile.dataset
       {
-        event: "dataset.published",
-        emitted_at: Time.current.utc.iso8601,
-        correlation_key: correlation_key,
+        operation: "ingest",
+        staging_key: datafile.storage_key_with_prefix,
+        target_key: File.join(dataset.key, datafile.binary_name),
         pass_through: {
           dataset_id: dataset.id,
           dataset_key: dataset.key,
+          datafile_id: datafile.id,
+          datafile_web_id: datafile.web_id,
           correlation_key: correlation_key
-        },
-        dataset: {
-          id: dataset.id,
-          key: dataset.key,
-          identifier: dataset.identifier,
-          title: dataset.title,
-          publication_state: dataset.publication_state,
-          published_at: dataset.published_at&.utc&.iso8601
         }
       }
     end
 
+    def stage_datafile!(datafile)
+      draft_root = StorageManager.instance.draft_root
+      if datafile.storage_root == draft_root.name && datafile.exists_on_storage?
+        return
+      end
+
+      raise ArgumentError, "Datafile #{datafile.web_id} has no draft binary to ingest" unless datafile.binary.attached?
+
+      key = File.join(datafile.web_id, datafile.binary_name)
+      datafile.binary.open do |io|
+        draft_root.copy_io_to(key, io, nil, datafile.binary.byte_size)
+      end
+      datafile.update!(storage_root: draft_root.name, storage_key: key)
+    end
+
     def ingest_events_enabled?
-      IdbConfig.fetch(:ingest, :events_enabled, default: "false").casecmp("true").zero?
+      IdbConfig.fetch(:ingest, :events_enabled, default: "false").to_s.casecmp("true").zero?
     end
 
     def rabbitmq_url
       IdbConfig.fetch(:ingest, :rabbitmq_url, default: "").to_s.strip
     end
 
-    def exchange_name
-      IdbConfig.fetch(:ingest, :events_exchange, default: "databank.ingest")
-    end
-
-    def routing_key
-      IdbConfig.fetch(:ingest, :events_routing_key, default: "dataset.published")
+    def requests_queue
+      IdbConfig.fetch(:ingest, :requests_queue, default: "").to_s.strip
     end
   end
 end

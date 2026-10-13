@@ -45,7 +45,8 @@ gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
 gem "csv", "~> 3.3"
 # ZIP archive support for download metrics bundle exports
-gem "rubyzip", "~> 2.4"
+gem "rubyzip", "~> 3.4"
+gem "bunny", "~> 2.24", require: false
 # Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
 gem "net-imap", ">= 0.6.4.1"
 # Fix CVE in concurrent-ruby reported by CI security scan
@@ -89,7 +90,7 @@ group :development, :test do
   gem "bundler-audit", require: false
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
-  gem "brakeman", "~> 8.0.6", require: false
+  gem "brakeman", "~> 8.1.0", require: false
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false

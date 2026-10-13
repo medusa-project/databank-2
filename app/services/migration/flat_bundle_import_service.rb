@@ -130,6 +130,7 @@ module Migration
           when "datafile"
             batches[:datafiles] << record
             if batches[:datafiles].size >= batch_size
+              flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
               batch_counts[:datafiles] += 1
               timed_flush(phase: :datafiles, batch_index: batch_counts[:datafiles], record_count: batches[:datafiles].size) do
                 flush_datafiles_batch(batches[:datafiles], summary, dry_run)
@@ -175,13 +176,7 @@ module Migration
       end
 
       # Flush remaining batches
-      if batches[:datasets].any?
-        batch_counts[:datasets] += 1
-        timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
-          flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
-        end
-        pause_between_batches!
-      end
+      flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
 
       if batches[:datafiles].any?
         batch_counts[:datafiles] += 1
@@ -448,9 +443,22 @@ module Migration
             embargo: normalize_embargo(record["embargo"]),
             is_test: boolean_or_false(record["is_test"]),
             is_import: boolean_or_false(record["is_import"]),
+            all_globus: boolean_or_false(record["all_globus"]),
+            all_medusa: boolean_or_false(record["all_medusa"]),
+            complete: boolean_or_false(record["complete"]),
+            org_creators: boolean_or_false(record["org_creators"]),
+            suppress_changelog: boolean_or_false(record["suppress_changelog"]),
+            external_files_link: record["external_files_link"],
+            external_files_note: record["external_files_note"],
+            medusa_dataset_dir: record["medusa_dataset_dir"],
+            version_comment: record["version_comment"],
+            have_permission: record["have_permission"],
+            removed_private: record["removed_private"],
+            agree: record["agree"],
             tombstone_date: record["tombstone_date"],
             dataset_version: record["dataset_version"],
-            nested_updated_at: record["nested_updated_at"]
+            nested_updated_at: record["nested_updated_at"],
+            legacy_publication_state: record["publication_state"]
           }
           attributes[:publication_state] = normalized_publication_state if normalized_publication_state.present?
           dataset.assign_attributes(assignable_attributes(dataset, attributes))
@@ -521,6 +529,17 @@ module Migration
         datafile.save!
         summary[:record_counts][:datafiles] += 1
       end
+    end
+
+    def flush_pending_datasets_batch!(batches, dataset_map, summary, dry_run, batch_counts)
+      return unless batches[:datasets].any?
+
+      batch_counts[:datasets] += 1
+      timed_flush(phase: :datasets, batch_index: batch_counts[:datasets], record_count: batches[:datasets].size) do
+        flush_datasets_batch(batches[:datasets], dataset_map, summary, dry_run)
+      end
+      batches[:datasets] = []
+      pause_between_batches!
     end
 
     def flush_nested_items_batch(records, summary, dry_run, nested_item_lookup: nil)

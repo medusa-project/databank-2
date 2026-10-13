@@ -124,7 +124,7 @@ module Ingest
     end
 
     def responses_enabled?
-      IdbConfig.fetch(:ingest, :responses_enabled, default: "false").casecmp("true").zero?
+      IdbConfig.fetch(:ingest, :responses_enabled, default: "false").to_s.casecmp("true").zero?
     end
 
     def rabbitmq_url

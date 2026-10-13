@@ -58,23 +58,14 @@ npm run test:e2e
 npm run test:e2e:a11y
 ```
 
-4. Chrome Lighthouse checks (performance, accessibility, best practices, SEO)
+4. npm dependency audit (including development tooling)
 
 ```sh
-npm run lighthouse:local
+npm audit
 ```
 
-Optional: clean old Lighthouse reports without running new audits
-
-```sh
-npm run lighthouse:clean
-```
-
-5. Lighthouse CI-style assertions (optional)
-
-```sh
-npm run lighthouse:ci
-```
+This is a local check; `bin/ci` currently audits importmap dependencies, not npm
+dependencies.
 
 Run strategy for Playwright checks:
 
@@ -82,14 +73,19 @@ Run strategy for Playwright checks:
 - for quick accessibility-focused feedback, run only `npm run test:e2e:a11y`
 - running both is mostly redundant unless you want a separate explicit accessibility pass/reporting step
 
-Run strategy for Lighthouse checks:
+Lighthouse and Lighthouse CI were removed because their dependency chains used
+`extract-zip`, which has no patched release for the symlink archive extraction
+vulnerabilities (including GHSA-7pqw-9j4j-h8q3). Their removal also eliminates the
+vulnerable transitive `js-yaml` and `ip-address` dependencies. Playwright and axe
+accessibility checks remain available; they do not replace Lighthouse's
+performance, SEO, or best-practices audits.
 
-- run `npm run lighthouse:local` when Rails is running locally on `http://127.0.0.1:3000`
-- `npm run lighthouse:local` automatically cleans old `*.report.html` and `*.report.json` files first
-- local reports are written to `tmp/lighthouse/` as `home.report.*` and `contact.report.*`
-- in root-based dev containers, the script already applies Chrome `--no-sandbox` for compatibility
-- run `npm run lighthouse:ci` for threshold-based warnings using `lighthouserc.json`
-- Lighthouse checks are complementary to Playwright a11y tests and catch performance + SEO + best-practice issues
+RubyZip is constrained to the patched 3.4+ series for
+GHSA-47m2-wp7j-p9vc. When updating it, verify metric ZIP exports with:
+
+```sh
+RAILS_ENV=test bundle exec rspec spec/models/metric_spec.rb spec/jobs/metric_refresh_job_spec.rb
+```
 
 ## 3) Situational checks
 

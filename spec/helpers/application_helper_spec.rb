@@ -99,6 +99,22 @@ RSpec.describe ApplicationHelper, type: :helper do
       expect(html).to include("fa-minus")
       expect(html).to include('type="button"')
     end
+
+    it "renders a button_to form when url and non-GET method like delete are provided" do
+      html = helper.semantic_action_button(action: :delete, url: "/datasets/1/datafiles/2", method: :delete)
+
+      expect(html).to include('<form')
+      expect(html).to include('action="/datasets/1/datafiles/2"')
+      expect(html).to include('name="_method"')
+      expect(html).to include('value="delete"')
+    end
+
+    it "renders a link_to anchor when url and GET method are provided" do
+      html = helper.semantic_action_button(action: :download, url: "/datasets/1/datafiles/2/download", method: :get)
+
+      expect(html).to include('<a')
+      expect(html).to include('href="/datasets/1/datafiles/2/download"')
+    end
   end
 
   describe "#semantic_badge" do

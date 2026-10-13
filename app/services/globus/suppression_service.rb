@@ -16,6 +16,8 @@ module Globus
         root.delete_content(target_key) if root.exist?(target_key)
       end
 
+      @dataset.update(all_globus: false) if @dataset.all_globus
+
       true
     rescue StandardError => e
       @logger.warn("Globus::SuppressionService remove_from_public_download failed for #{@dataset.key}: #{e.class}: #{e.message}")

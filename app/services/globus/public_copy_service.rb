@@ -115,6 +115,23 @@ module Globus
         }
         @logger.warn("Globus::PublicCopyService failed for #{dataset.key} #{source_key}: #{e.class}: #{e.message}")
       end
+
+      update_all_globus_flag(dataset) unless @dry_run
+    end
+
+    # Mirrors legacy behavior: mark the dataset as fully available via Globus
+    # once every datafile is present in the download root.
+    def update_all_globus_flag(dataset)
+      return if dataset.datafiles.empty?
+
+      destination_root = StorageManager.instance.globus_download_root
+      all_present = dataset.datafiles.all? do |datafile|
+        binary_name = datafile.binary_name.to_s.strip
+        binary_name = File.basename(datafile.storage_key.to_s) if binary_name.blank?
+        destination_root.exist?(File.join(dataset.key, binary_name))
+      end
+
+      dataset.update(all_globus: true) if all_present && !dataset.all_globus
     end
   end
 end

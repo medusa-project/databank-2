@@ -9,7 +9,7 @@
 				.idb-metadata-grid
 					.idb-grid-col-5
 						.idb-row-actions-inline{data: { controller: "api-token", api_token_current_url_value: get_current_token_dataset_path(dataset), api_token_renew_url_value: get_new_token_dataset_path(dataset), api_token_dataset_key_value: dataset.key }}
-							%button.idb-button-secondary{type: "button", data: { action: "api-token#open" }} Get token for command line tools
+							%button.idb-button-primary{type: "button", data: { action: "api-token#open" }} Get token for command line tools
 							= render "datasets/api_modal", dataset: dataset
 					.idb-grid-col-7
 						%p
@@ -21,7 +21,7 @@
 
 				.idb-metadata-grid
 					.idb-grid-col-5
-						= link_to "Request large file transfer", "https://forms.illinois.edu/sec/1813779862", class: "idb-button-secondary", target: "_blank", rel: "noopener noreferrer"
+						%button.idb-button-primary{type: "button", onclick: "window.open('https://forms.illinois.edu/sec/1813779862', '_blank')"} Request large file transfer
 					.idb-grid-col-7
 						%p Files larger than 50GB require special handling.
 						%p See the large file transfer request form for details.

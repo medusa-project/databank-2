@@ -105,3 +105,23 @@ Common failure modes:
 - Invalid credentials: 401/403 from DataCite.
 - Strict mode enabled with DataCite outage: publish fails fast.
 
+## Offline Tests
+
+Run the DOI service specs without making requests to DataCite:
+
+```sh
+RAILS_ENV=test bundle exec rspec spec/services/doi
+```
+
+The client specs replace `Net::HTTP.start` with an HTTP double and check request
+methods, paths, authentication, JSON:API payloads, HTTP errors, and timeouts.
+Identifier and suppression service specs use a verifying DataCite client double
+and prohibit `Net::HTTP.start`, so configured registration, strict/non-strict
+failures, and metadata hide/republish behavior are tested without network calls
+or real credentials.
+
+Request contracts follow the DataCite guides for
+[creating DOIs](https://support.datacite.org/docs/api-create-dois) and
+[updating DOIs](https://support.datacite.org/docs/updating-metadata-with-the-rest-api).
+These offline tests verify the application's current payloads, not acceptance by
+the live API.

@@ -1,0 +1,50 @@
+%section.idb-section-card{aria: { label: "External delivery" }}
+  %details.idb-section-disclosure{open: true}
+    %summary
+      %h2.idb-section-title External Delivery
+    .idb-section-body
+      %p= link_to "View Delivery Audit", admin_external_delivery_attempts_path(dataset_key: dataset.key), class: "idb-button-primary"
+
+      - if ingest_health_summary.present?
+        %h3 Ingest Response Health
+        %p
+          %strong Status:
+          = semantic_status_badge(status: ingest_health_summary[:state], label: ingest_health_summary[:state].to_s.titleize, sr_label: "Ingest health status #{ingest_health_summary[:state]}")
+          %span.sr-only= "Status: #{ingest_health_summary[:state].to_s.titleize}"
+        %p= ingest_health_summary[:freshness_message]
+        %p= "Orphaned responses in last #{ingest_health_summary[:orphan_lookback_minutes]} minute(s): #{ingest_health_summary[:orphan_count]}"
+        - if ingest_health_summary[:alerts].any?
+          %ul.dataset-show-list
+            - ingest_health_summary[:alerts].each do |alert|
+              %li
+                %span.dataset-show-list-tertiary= alert
+
+      - if latest_delivery_attempts.present?
+        %ul.dataset-show-list
+          - latest_delivery_attempts.each do |integration, attempt|
+            %li
+              %span.dataset-show-list-primary
+                = "#{integration}: "
+                = semantic_status_badge(status: attempt.status, sr_label: "#{integration} status #{attempt.status}")
+                %span.sr-only= "#{integration}: #{attempt.status}"
+              %span.dataset-show-list-secondary= "Attempt #{attempt.attempt} at #{attempt.created_at.utc.iso8601}"
+              - if attempt.error_message.present?
+                %span.dataset-show-list-tertiary= attempt.error_message
+      - else
+        %p No external delivery attempts recorded yet.
+
+      - total_failed = failed_delivery_counts.values.sum
+      - if total_failed.positive?
+        %p
+          Failed attempts:
+          = semantic_count_badge(count: total_failed, label: nil, tone: "danger", sr_label: "Total failed delivery attempts")
+        %p
+          = button_to "Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(dataset, integration: "all"), method: :post, class: "idb-button-primary"
+          = button_to "Force Replay All Failed Deliveries", replay_failed_deliveries_dataset_path(dataset, integration: "all", force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures for all integrations?" } }
+        - failed_delivery_counts.each do |integration, count|
+          %p
+            = "#{integration} failures:"
+            = semantic_count_badge(count: count, label: nil, tone: "danger", sr_label: "#{integration} failed attempts")
+            = button_to "Replay #{integration} Failures", replay_failed_deliveries_dataset_path(dataset, integration: integration), method: :post, class: "idb-button-primary"
+            - if integration.to_s == "ingest"
+              = button_to "Force Replay #{integration} Failures", replay_failed_deliveries_dataset_path(dataset, integration: integration, force_replay: true), method: :post, class: "idb-button-secondary", form: { data: { turbo_confirm: "Force replay acknowledged ingest failures?" } }

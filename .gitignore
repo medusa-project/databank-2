@@ -45,8 +45,7 @@
 /working/*
 !/working/.keep
 /migration_bundles/*
-/databank_exports/*
-!/databank_exports/.keep
+/databank_exports/
 /storage/
 /test_bundle/*
 !/test_bundle/.keep
@@ -56,9 +55,6 @@
 /.vscode/
 /core
 /core.*
-
-# Local-only Lighthouse setup
-/lighthouserc.json
 
 # Local placeholder files used to prevent cookie-banner 404 noise in local audits
 /public/css/ila-cookie-uiuc-colors.css

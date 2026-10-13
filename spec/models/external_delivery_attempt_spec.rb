@@ -38,6 +38,58 @@ RSpec.describe ExternalDeliveryAttempt, type: :model do
     end
   end
 
+  it "triggers Medusa::FinalizeIngestService for a successful ingest response" do
+    attempt = described_class.create!(
+      dataset: dataset,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :started,
+      attempt: 1,
+      idempotency_key: "publish:#{dataset.id}:2",
+      correlation_key: "dataset.published:#{dataset.id}:2"
+    )
+    finalize_service = instance_double(Medusa::FinalizeIngestService, call: true)
+    allow(Medusa::FinalizeIngestService).to receive(:new).with(dataset).and_return(finalize_service)
+
+    attempt.apply_ingest_response!("status" => "ok")
+
+    expect(finalize_service).to have_received(:call)
+  end
+
+  it "does not trigger Medusa::FinalizeIngestService for a failed ingest response" do
+    attempt = described_class.create!(
+      dataset: dataset,
+      integration: :ingest,
+      event_name: "dataset.published",
+      status: :started,
+      attempt: 1,
+      idempotency_key: "publish:#{dataset.id}:3",
+      correlation_key: "dataset.published:#{dataset.id}:3"
+    )
+    allow(Medusa::FinalizeIngestService).to receive(:new)
+
+    attempt.apply_ingest_response!("status" => "failed")
+
+    expect(Medusa::FinalizeIngestService).not_to have_received(:new)
+  end
+
+  it "does not trigger Medusa::FinalizeIngestService for a successful globus response" do
+    attempt = described_class.create!(
+      dataset: dataset,
+      integration: :globus,
+      event_name: "dataset.published",
+      status: :started,
+      attempt: 1,
+      idempotency_key: "publish:#{dataset.id}:4",
+      correlation_key: "dataset.published:#{dataset.id}:4"
+    )
+    allow(Medusa::FinalizeIngestService).to receive(:new)
+
+    attempt.apply_ingest_response!("status" => "ok")
+
+    expect(Medusa::FinalizeIngestService).not_to have_received(:new)
+  end
+
   it "marks failed responses and extracts fallback fields" do
     attempt = described_class.create!(
       dataset: dataset,

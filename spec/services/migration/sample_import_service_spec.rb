@@ -28,6 +28,16 @@ RSpec.describe Migration::SampleImportService do
       "is_import" => true,
       "dataset_version" => "V3",
       "tombstone_date" => "2024-12-25",
+      "complete" => true,
+      "org_creators" => true,
+      "suppress_changelog" => true,
+      "external_files_link" => "https://example.edu/external",
+      "external_files_note" => "See external repository for raw data.",
+      "medusa_dataset_dir" => "legacy/medusa/dir",
+      "version_comment" => "Initial legacy version.",
+      "have_permission" => "yes",
+      "removed_private" => "no",
+      "agree" => "yes",
       "nested_updated_at" => "2020-01-03T00:00:00Z",
       "created_at" => "2020-01-01T00:00:00Z",
       "updated_at" => "2020-01-02T00:00:00Z",
@@ -107,6 +117,16 @@ RSpec.describe Migration::SampleImportService do
     expect(dataset.dataset_version).to eq("V3")
     expect(dataset.tombstone_date).to eq(Date.new(2024, 12, 25))
     expect(dataset.nested_updated_at).to eq(Time.zone.parse("2020-01-03T00:00:00Z"))
+    expect(dataset.complete).to be(true)
+    expect(dataset.org_creators).to be(true)
+    expect(dataset.suppress_changelog).to be(true)
+    expect(dataset.external_files_link).to eq("https://example.edu/external")
+    expect(dataset.external_files_note).to eq("See external repository for raw data.")
+    expect(dataset.medusa_dataset_dir).to eq("legacy/medusa/dir")
+    expect(dataset.version_comment).to eq("Initial legacy version.")
+    expect(dataset.have_permission).to eq("yes")
+    expect(dataset.removed_private).to eq("no")
+    expect(dataset.agree).to eq("yes")
     expect(dataset.creators.count).to eq(1)
     expect(dataset.contributors.count).to eq(1)
     expect(dataset.creators.first.identifier_scheme).to eq("ORCID")

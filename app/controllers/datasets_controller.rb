@@ -672,7 +672,9 @@ class DatasetsController < ApplicationController
 
       case attempt.integration
       when "ingest"
-        Ingest::PublishDatasetEventJob.perform_later(@dataset.id, attempt.idempotency_key)
+        args = [ @dataset.id, attempt.idempotency_key ]
+        args << attempt.details["datafile_id"] if attempt.details["datafile_id"].present?
+        Ingest::PublishDatasetEventJob.perform_later(*args)
         replayed += 1
       when "globus"
         Globus::SubmitDatasetTransferJob.perform_later(@dataset.id, attempt.idempotency_key)

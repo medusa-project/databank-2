@@ -1,0 +1,95 @@
+%section.idb-section-card{aria: { label: "Dataset metadata" }}
+  %details.idb-section-disclosure{open: true}
+    %summary
+      %h2.idb-section-title Metadata
+    .idb-section-body
+      %dl.dataset-show-metadata
+        - if dataset.description.present?
+          %dt Dataset Description
+          %dd= simple_format(dataset.description)
+
+        - if dataset.subject.present?
+          %dt Subject
+          %dd= link_to dataset.subject, datasets_path(subjects: [dataset.subject])
+
+        - if dataset.keywords.present?
+          %dt Keywords
+          %dd= dataset.keywords
+
+        - if dataset.license.present?
+          %dt License
+          %dd= dataset.license
+
+        - dataset.funders.each do |funder|
+          %dt Funder
+          - funder_bits = [funder.name, funder.identifier.presence, (funder.award_number.present? ? "Award #{funder.award_number}" : nil)].compact
+          %dd= funder_bits.join(" | ")
+
+        - if primary_contact_name.present?
+          %dt Corresponding Creator
+          %dd= primary_contact_name
+
+        - if additional_contacts.any?
+          %dt Additional Contact(s)
+          %dd= additional_contacts.join("; ")
+
+        - if dataset.publisher.present?
+          %dt Publisher
+          %dd= dataset.publisher
+
+        - if can?(:manage, dataset)
+          %dt Depositor
+          %dd= dataset.depositor_name
+
+          %dt Depositor Email
+          %dd= dataset.depositor_email
+
+        - if download_count.positive?
+          %dt Downloaded
+          %dd= pluralize(download_count, "time")
+
+        - if related_materials.any?
+          %dt.sr-only Related Materials
+          %dd.dataset-show-metadata-nested
+            %details.idb-section-disclosure.dataset-show-nested-disclosure
+              %summary
+                %span.dataset-show-nested-summary-label
+                  %span.dataset-show-nested-title Related Materials
+                  = semantic_count_badge(count: related_materials.count, label: nil, sr_label: "Related materials count")
+              .idb-section-body
+                %ul.dataset-show-list
+                  - related_materials.each do |material|
+                    %li
+                      - if material.uri.present?
+                        %span.dataset-show-list-primary= link_to material.title, material.uri
+                      - else
+                        %span.dataset-show-list-primary= material.title
+                      - if material.selected_type.present?
+                        %span.dataset-show-list-secondary= "Type: #{material.selected_type}"
+                      - if material.relation_types.any?
+                        %span.dataset-show-list-secondary= "Relations: #{material.relation_types.join(', ')}"
+                      - if material.note.present?
+                        %span.dataset-show-list-tertiary= "Note: #{material.note}"
+
+        - if cited_by_materials.any?
+          %dt.sr-only Cited By
+          %dd.dataset-show-metadata-nested
+            %details.idb-section-disclosure.dataset-show-nested-disclosure
+              %summary
+                %span.dataset-show-nested-summary-label
+                  %span.dataset-show-nested-title Cited By
+                  = semantic_count_badge(count: cited_by_materials.count, label: nil, sr_label: "Cited by count")
+              .idb-section-body
+                %ul.dataset-show-list
+                  - cited_by_materials.each do |material|
+                    %li
+                      - if material.uri.present?
+                        %span.dataset-show-list-primary= link_to material.title, material.uri
+                      - else
+                        %span.dataset-show-list-primary= material.title
+                      - if material.selected_type.present?
+                        %span.dataset-show-list-secondary= "Type: #{material.selected_type}"
+                      - if material.relation_types.any?
+                        %span.dataset-show-list-secondary= "Relations: #{material.relation_types.join(', ')}"
+                      - if material.note.present?
+                        %span.dataset-show-list-tertiary= "Note: #{material.note}"

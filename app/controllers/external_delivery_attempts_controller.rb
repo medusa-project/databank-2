@@ -246,7 +246,9 @@ class ExternalDeliveryAttemptsController < ApplicationController
   def enqueue_replay(attempt)
     case attempt.integration
     when "ingest"
-      Ingest::PublishDatasetEventJob.perform_later(attempt.dataset_id, attempt.idempotency_key)
+      args = [ attempt.dataset_id, attempt.idempotency_key ]
+      args << attempt.details["datafile_id"] if attempt.details["datafile_id"].present?
+      Ingest::PublishDatasetEventJob.perform_later(*args)
       true
     when "globus"
       Globus::SubmitDatasetTransferJob.perform_later(attempt.dataset_id, attempt.idempotency_key)

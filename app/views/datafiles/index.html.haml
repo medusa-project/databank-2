@@ -19,7 +19,9 @@
           - @datafiles.each do |datafile|
             %tr
               %td
-                = link_to(datafile.binary_name.presence || datafile.web_id, view_dataset_datafile_path(@dataset, datafile))
+                = form_with model: [@dataset, datafile], local: true, class: "idb-inline-form" do |df|
+                  = df.text_field :binary_name, value: datafile.binary_name.presence || datafile.web_id
+                  = df.submit "Save", class: "btn btn-sm btn-primary"
               %td
                 - if datafile.binary.attached?
                   %span.badge.badge-success Attached

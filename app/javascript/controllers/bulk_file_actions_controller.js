@@ -27,9 +27,7 @@ export default class extends Controller {
     }
 
     if (this.hasCountTarget) {
-      const label =
-        selectedCount === 1 ? "(1 selected)" : `(${selectedCount} selected)`;
-      this.countTarget.textContent = label;
+      this.countTarget.textContent = `(${selectedCount})`;
     }
 
     if (this.hasSelectAllTarget) {

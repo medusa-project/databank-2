@@ -1,0 +1,23 @@
+- if visible_version_entries.any?
+  %section.idb-section-card{aria: { label: "Versions in Illinois Data Bank" }}
+    %details.idb-section-disclosure{open: (visible_version_entries.length > 1)}
+      %summary
+        %h2.idb-section-title= visible_version_entries.length > 1 ? "Versions in Illinois Data Bank" : "Versions"
+      .idb-section-body
+        .dataset-show-table-wrap
+          %table.dataset-show-table
+            %thead
+              %tr
+                %th Dataset
+                %th DOI
+                %th State
+            %tbody
+              - visible_version_entries.each do |entry|
+                %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
+                  %td= link_to "#{entry[:title]} (#{entry[:key]})", dataset_path(entry[:dataset])
+                  %td
+                    - if entry[:doi].present?
+                      = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
+                    - else
+                      not yet set
+                  %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")

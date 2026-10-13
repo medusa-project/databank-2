@@ -11,10 +11,10 @@
         = link_to "Back to Dataset", dataset_path(@dataset), class: "idb-button-secondary"
         = link_to "New Note", new_dataset_note_path(@dataset), class: "idb-button-primary"
 
-  %section.dataset-show-panel.idb-rounded-section{aria: { label: "Curator notes" }}
-    %details.idb-section-disclosure.dataset-show-disclosure{open: true}
+  %section.idb-section-card{aria: { label: "Curator notes" }}
+    %details.idb-section-disclosure{open: true}
       %summary
-        %h2.dataset-show-section-title Notes
+        %h2.idb-section-title Notes
       .idb-section-body
         - if @notes.any?
           %ul.dataset-show-list
