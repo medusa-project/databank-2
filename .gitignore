@@ -56,9 +56,6 @@
 /core
 /core.*
 
-# Local-only Lighthouse setup
-/lighthouserc.json
-
 # Local placeholder files used to prevent cookie-banner 404 noise in local audits
 /public/css/ila-cookie-uiuc-colors.css
 /public/css/ila-slideover.css

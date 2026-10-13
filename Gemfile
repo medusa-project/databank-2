@@ -45,7 +45,7 @@ gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
 gem "csv", "~> 3.3"
 # ZIP archive support for download metrics bundle exports
-gem "rubyzip", "~> 2.4"
+gem "rubyzip", "~> 3.4"
 gem "bunny", "~> 2.24", require: false
 # Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
 gem "net-imap", ">= 0.6.4.1"
