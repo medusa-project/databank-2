@@ -32,6 +32,34 @@ RSpec.describe "Dataset edit workflow actions", type: :request do
     expect(response.body).to include("Dataset updated and saved.")
   end
 
+  it "renders independent action forms without breaking the metadata form" do
+    sign_in_as(email: "admin-workflow@example.edu", name: "Admin User", role: "admin")
+    grant = dataset.dataset_access_grants.create!(email: "reviewer@example.edu", access_level: :viewer)
+    create_list(:datafile, 2, dataset: dataset, attach_binary: false)
+
+    get edit_dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML5(response.body)
+    edit_form = document.at_css("#dataset-edit-form")
+    expect(edit_form.css("form")).to be_empty
+    expect(edit_form.at_css("#dataset_description")).to be_present
+    expect(edit_form.at_css("#funder-rows")).to be_present
+    expect(edit_form.at_css("#material-rows")).to be_present
+    expect(document.at_css("#dataset-access-grant-form")["action"]).to eq(dataset_dataset_access_grants_path(dataset))
+    expect(document.at_css("#dataset_access_grant_email")["form"]).to eq("dataset-access-grant-form")
+    expect(document.at_css("#dataset-access-grant-remove-#{grant.id}")["action"]).to eq(dataset_dataset_access_grant_path(dataset, grant))
+    expect(document.at_css("#bulk-file-delete-form")["action"]).to eq(bulk_destroy_dataset_datafiles_path(dataset))
+    expect(document.css('input[name="selected_files[]"]').map { |input| input["form"] }).to eq(
+      [ "bulk-file-delete-form", "bulk-file-delete-form" ]
+    )
+    dataset.datafiles.each do |datafile|
+      expect(document.at_css("#datafile-delete-#{datafile.id}")["action"]).to eq(dataset_datafile_path(dataset, datafile))
+      expect(edit_form.at_css("button[form='datafile-delete-#{datafile.id}']")).to be_present
+    end
+    expect(document.css('form').all? { |form| form.ancestors("form").empty? }).to be(true)
+  end
+
   def sign_in_as(email:, name:, role:)
     OmniAuth.config.mock_auth[:developer] = OmniAuth::AuthHash.new(
       provider: "developer",

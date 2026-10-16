@@ -54,7 +54,7 @@ module ApplicationHelper
     continue: {
       label: "Continue",
       variant: "primary",
-      icon: "right-from-bracket",
+      icon: "play",
       icon_style: :solid
     },
     publish: {
@@ -119,7 +119,7 @@ module ApplicationHelper
     },
     back: {
       label: "Back",
-      variant: "primary",
+      variant: "info",
       icon: "arrow-left",
       icon_style: :solid
     },

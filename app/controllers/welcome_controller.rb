@@ -89,6 +89,8 @@ class WelcomeController < ApplicationController
 
   def badge_examples; end
 
+  def semantic_buttons; end
+
   private
 
   def require_admin_or_curator!

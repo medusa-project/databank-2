@@ -56,7 +56,7 @@ export default class extends Controller {
         : `Are you sure you want to delete ${selectedCount} files? This action cannot be undone.`;
 
     if (confirm(message)) {
-      this.element.querySelector("form")?.submit();
+      document.getElementById("bulk-file-delete-form")?.requestSubmit();
     }
   }
 }

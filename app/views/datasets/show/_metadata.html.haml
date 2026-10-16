@@ -4,30 +4,40 @@
       %h2.idb-section-title Metadata
     .idb-section-body
       %dl.dataset-show-metadata
-        - if dataset.description.present?
-          %dt Dataset Description
-          %dd= simple_format(dataset.description)
-
+       
+        %dt Dataset Description
+        %dd
+          - if dataset.description.present?
+            = simple_format(dataset.description)
+          - else
+            = "No description provided."
         - if dataset.subject.present?
-          %dt Subject
+          %dt Subject        
           %dd= link_to dataset.subject, datasets_path(subjects: [dataset.subject])
 
         - if dataset.keywords.present?
           %dt Keywords
           %dd= dataset.keywords
+        %dt License
+        %dd
+          - if dataset.license.present?
+            = dataset.license
+          - else
+            = "No license provided."
 
-        - if dataset.license.present?
-          %dt License
-          %dd= dataset.license
+        -if dataset.funders.any?
+          - dataset.funders.each do |funder|
+            %dt Funder
+            - funder_bits = [funder.name, funder.identifier.presence, (funder.award_number.present? ? "Award #{funder.award_number}" : nil)].compact
+            %dd= funder_bits.join(" | ")
 
-        - dataset.funders.each do |funder|
-          %dt Funder
-          - funder_bits = [funder.name, funder.identifier.presence, (funder.award_number.present? ? "Award #{funder.award_number}" : nil)].compact
-          %dd= funder_bits.join(" | ")
 
-        - if primary_contact_name.present?
-          %dt Corresponding Creator
-          %dd= primary_contact_name
+        %dt Corresponding Creator
+        %dd
+          - if primary_contact_name.present?
+            = primary_contact_name
+          - else
+            = "No corresponding creator provided."
 
         - if additional_contacts.any?
           %dt Additional Contact(s)
@@ -43,6 +53,10 @@
 
           %dt Depositor Email
           %dd= dataset.depositor_email
+          
+          - if dataset.primary_contact_email.present?
+            %dt Corresponding Creator Email
+            %dd= dataset.primary_contact_email
 
         - if download_count.positive?
           %dt Downloaded

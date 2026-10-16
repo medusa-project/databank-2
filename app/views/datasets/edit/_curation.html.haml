@@ -45,16 +45,16 @@
               %h2 Dataset Access
               %p Grant dataset-specific review or edit access by email address.
 
-              = form_with model: [@dataset, DatasetAccessGrant.new], local: true do |f|
+              = fields_for :dataset_access_grant, DatasetAccessGrant.new do |grant_form|
                 .idb-metadata-grid
                   .idb-grid-col-8
-                    = f.label :email, "Grant recipient email"
-                    = f.email_field :email, required: true, autocomplete: "email"
+                    = grant_form.label :email, "Grant recipient email"
+                    = grant_form.email_field :email, required: true, autocomplete: "email", form: "dataset-access-grant-form"
                   .idb-grid-col-2
-                    = f.label :access_level, "Access level"
-                    = f.select :access_level, options_for_select([["Viewer", "viewer"], ["Editor", "editor"]], "viewer")
+                    = grant_form.label :access_level, "Access level"
+                    = grant_form.select :access_level, options_for_select([["Viewer", "viewer"], ["Editor", "editor"]], "viewer"), {}, { form: "dataset-access-grant-form" }
                   .idb-grid-col-2.idb-row-actions-inline
-                    = f.submit "Grant Access", class: "idb-button-primary"
+                    = grant_form.submit "Grant Access", class: "idb-button-primary", form: "dataset-access-grant-form"
 
               - if @dataset.dataset_access_grants.any?
                 - creator_emails = @dataset.creators.map(&:email).to_set
@@ -73,6 +73,6 @@
                           - if creator_emails.include?(grant.email)
                             %em creator editor access cannot be removed
                           - else
-                            = button_to "Remove", dataset_dataset_access_grant_path(@dataset, grant), method: :delete, class: "idb-button-danger", form: { data: { turbo_confirm: "Remove access for #{grant.email}?" } }
+                            %button.idb-button-danger{type: "submit", form: "dataset-access-grant-remove-#{grant.id}", aria: { label: "Remove access for #{grant.email}" }} Remove
               - else
                 %p No dataset-specific access grants configured.

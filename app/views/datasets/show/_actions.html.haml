@@ -1,0 +1,15 @@
+- return unless logged_in? && can?(:update, dataset)
+
+%section.idb-workflow-strip{aria: { label: "Dataset workflow actions" }}
+  %nav.idb-workflow-actions-right{aria: { label: "Dataset workflow actions" }}
+    = semantic_action_button(action: :edit, label: "Edit", url: edit_dataset_path(dataset), style: :idb)
+
+    - if dataset.version_eligible?
+      = semantic_action_button(action: :new, label: "Request New Version", url: pre_version_dataset_path(dataset), style: :idb)
+      - if can?(:review_versions, dataset)
+        = semantic_action_button(action: :new, label: "Create New Version", url: version_dataset_path(dataset), style: :idb )
+
+    = semantic_action_button(action: :back, label: "Exit this saved dataset", url: datasets_path, style: :idb)
+
+    - if dataset.draft?
+      = semantic_action_button(action: :delete, url: dataset_path(dataset), style: :idb, method: :delete, data: { confirm: "Are you sure? This removes all files and metadata." })  

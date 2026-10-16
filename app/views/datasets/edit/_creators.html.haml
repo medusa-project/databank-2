@@ -34,7 +34,7 @@
     - if creator_mode_org
       %p One primary long-term contact must be selected from the organizational author list.
 
-      %table.idb-compact-table.idb-compact-table-org
+      %table.idb-compact-table.idb-compact-table-org.creators-table
         %thead
           %tr
             %th
@@ -68,8 +68,10 @@
                   = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
                   = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
                   = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                  = cf.label :institution_name, "Organization Name(s)", class: "sr-only"
                   = cf.text_field :institution_name, value: (cf.object.institution_name.presence || cf.object.name), placeholder: "[Organization Name]", required: true
                 %td
+                  = cf.label :email, "Email", class: "sr-only"
                   = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
                 %td.idb-contact-cell
                   %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
@@ -82,7 +84,7 @@
     - else
       %p One primary long-term contact must be selected from the individual author list.
 
-      %table.idb-compact-table.idb-compact-table-individual
+      %table.idb-compact-table.idb-compact-table-individual.creators-table
         %thead
           %tr
             %th
@@ -129,15 +131,19 @@
                   = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
                   = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
                   = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                  = cf.label :family_name, "Family Name(s)", class: "sr-only"
                   = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
                 %td
+                  = cf.label :given_name, "Given Name(s)", class: "sr-only"
                   = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
                 %td
+                  = cf.label :identifier, "ORCID", class: "sr-only"
                   = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
                   = cf.hidden_field :identifier_scheme, value: "ORCID"
                 %td
                   %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
                 %td
+                  = cf.label :email, "Email", class: "sr-only"
                   = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
                 %td.idb-contact-cell
                   %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
@@ -160,8 +166,10 @@
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
           = cf.hidden_field :contact, value: false, data: { contactField: true }
           = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.label :institution_name, "Organization Name(s)", class: "sr-only"
           = cf.text_field :institution_name, placeholder: "[Organization Name]", required: true
         %td
+          = cf.label :email, "Email", class: "sr-only"
           = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
         %td.idb-contact-cell
           %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
@@ -180,15 +188,19 @@
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
           = cf.hidden_field :contact, value: false, data: { contactField: true }
           = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.label :family_name, "Family Name(s)", class: "sr-only"
           = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
         %td
+          = cf.label :given_name, "Given Name(s)", class: "sr-only"
           = cf.text_field :given_name, placeholder: "[e.g.: Jean W.]", required: true
         %td
+          = cf.label :identifier, "ORCID", class: "sr-only"
           = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
           = cf.hidden_field :identifier_scheme, value: "ORCID"
         %td
           %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
         %td
+          = cf.label :email, "Email", class: "sr-only"
           = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
         %td.idb-contact-cell
           %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}

@@ -1,0 +1,28 @@
+-# Semantic Buttons Example Page
+- content_for :title, "Semantic Buttons"
+
+%ilw-content.semantic-buttons-page
+  %section{ "aria-labelledby" => "semantic-buttons-heading" }
+    %h1#semantic-buttons-heading Semantic Buttons
+    %p
+      Examples below use the current defaults from
+      %code ApplicationHelper::IDB_SEMANTIC_BUTTONS
+      and render through
+      %code semantic_action_button
+      with the IDB style.
+
+  %section{ "aria-labelledby" => "semantic-button-options-heading" }
+    %h2#semantic-button-options-heading Available button options
+    %ul
+      - ApplicationHelper::IDB_SEMANTIC_BUTTONS.each do |action, options|
+        %li
+          %h3= options.fetch(:label)
+          = semantic_action_button(action: action, style: :idb)
+          %dl
+            %dt Action
+            %dd= action
+            %dt Variant
+            %dd= options.fetch(:variant)
+            %dt Icon
+            %dd
+              %code= "#{options.fetch(:icon_style)} fa-#{options.fetch(:icon)}"
