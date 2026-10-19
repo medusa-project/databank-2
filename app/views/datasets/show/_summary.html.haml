@@ -7,6 +7,9 @@
 - if logged_in? && can?(:update, dataset)
   - missing = dataset.missing_publish_fields
   .dataset-show-status
+    %p
+      %strong Publication Status (who can see this dataset):
+      = "#{dataset.visibility} (#{dataset.who_can_see})"
     - if missing.any?
       %p
         %strong Required elements for a complete dataset missing:

@@ -119,6 +119,29 @@ module Dataset::Publishable
     visibility
   end
 
+  def who_can_see
+    return "Depositor, Curators" if new_record?
+
+    case hold_state_mode
+    when HOLD_TEMP_METADATA
+      "depositor, editors, curators, anyone with share link"
+    when HOLD_TEMP_FILE
+      "depositor, editors, curators, anyone with share link"
+    when HOLD_PERM_FILE
+      "depositor, editors, curators"
+    when HOLD_PERM_METADATA
+      "curators"
+    when HOLD_TEMP_VERSION
+      "depositor, editors, curators, anyone with share link"
+    else
+      return "depositor, editors, curators, anyone with share link" if draft?
+      return "depositor, editors, curators, anyone with share link" if metadata_embargoed? && !embargo_released?
+      return "depositor, editors, curators, anyone with share link" if file_embargoed? && !embargo_released?
+
+      "public"
+    end
+  end
+
   def embargo_mode
     embargo.presence || EMBARGO_NONE
   end
