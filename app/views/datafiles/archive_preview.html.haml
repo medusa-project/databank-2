@@ -3,7 +3,7 @@
     %h1
       = @datafile.binary_name.presence || @datafile.web_id
     %p.idb-text-muted
-      = link_to "← Back to dataset", dataset_path(@dataset)
+      = link_to "← Back to dataset", dataset_path(@dataset, **shared_access_params)
 
     %section.idb-rounded-section
       %h2 Archive Contents

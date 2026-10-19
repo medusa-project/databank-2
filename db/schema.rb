@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_142200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_194500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -510,6 +510,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_142200) do
     t.index ["dataset_id"], name: "index_review_requests_on_dataset_id"
   end
 
+  create_table "share_codes", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "dataset_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_share_codes_on_code", unique: true
+    t.index ["dataset_id"], name: "index_share_codes_on_dataset_id", unique: true
+  end
+
   create_table "tokens", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "dataset_key", null: false
@@ -572,6 +581,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_142200) do
   add_foreign_key "related_material_relationships", "related_materials"
   add_foreign_key "related_materials", "datasets"
   add_foreign_key "review_requests", "datasets"
+  add_foreign_key "share_codes", "datasets"
   add_foreign_key "tokens", "datasets", column: "dataset_key", primary_key: "key"
   add_foreign_key "version_requests", "datasets"
   add_foreign_key "version_requests", "datasets", column: "approved_dataset_id"

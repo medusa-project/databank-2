@@ -51,6 +51,7 @@ namespace :pub do
       dataset.embargo = Dataset::EMBARGO_NONE
       if dataset.save
         updated += 1
+        dataset.revoke_released_share_code
       else
         warn "pub:update_state failed for #{dataset.key}: #{dataset.errors.full_messages.to_sentence}"
       end

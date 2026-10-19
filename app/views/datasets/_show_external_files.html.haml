@@ -9,6 +9,6 @@
 
   - if dataset.external_files_link.present?
     %p
-      = link_to "Access All Files", open_in_granite_dataset_path(dataset), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: { label: "Access all externally stored files" }
+      = link_to "Access All Files", open_in_granite_dataset_path(dataset, **shared_access_params), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: { label: "Access all externally stored files" }
   - else
     %p No associated large files are available yet.

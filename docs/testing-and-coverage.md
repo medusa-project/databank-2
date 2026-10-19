@@ -41,6 +41,19 @@ Axe scans cover the main edit content, including expanded curator sections.
 Automated checks supplement, rather than replace, manual screen-reader, zoom,
 and keyboard testing for WCAG 2.2 AA.
 
+### Private sharing
+
+```sh
+bundle exec rspec spec/models/share_code_spec.rb spec/models/dataset/sharable_spec.rb spec/requests/dataset_sharing_spec.rb
+PW_SKIP_GLOBAL_SETUP=1 npx playwright test playwright/share-code.spec.js
+```
+
+These specs cover random-code collisions, one-year expiry, publication and embargo
+release, authenticated link management, dataset-scoped guest reads and downloads,
+preview navigation, aggregate downloads, and effective-code badges independent of
+upload tokens. The browser test checks native labeled controls, keyboard activation,
+clipboard feedback, guest access, revocation, and WCAG 2.2 AA rules with axe.
+
 ### Metric export coverage
 
 ```sh

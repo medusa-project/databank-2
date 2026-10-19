@@ -43,6 +43,8 @@ Rails.application.routes.draw do
       get :version_to_draft
       post :get_current_token, defaults: { format: :json }
       post :get_new_token, defaults: { format: :json }
+      post :share
+      delete :remove_sharing_link
       post :request_review
       post :submit_version_request
       get :version_acknowledge

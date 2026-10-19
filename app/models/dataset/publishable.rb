@@ -126,9 +126,9 @@ module Dataset::Publishable
     when HOLD_TEMP_METADATA
       "depositor, editors, curators, anyone with share link"
     when HOLD_TEMP_FILE
-      "depositor, editors, curators, anyone with share link"
+      "metadata: public, files: depositor, editors, curators, anyone with share link"
     when HOLD_PERM_FILE
-      "depositor, editors, curators"
+      "metadata: public, files: depositor, editors, curators"
     when HOLD_PERM_METADATA
       "curators"
     when HOLD_TEMP_VERSION

@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["modal"]
+  static values = { url: String }
 
   updateTotal() {
     const checkboxes = document.querySelectorAll('input[name="selected_files[]"]:checked')
@@ -36,9 +37,9 @@ export default class extends Controller {
       return
     }
 
-    const datasetKey = document.querySelector("[data-dataset-key]")?.dataset.datasetKey
-    if (!datasetKey) {
-      console.error("Could not find dataset key")
+    if (!this.hasUrlValue) {
+      console.error("Could not find dataset download URL")
+      alert("Unable to request a download link. Please reload the page.")
       return
     }
 
@@ -46,7 +47,9 @@ export default class extends Controller {
     button.disabled = true
     button.textContent = "Generating download link..."
 
-    fetch(`/datasets/${datasetKey}/download_link?web_ids=${encodeURIComponent(webIds)}`, {
+    const downloadUrl = new URL(this.urlValue, window.location.origin)
+    downloadUrl.searchParams.set("web_ids", webIds)
+    fetch(downloadUrl, {
       method: "GET",
       headers: {
         "Accept": "application/json"

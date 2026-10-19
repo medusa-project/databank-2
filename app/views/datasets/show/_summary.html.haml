@@ -17,6 +17,7 @@
     - else
       %p
         %strong This dataset is ready to publish.
+  = render "datasets/show/sharing", dataset: dataset
 .dataset-show-titlebar
   = render "datasets/show/actions", dataset: dataset
 - if citation_text.present? || doi_url.present?
@@ -33,5 +34,4 @@
           %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
           = semantic_action_button(action: :copy, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
           %span#copy-status.sr-only{aria: { live: "polite" }}
-
 
