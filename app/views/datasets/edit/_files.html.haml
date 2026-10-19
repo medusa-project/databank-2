@@ -11,14 +11,11 @@
 
       - if dataset.draft? && dataset.previous_version_dataset.present? && can?(:update, dataset)
         .idb-file-metadata-actions
-          = button_to "Copy Files from Previous Version", copy_version_files_dataset_path(dataset), method: :post, class: "idb-button-primary"
+          %button.idb-button-primary{type: "submit", form: "copy-version-files-form"} Copy Files from Previous Version
 
       - if dataset.datafiles.count <= 500
         - if dataset.datafiles.any?
           .idb-file-metadata-container{data: { controller: "bulk-file-actions" }}
-            = form_with url: bulk_destroy_dataset_datafiles_path(dataset), method: :post, local: true, id: "bulk-file-delete-form" do
-              %span
-
             - if can_edit && dataset.datafiles.count > 1
               .idb-file-bulk-header
                 .idb-file-bulk-actions
@@ -48,18 +45,18 @@
                       = number_to_human_size(datafile.binary_size || 0)
                     %td.idb-file-actions-cell
                       - if can_edit
-                        = semantic_action_button action: :delete, url: dataset_datafile_path(dataset, datafile), method: :delete
+                        = semantic_action_button action: :delete, type: "submit", form: "datafile-delete-#{datafile.id}", aria: { label: "Delete #{datafile.binary_name.presence || datafile.web_id}" }
 
         - if can_edit
           .idb-file-upload-section{data: { controller: "file-upload" }}
             .idb-file-upload-container
-              .idb-file-upload-area{id: "file-select-area", data: { file_upload_target: "dropZone", action: "dragover->file-upload#handleDragOver dragout->file-upload#handleDragOut drop->file-upload#handleDrop click->file-upload#selectFiles" }}
+              .idb-file-upload-area{id: "file-select-area", data: { file_upload_target: "dropZone", action: "dragover->file-upload#handleDragOver dragout->file-upload#handleDragOut drop->file-upload#handleDrop" }}
                 %i.fa.fa-cloud-upload-alt.fa-2x
                 %p Drop files here or
-                %button.idb-button-upload{type: "button"}
+                %button.idb-button-upload{type: "button", data: { action: "file-upload#selectFiles" }}
                   %span.fa.fa-laptop
                   Select files from your computer
-              %input{type: "file", multiple: true, style: "display: none;", data: { file_upload_target: "fileInput", action: "change->file-upload#handleFileSelect" }}
+              %input{type: "file", multiple: true, style: "display: none;", aria: { label: "Select files from your computer" }, data: { file_upload_target: "fileInput", action: "change->file-upload#handleFileSelect" }}
 
               .idb-progress-container{data: { file_upload_target: "progressContainer" }, hidden: true}
                 .idb-progress-header

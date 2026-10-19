@@ -65,7 +65,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background-color: #28a745;
+  background-color: #218838;
   color: white;
   border: none;
   border-radius: 0.25rem;
@@ -76,7 +76,7 @@
 }
 
 .idb-button-upload:hover {
-  background-color: #218838;
+  background-color: #19692c;
 }
 
 .idb-button-upload:disabled {
@@ -110,7 +110,7 @@
 
 .idb-file-upload-guidelines a {
   color: #0066cc;
-  text-decoration: none;
+  text-decoration: underline;
 }
 
 .idb-file-upload-guidelines a:hover {
@@ -359,4 +359,3 @@
   display: inline-block;
   margin: 0;
 }
-

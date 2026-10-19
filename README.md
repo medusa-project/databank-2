@@ -24,6 +24,23 @@ bin/dev
 bundle exec rspec
 ```
 
+## Private dataset sharing
+
+Dataset owners, editors, and curators can generate and revoke a private sharing
+link from the dataset page. Anyone with the link can read the metadata, preview
+files, and download files without signing in, but cannot edit the dataset.
+Links use a separate `ShareCode`, not the `Token` used by command-line upload
+tools. The "has sharing link" badge indicates an effective, unexpired ShareCode.
+
+Links expire 12 months after creation, are revoked when the dataset's files
+become public, and remain usable during an embargo. Deleting a link immediately
+invalidates it; generating another produces a new code. Sharing access is
+dataset-scoped and must accompany each request as the `code` query parameter.
+
+After deploying this feature, run `bin/rails db:migrate`. API clients can use
+`POST /datasets/:id/share` and `DELETE /datasets/:id/remove_sharing_link`;
+JSON responses contain `private_share_link`. Both endpoints require edit access.
+
 ## Common Commands
 
 - CI parity checks:

@@ -4,6 +4,7 @@ class Dataset < ApplicationRecord
   include Dataset::Versionable
   include Dataset::Publishable
   include Dataset::Searchable
+  include Dataset::Sharable
 
   class << self
     def citation_report(datasets:, request_url:, current_user:)
@@ -185,10 +186,6 @@ class Dataset < ApplicationRecord
     end
 
     (latest_attempt&.response_received_at || latest_attempt&.created_at)&.to_date
-  end
-
-  def has_sharing_link?
-    token.present?
   end
 
   def record_text

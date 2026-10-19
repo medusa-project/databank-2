@@ -6,6 +6,7 @@
 
 :root {
 	--idb-page-gutter: clamp(.75rem, 3vw, 2rem);
+	--idb-status-background: #fff9db;
 }
 
 #main-content {
@@ -521,6 +522,11 @@
 .idb-compact-table-org th:nth-child(5),
 .idb-compact-table-org td:nth-child(5) {
 	width: 10%;
+}
+
+.creators-table th{
+	background-color: var(--il-blue-90);
+	color: black;
 }
 
 .idb-drag-cell {
@@ -1196,6 +1202,7 @@ a:focus {
  * Tables
  * ----------------------------------------------------------------------- */
 table {
+	border-radius: 0.5rem;
 	font-family: var(--il-font-sans);
 	font-size: 1rem;
 	line-height: 1.5;

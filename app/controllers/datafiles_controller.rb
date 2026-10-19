@@ -1,4 +1,6 @@
 class DatafilesController < ApplicationController
+  include ShareCodeAccess
+
   ArchiveTreeNode = Struct.new(:name, :path, :is_directory, :size, :children, keyword_init: true)
 
   skip_before_action :authenticate_user!, only: %i[download view]
@@ -161,13 +163,14 @@ class DatafilesController < ApplicationController
     end
 
     # For unsupported file types: redirect to download
-    redirect_to download_dataset_datafile_path(@dataset, @datafile), notice: "Preview not available for this file type. Downloading instead."
+    redirect_to download_dataset_datafile_path(@dataset, @datafile, **shared_access_params), notice: "Preview not available for this file type. Downloading instead."
   end
 
   private
 
   def set_dataset
     @dataset = Dataset.find_by!(key: params[:dataset_id])
+    grant_share_code_access(dataset: @dataset) if %w[download view].include?(action_name)
     authorize! :update, @dataset unless %w[download view].include?(action_name)
   end
 

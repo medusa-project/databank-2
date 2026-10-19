@@ -43,6 +43,8 @@ Rails.application.routes.draw do
       get :version_to_draft
       post :get_current_token, defaults: { format: :json }
       post :get_new_token, defaults: { format: :json }
+      post :share
+      delete :remove_sharing_link
       post :request_review
       post :submit_version_request
       get :version_acknowledge
@@ -141,6 +143,7 @@ Rails.application.routes.draw do
   # Static / nav pages
   get "/button_examples", to: "welcome#button_examples", as: :button_examples
   get "/badge_examples", to: "welcome#badge_examples", as: :badge_examples
+  get "/semantic_buttons", to: "welcome#semantic_buttons", as: :semantic_buttons
   get "/curator_guide", to: "welcome#curator_guide", as: :curator_guide
   get "/illinois_experts", to: "illinois_experts#index", defaults: { format: :xml }, as: :illinois_experts
   get "/illinois_experts/persons", to: "illinois_experts#persons", defaults: { format: :xml }, as: :illinois_experts_persons

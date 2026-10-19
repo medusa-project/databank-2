@@ -58,6 +58,11 @@ export default class extends Controller {
 
     const destroyField = row.querySelector("input[data-destroy-field]")
     const idField = row.querySelector("input[name$='[id]']")
+    const container = row.parentElement
+    const visibleRows = Array.from(container.querySelectorAll(":scope > .idb-nested-row")).filter((item) => !item.hidden)
+    const index = visibleRows.indexOf(row)
+    const nextRow = visibleRows[index + 1] || visibleRows[index - 1]
+    const addButton = container.closest(".idb-section-body")?.querySelector("button[data-action*='#add']")
 
     if (destroyField && idField && idField.value) {
       destroyField.value = "true"
@@ -69,6 +74,9 @@ export default class extends Controller {
     this.syncPrimaryContact()
     this.refreshAllRowPositions()
     this.refreshCreatorAddButtons()
+    const nextField = nextRow?.querySelector("input:not([type='hidden']), select, textarea")
+    if (nextField) nextField.focus()
+    else addButton?.focus()
   }
 
   moveRowUp(event) {
@@ -82,6 +90,7 @@ export default class extends Controller {
 
     const previous = visibleRows[index - 1]
     container.insertBefore(row, previous)
+    event.currentTarget.focus()
     this.refreshContainerRowPositions(container)
     this.refreshCreatorAddButtons()
   }
@@ -97,6 +106,7 @@ export default class extends Controller {
 
     const next = visibleRows[index + 1]
     container.insertBefore(next, row)
+    event.currentTarget.focus()
     this.refreshContainerRowPositions(container)
     this.refreshCreatorAddButtons()
   }
@@ -245,6 +255,7 @@ this.orcidResultsTarget.innerHTML = `<p class="idb-orcid-results-count">${countL
     const html = templateTarget.innerHTML.replaceAll(token, index)
     container.insertAdjacentHTML("beforeend", html)
     this.refreshRowPositions(containerId)
+    container.lastElementChild?.querySelector("input:not([type='hidden']), select, textarea")?.focus()
   }
 
   updateMaterialTypeVisibility(row) {

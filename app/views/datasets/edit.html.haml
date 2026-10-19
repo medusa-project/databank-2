@@ -38,3 +38,21 @@
           = render "datasets/edit/actions", dataset: @dataset, form_id: form_id
         = render "datasets/edit/orcid_lookup_modal"
 
+      - if can?(:manage, @dataset)
+        = form_with model: [@dataset, DatasetAccessGrant.new], local: true, id: "dataset-access-grant-form" do
+          -# Controls are associated using the form attribute to avoid nested forms.
+        - creator_emails = @dataset.creators.map(&:email).to_set
+        - @dataset.dataset_access_grants.each do |grant|
+          - unless creator_emails.include?(grant.email)
+            = form_with url: dataset_dataset_access_grant_path(@dataset, grant), method: :delete, local: true, id: "dataset-access-grant-remove-#{grant.id}", data: { turbo_confirm: "Remove access for #{grant.email}?" } do
+              -# The submit button remains in the curation section.
+      - if can?(:manage, @dataset) || can?(:update, @dataset)
+        = form_with url: bulk_destroy_dataset_datafiles_path(@dataset), method: :post, local: true, id: "bulk-file-delete-form" do
+          -# File checkboxes are associated using the form attribute.
+        - if @dataset.datafiles.count <= 500
+          - @dataset.datafiles.each do |datafile|
+            = form_with url: dataset_datafile_path(@dataset, datafile), method: :delete, local: true, id: "datafile-delete-#{datafile.id}" do
+              -# The submit button remains in the files section.
+      - if @dataset.draft? && @dataset.previous_version_dataset.present? && can?(:update, @dataset)
+        = form_with url: copy_version_files_dataset_path(@dataset), method: :post, local: true, id: "copy-version-files-form" do
+          -# The submit button remains in the files section.

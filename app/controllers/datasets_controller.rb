@@ -1,7 +1,46 @@
 class DatasetsController < ApplicationController
+  include ShareCodeAccess
+
   skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token]
+  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token share remove_sharing_link]
+
+  def share
+    authorize! :update, @dataset
+
+    if @dataset.files_publicly_readable_now?
+      return sharing_error(message: "This dataset is public and does not need a private sharing link.")
+    end
+
+    @dataset.with_lock do
+      @dataset.create_share_code! unless @dataset.current_share_code
+    end
+
+    respond_to do |format|
+      format.html do
+        redirect_to dataset_path(@dataset), notice: "Private sharing link generated. Anybody with this link can access the metadata and files. The link expires 12 months after generation or when the dataset is released."
+      end
+      format.json { render json: { private_share_link: @dataset.sharing_link }, status: :ok }
+    end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+    Rails.logger.warn("Error generating sharing link for #{@dataset.key}: #{e.class}")
+    sharing_error(message: "Error generating share link.")
+  end
+
+  def remove_sharing_link
+    authorize! :update, @dataset
+
+    unless @dataset.share_code
+      Rails.logger.warn("Error removing sharing link for #{@dataset.key}: no share code")
+      return sharing_error(message: "Unexpected Error")
+    end
+
+    @dataset.share_code.destroy!
+    respond_to do |format|
+      format.html { redirect_to dataset_path(@dataset), notice: "Private Sharing Link has been removed." }
+      format.json { render json: { private_share_link: nil }, status: :ok }
+    end
+  end
 
   def index
     @query = params[:q].to_s
@@ -300,6 +339,7 @@ class DatasetsController < ApplicationController
     @dataset.hold_state = Dataset::HOLD_PERM_FILE
     @dataset.embargo = Dataset::EMBARGO_NONE
     @dataset.tombstone_date = Date.current
+    @dataset.revoke_released_share_code
 
     if @dataset.save
       if globus_suppression_service.remove_from_public_download
@@ -373,6 +413,7 @@ class DatasetsController < ApplicationController
     @dataset.hold_state = Dataset::HOLD_PERM_METADATA
     @dataset.embargo = Dataset::EMBARGO_NONE
     @dataset.tombstone_date = Date.current
+    @dataset.revoke_released_share_code
 
     if @dataset.save
       doi_ok = doi_suppression_service.suppress_metadata
@@ -571,12 +612,7 @@ class DatasetsController < ApplicationController
   end
 
   def publish
-    authorize! :update, @dataset
-
-    if @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
-      redirect_to dataset_path(@dataset), alert: "Version drafts require pre-publication review before publishing."
-      return
-    end
+    authorize! :manage, @dataset
 
     if @dataset.ready_to_publish?
       identifier = Doi::IdentifierService.new(@dataset).mint_for_publish!
@@ -588,6 +624,7 @@ class DatasetsController < ApplicationController
       )
       Ingest::PublishDatasetEventJob.perform_later(@dataset.id)
       Globus::SubmitDatasetTransferJob.perform_later(@dataset.id)
+      @dataset.revoke_released_share_code if @dataset.files_publicly_readable_now?
       redirect_to dataset_path(@dataset), notice: "Dataset published. DOI: #{@dataset.identifier}"
     else
       redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
@@ -699,10 +736,18 @@ class DatasetsController < ApplicationController
 
   private
 
+  def sharing_error(message:)
+    respond_to do |format|
+      format.html { redirect_to dataset_path(@dataset), alert: message }
+      format.json { render json: { private_share_link: nil, error: message }, status: :unprocessable_content }
+    end
+  end
+
   def set_dataset
     @dataset = dataset_lookup_scope.find_by!(key: params[:id])
+    grant_share_code_access(dataset: @dataset) if %w[show record_text download_metrics download_link open_in_granite].include?(action_name)
 
-    unless @dataset.publicly_readable_now? || logged_in?
+    unless @dataset.publicly_readable_now? || logged_in? || @shared_by_link
       redirect_to login_path, alert: "Please sign in to continue."
     end
   end

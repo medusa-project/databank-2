@@ -22,7 +22,7 @@
 
 - if can?(:edit, dataset)
   = semantic_badge(kind: :neutral, tone: "info", label: dataset.curator_visibility_label, icon: "eye", icon_style: :regular, sr_label: "Visibility #{dataset.curator_visibility_label}")
-- if can?(:edit, dataset) && dataset.has_sharing_link? && !dataset.published?
+- if can?(:edit, dataset) && dataset.has_sharing_link?
   = semantic_badge(kind: :status_ok, label: "has sharing link", icon: false, sr_label: "Has sharing link")
 
 - if can?(:read, dataset) && dataset.publicly_readable_now?

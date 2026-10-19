@@ -25,6 +25,35 @@ no live storage access is required. Assertions check response bodies, metadata,
 counts, inline MIME types, and preview sanitization rather than status alone.
 Unused archive-tree helpers are not exercised solely to increase coverage.
 
+### Dataset edit accessibility
+
+```sh
+PW_SKIP_GLOBAL_SETUP=1 npx playwright test playwright/deposit-form.spec.js
+```
+
+These browser tests create their own datasets, so they do not need the migration
+fixture imports in global setup. They verify native labels for individual and
+organization creators in initial and dynamically added rows, keyboard focus when
+adding/reordering/removing creators, ORCID dialog focus restoration, the file
+chooser button, independent access-grant and file-deletion forms, and mobile
+metadata layout.
+Axe scans cover the main edit content, including expanded curator sections.
+Automated checks supplement, rather than replace, manual screen-reader, zoom,
+and keyboard testing for WCAG 2.2 AA.
+
+### Private sharing
+
+```sh
+bundle exec rspec spec/models/share_code_spec.rb spec/models/dataset/sharable_spec.rb spec/requests/dataset_sharing_spec.rb
+PW_SKIP_GLOBAL_SETUP=1 npx playwright test playwright/share-code.spec.js
+```
+
+These specs cover random-code collisions, one-year expiry, publication and embargo
+release, authenticated link management, dataset-scoped guest reads and downloads,
+preview navigation, aggregate downloads, and effective-code badges independent of
+upload tokens. The browser test checks native labeled controls, keyboard activation,
+clipboard feedback, guest access, revocation, and WCAG 2.2 AA rules with axe.
+
 ### Metric export coverage
 
 ```sh
