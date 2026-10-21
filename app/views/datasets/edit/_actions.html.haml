@@ -1,14 +1,12 @@
 %section.idb-workflow-strip{aria: { label: "Edit dataset workflow actions" }}
   .idb-workflow-actions-right
     - if dataset.draft?
-      -#%button.idb-button-primary{type: "submit", form: form_id}
-      -#  Save & Continue
-      = semantic_action_button(action: :continue, label: "Save & Continue", icon_position: :right, form: form_id, style: :idb)
+      = semantic_action_button(action: :continue, label: "Save & Continue", icon_position: :right, type: "submit", form: form_id, style: :idb)
 
-      = semantic_action_button(action: :back, label: "Save & Exit", form: form_id, name: "save_and_exit", value: "true", style: :idb)
+      = semantic_action_button(action: :back, label: "Save & Exit", type: "submit", form: form_id, name: "save_and_exit", value: "true", style: :idb)
 
-      = semantic_action_button(action: :delete, label: "Delete", url: dataset_path(dataset), method: :delete, data: { turbo_confirm: "Are you sure?" }, style: :idb)
+      = semantic_action_button(action: :delete, label: "Delete", type: "submit", form: "dataset-delete-form", style: :idb)
     - else
-      = semantic_action_button(action: :primary, label: "Confirm", form: form_id, style: :idb)
+      = semantic_action_button(action: :update, label: "Confirm", type: "submit", form: form_id, style: :idb)
 
       = semantic_action_button(action: :cancel, label: "Cancel", url: datasets_path, style: :idb)

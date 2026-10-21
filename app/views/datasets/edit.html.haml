@@ -38,6 +38,10 @@
           = render "datasets/edit/actions", dataset: @dataset, form_id: form_id
         = render "datasets/edit/orcid_lookup_modal"
 
+      - if @dataset.draft? && can?(:update, @dataset)
+        = form_with url: dataset_path(@dataset), method: :delete, local: true, id: "dataset-delete-form", data: { turbo_confirm: "Are you sure?" } do
+          -# The delete control is in the workflow strip, outside this form.
+
       - if can?(:manage, @dataset)
         = form_with model: [@dataset, DatasetAccessGrant.new], local: true, id: "dataset-access-grant-form" do
           -# Controls are associated using the form attribute to avoid nested forms.

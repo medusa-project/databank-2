@@ -32,6 +32,36 @@ RSpec.describe "Dataset edit workflow actions", type: :request do
     expect(response.body).to include("Dataset updated and saved.")
   end
 
+  it "renders native submit buttons associated with the draft metadata form" do
+    sign_in_as(email: dataset.depositor_email, name: "Owner User", role: "depositor")
+
+    get edit_dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML5(response.body)
+    buttons = document.css("button[type='submit'][form='dataset-edit-form']")
+    expect(buttons.map { |button| button.text.strip }).to include("Save & Continue", "Save & Exit")
+    exit_button = buttons.find { |button| button["name"] == "save_and_exit" }
+    expect(exit_button["value"]).to eq("true")
+    delete_form = document.at_css("#dataset-delete-form")
+    expect(delete_form.ancestors("form")).to be_empty
+    expect(delete_form["action"]).to eq(dataset_path(dataset))
+    expect(delete_form.at_css("input[name='_method']")["value"]).to eq("delete")
+    expect(document.at_css("button[type='submit'][form='dataset-delete-form']").text.strip).to eq("Delete")
+  end
+
+  it "renders Confirm as a native submit button for published metadata" do
+    dataset.update!(publication_state: :published)
+    sign_in_as(email: dataset.depositor_email, name: "Owner User", role: "depositor")
+
+    get edit_dataset_path(dataset)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML5(response.body)
+    buttons = document.css("button[type='submit'][form='dataset-edit-form']")
+    expect(buttons.map { |button| button.text.strip }).to include("Confirm")
+  end
+
   it "renders independent action forms without breaking the metadata form" do
     sign_in_as(email: "admin-workflow@example.edu", name: "Admin User", role: "admin")
     grant = dataset.dataset_access_grants.create!(email: "reviewer@example.edu", access_level: :viewer)

@@ -37,6 +37,10 @@ organization creators in initial and dynamically added rows, keyboard focus when
 adding/reordering/removing creators, ORCID dialog focus restoration, the file
 chooser button, independent access-grant and file-deletion forms, and mobile
 metadata layout.
+Request specs in `spec/requests/dataset_edit_workflow_spec.rb` verify that save
+and confirm controls submit the metadata form and that dataset deletion uses an
+independent form. `spec/requests/cookie_assets_spec.rb` covers cookie asset
+redirects from both section and dataset-specific URLs.
 Axe scans cover the main edit content, including expanded curator sections.
 Automated checks supplement, rather than replace, manual screen-reader, zoom,
 and keyboard testing for WCAG 2.2 AA.
