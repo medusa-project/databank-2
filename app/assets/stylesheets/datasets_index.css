@@ -396,6 +396,47 @@
   flex-wrap: wrap;
 }
 
+.dataset-show-titlebar-main {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.dataset-show-titlebar-actions {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.dataset-show-actions-wide {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .dataset-show-titlebar {
+    flex-wrap: nowrap;
+  }
+
+  .dataset-show-actions-narrow {
+    display: none;
+  }
+
+  /* 9 of 12 columns for the sharing card, 3 for the actions */
+  .dataset-show-titlebar-main {
+    flex: 0 0 calc(75% - 0.5rem);
+  }
+
+  .dataset-show-titlebar-actions {
+    flex: 1 1 0;
+  }
+
+  .dataset-show-actions-wide {
+    display: block;
+  }
+
+  .dataset-show-titlebar-actions .idb-workflow-actions-right {
+    width: 100%;
+  }
+}
+
 .dataset-show-key {
   margin: 0;
   color: var(--idb-muted);

@@ -17,9 +17,14 @@
     - else
       %p
         %strong This dataset is ready to publish.
-  = render "datasets/show/sharing", dataset: dataset
 .dataset-show-titlebar
-  = render "datasets/show/actions", dataset: dataset
+  -# Actions render twice so DOM order matches visual order at every breakpoint; CSS shows one copy.
+  .dataset-show-titlebar-actions.dataset-show-actions-narrow
+    = render "datasets/show/actions", dataset: dataset
+  .dataset-show-titlebar-main
+    = render "datasets/show/sharing", dataset: dataset
+  .dataset-show-titlebar-actions.dataset-show-actions-wide
+    = render "datasets/show/actions", dataset: dataset
 - if citation_text.present? || doi_url.present?
   .dataset-show-citation
     - if citation_text.present?
