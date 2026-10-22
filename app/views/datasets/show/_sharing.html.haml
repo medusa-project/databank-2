@@ -1,15 +1,19 @@
+-# only included in show view via summary partial when the dataset is eligible for a private sharing link
 - code = dataset.current_share_code
-- if code.present? || !dataset.files_publicly_readable_now?
-  %section.idb-section-card{aria: { labelledby: "private-sharing-heading" }}
-    %h2#private-sharing-heading Private Sharing Link
-    %p Anybody with this link can access this dataset's metadata and files without signing in. Share it only with trusted reviewers or collaborators.
-    %p The link expires 12 months after it is first generated or when the dataset is released.
-    - if code.present?
-      = semantic_badge(kind: :status_ok, label: "has sharing link", icon: false, sr_label: "Has sharing link")
-      %label{for: "sharing-link"} Private sharing URL
-      %input#sharing-link.datasets-search-input{type: "text", value: dataset.sharing_link, readonly: true}
-      = semantic_action_button(action: :copy, label: "Copy sharing link", style: :idb, onclick: "navigator.clipboard.writeText(document.getElementById('sharing-link').value).then(function() { document.getElementById('sharing-copy-status').textContent = 'Sharing link copied to clipboard.'; }).catch(function() { document.getElementById('sharing-copy-status').textContent = 'Unable to copy link. Please copy it manually.'; });")
-      %span#sharing-copy-status.sr-only{role: "status"}
-      = semantic_action_button(action: :delete, label: "Delete sharing link", url: remove_sharing_link_dataset_path(dataset), method: :delete, style: :idb)
-    - else
-      = semantic_action_button(action: :new, label: "Generate private sharing link", url: share_dataset_path(dataset), method: :post, style: :idb)
+
+%section.idb-section-card{aria: { label: "Private sharing link" }}
+  %details.idb-section-disclosure{open: true}
+    %summary
+      %h2.idb-section-title Private Sharing Link
+    .idb-section-body
+      .idb-sharing-row
+        - if code.present?
+          .datasets-query-fieldset
+            %label.sr-only{for: "sharing-link"} Private sharing URL
+            %input#sharing-link.datasets-search-input{type: "text", value: dataset.sharing_link, readonly: true, aria: { describedby: "sharing-link-help" }}
+            = semantic_action_button(action: :copy, label: "Copy sharing link", icon_only: true, style: :legacy, class: "datasets-query-button", onclick: "navigator.clipboard.writeText(document.getElementById('sharing-link').value).then(function() { document.getElementById('sharing-copy-status').textContent = 'Sharing link copied to clipboard.'; }).catch(function() { document.getElementById('sharing-copy-status').textContent = 'Unable to copy link. Please copy it manually.'; });")
+            = semantic_action_button(action: :delete, label: "Delete", aria_label: "Delete sharing link", url: remove_sharing_link_dataset_path(dataset), method: :delete, style: :legacy, class: "datasets-query-button")
+          %span#sharing-copy-status.sr-only{role: "status"}
+          %p#sharing-link-help.sr-only Anybody with this link can access this dataset's metadata and files without signing in. The link expires 12 months after it is first generated or when the dataset is released.
+        - elsif !dataset.files_publicly_readable_now?
+          = semantic_action_button(action: :new, label: "Generate private sharing link", url: share_dataset_path(dataset), icon: "link", method: :post, style: :idb)

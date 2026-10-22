@@ -95,4 +95,13 @@ RSpec.describe Dataset::Sharable, type: :model do
       end
     end
   end
+
+  [ Dataset::HOLD_PERM_METADATA, Dataset::HOLD_PERM_FILE ].each do |hold|
+    it "revokes the share code on save when #{hold} is applied" do
+      code = dataset.create_share_code!
+      dataset.update!(hold_state: hold)
+
+      expect(ShareCode.exists?(code.id)).to be(false)
+    end
+  end
 end

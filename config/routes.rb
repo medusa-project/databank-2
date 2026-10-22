@@ -28,6 +28,10 @@ Rails.application.routes.draw do
       get :suppression_controls
       get :download_metrics, defaults: { format: :json }
       get :record_text
+      get :download_endnote_xml
+      get :download_ris
+      get :download_bibtex
+      get :download_plaintext_citation
       get :confirm_review
       post :suppression_action
       get :suppress_changelog
@@ -161,6 +165,8 @@ Rails.application.routes.draw do
   # Redirect those section-scoped requests to canonical public asset paths.
   get "/:section/css/*asset", to: redirect { |params, _req| "/css/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
   get "/:section/partials/*asset", to: redirect { |params, _req| "/partials/#{params[:asset]}" }, constraints: { section: cookie_asset_sections }, format: false
+  get "/datasets/:dataset_key/css/*asset", to: redirect { |params, _req| "/css/#{params[:asset]}" }, format: false
+  get "/datasets/:dataset_key/partials/*asset", to: redirect { |params, _req| "/partials/#{params[:asset]}" }, format: false
 
   # Errors
   post "/", to: "errors#error404"

@@ -66,6 +66,43 @@ async function selectPrimaryContact(page, index = 0) {
 }
 
 test.describe("deposit form parity behavior", () => {
+  test("submits draft workflow actions by keyboard and keeps deletion independent", async ({ page }) => {
+    await signInWithDeveloperAuth(page);
+    await createDatasetAndOpenEdit(page);
+    const editPath = new URL(page.url()).pathname;
+    const showPath = editPath.replace(/\/edit$/, "");
+
+    await expect.poll(() => page.locator("#dataset-edit-form").evaluate((form) =>
+      Boolean(window.Stimulus?.getControllerForElementAndIdentifier(form, "deposit-form")),
+    )).toBe(true);
+    await fillIndividualCreatorRow(page, 0, {
+      familyName: "Workflow",
+      givenName: "Tester",
+      email: "workflow@example.test",
+    });
+    await selectPrimaryContact(page);
+    const title = `Workflow save ${Date.now()}`;
+    await page.locator('input[name="dataset[title]"]').fill(title);
+    const save = page.getByRole("button", { name: "Save & Continue", exact: true });
+    await save.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${showPath}$`));
+
+    await page.goto(editPath);
+    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(title);
+    await page.locator('input[name="dataset[title]"]').fill(`${title} exit`);
+    await selectPrimaryContact(page);
+    const exit = page.getByRole("button", { name: "Save & Exit", exact: true });
+    await exit.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/datasets$/);
+
+    await page.goto(editPath);
+    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(`${title} exit`);
+    const remove = page.getByRole("button", { name: "Delete", exact: true });
+    await expect(remove).toHaveAttribute("form", "dataset-delete-form");
+  });
+
   test("labels individual creator fields in initial and added rows", async ({ page }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);

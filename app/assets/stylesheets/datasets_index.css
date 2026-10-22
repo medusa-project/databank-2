@@ -385,7 +385,12 @@
 }
 
 .dataset-show-summary {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Inside the grid, the grid gap provides the spacing between cards */
+.dataset-show-grid > .dataset-show-summary {
+  margin-bottom: 0;
 }
 
 .dataset-show-titlebar {
@@ -394,6 +399,47 @@
   align-items: start;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.dataset-show-titlebar-main {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.dataset-show-titlebar-actions {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.dataset-show-actions-wide {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .dataset-show-titlebar {
+    flex-wrap: nowrap;
+  }
+
+  .dataset-show-actions-narrow {
+    display: none;
+  }
+
+  /* 9 of 12 columns for the sharing card, 3 for the actions */
+  .dataset-show-titlebar-main {
+    flex: 0 0 calc(75% - 0.5rem);
+  }
+
+  .dataset-show-titlebar-actions {
+    flex: 1 1 0;
+  }
+
+  .dataset-show-actions-wide {
+    display: block;
+  }
+
+  .dataset-show-titlebar-actions .idb-workflow-actions-right {
+    width: 100%;
+  }
 }
 
 .dataset-show-key {
@@ -494,6 +540,7 @@
   margin: 0;
   color: var(--idb-text);
   line-height: 1.6;
+  background-color: white;
 }
 
 .dataset-show-persistent-link {
@@ -820,4 +867,141 @@
     text-align: right;
     justify-self: end;
   }
+}
+/* The header wrapper drops out of layout so label, button and text can be arranged by one grid. */
+.dataset-show-citation-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.dataset-show-citation-header {
+  display: contents;
+}
+
+.dataset-show-citation-header .dataset-show-eyebrow {
+  margin: 0;
+}
+
+.dataset-show-citation-copy .dataset-show-citation-text {
+  min-width: 0;
+}
+
+.dataset-show-citation-copy .dataset-export-citation {
+  justify-self: start;
+}
+
+/* Medium: label and button share a row, text below */
+@media (min-width: 576px) {
+  .dataset-show-citation-copy {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dataset-show-citation-copy .dataset-show-citation-text {
+    grid-column: 1 / -1;
+  }
+
+  .dataset-show-citation-copy .dataset-export-citation {
+    justify-self: end;
+  }
+
+  .dataset-show-citation-copy .dataset-export-citation-menu {
+    left: auto;
+    right: 0;
+  }
+}
+
+/* Desktop: label on its own row, text and button share the next row */
+@media (min-width: 992px) {
+  .dataset-show-citation-copy .dataset-show-eyebrow {
+    grid-column: 1 / -1;
+  }
+
+  .dataset-show-citation-copy .dataset-show-citation-text {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .dataset-show-citation-copy .dataset-export-citation {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* One fixed height keeps the input and the button identical */
+  .dataset-show-citation-copy .dataset-show-citation-text,
+  .dataset-show-citation-copy .dataset-export-citation > summary {
+    box-sizing: border-box;
+    height: 2.5rem;
+    margin: 0;
+  }
+
+  .dataset-show-citation-copy .dataset-export-citation > summary {
+    display: flex;
+    align-items: center;
+    padding: 0 0.9rem;
+    font-size: 0.9rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+}
+
+.dataset-export-citation {
+  position: relative;
+}
+
+.dataset-export-citation > summary {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
+  color: var(--idb-text);
+  background: #fff;
+  border: 1px solid #aab4bf;
+  border-radius: 4px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dataset-export-citation > summary:hover,
+.dataset-export-citation[open] > summary {
+  background: #eef3f8;
+}
+
+.dataset-export-citation > summary:focus-visible {
+  outline: 3px solid #ffbf47;
+  outline-offset: 2px;
+}
+
+.dataset-export-citation > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dataset-export-citation > summary::after {
+  content: " \25BE";
+}
+
+.dataset-export-citation-menu {
+  position: absolute;
+  left: 0;
+  z-index: 10;
+  min-width: 11rem;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--idb-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.dataset-export-citation-menu a {
+  display: block;
+  padding: 0.4rem 0.9rem;
+  color: var(--idb-text);
+  text-decoration: none;
+}
+
+.dataset-export-citation-menu a:hover,
+.dataset-export-citation-menu a:focus-visible {
+  background: #eef3f8;
 }

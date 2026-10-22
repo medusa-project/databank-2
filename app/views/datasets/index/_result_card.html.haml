@@ -12,7 +12,7 @@
   - if dataset.keywords.present?
     .keyword_display
       keywords:
-      = dataset.keywords
+      = formatted_keywords(dataset.keywords)
   -if dataset.identifier.present?
     .identifier_display
       DOI:

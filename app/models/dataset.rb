@@ -278,6 +278,64 @@ class Dataset < ApplicationRecord
     creator_display_names(separator: "; ")
   end
 
+  def export_identifier
+    identifier.presence || key
+  end
+
+  def export_url
+    "https://doi.org/#{export_identifier}"
+  end
+
+  def citation_export_filename(extension)
+    "DOI-#{export_identifier.to_s.gsub(/[^\w.-]+/, '_')}.#{extension}"
+  end
+
+  def citation_endnote_xml
+    builder = Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
+      xml.xml do
+        xml.records do
+          xml.record do
+            xml.send(:"ref-type", "45", name: "Online Database")
+            xml.contributors { xml.authors { xml.author creator_list } }
+            xml.titles { xml.title title }
+            xml.dates { xml.year publication_year }
+            xml.publisher publisher
+            xml.urls { xml.send(:"related-urls") { xml.url export_url } }
+            xml.send(:"electronic-resource-num", export_identifier)
+          end
+        end
+      end
+    end
+    builder.to_xml
+  end
+
+  def citation_ris
+    [
+      "Provider: Illinois Data Bank",
+      "Content: text/plain; charset=\"utf-8\"",
+      "TY  - DATA",
+      "T1  - #{title}",
+      "DO  - #{export_identifier}",
+      "PY  - #{publication_year}",
+      "UR  - #{export_url}",
+      "PB  - #{publisher}",
+      "ER  - "
+    ].join("\n") + "\n"
+  end
+
+  def citation_bibtex
+    fields = {
+      doi: export_identifier,
+      url: export_url,
+      author: bibtex_creator_list,
+      publisher: publisher,
+      title: title,
+      year: publication_year
+    }
+    body = fields.map { |name, value| "#{name} = {#{value}}" }.join(",\n")
+    "@data{illinoisdatabank#{key},\n#{body}\n}\n"
+  end
+
   def bibtex_creator_list
     creator_display_names(separator: " and ")
   end

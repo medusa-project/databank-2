@@ -827,7 +827,8 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("Depositor")
     expect(response.body).to include("Depositor Private")
     expect(response.body).to include("private@example.edu")
-    expect(response.body).not_to include("researcher@example.edu")
+    expect(response.body).to include("Corresponding Creator Email")
+    expect(response.body).to include("researcher@example.edu")
   end
 
   it "rejects related materials with a URI but no relation type" do
@@ -1811,7 +1812,8 @@ RSpec.describe "Datasets workflow", type: :request do
 
     get dataset_path(version)
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Corresponding Creator")
+    expect(response.body).to include("No corresponding creator provided.")
+    expect(response.body).not_to include("Corresponding Creator Email")
     expect(response.body).to include("Source Primary; Source Secondary")
   end
 

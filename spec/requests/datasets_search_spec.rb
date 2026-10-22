@@ -680,7 +680,7 @@ RSpec.describe "Datasets search", type: :request do
       depositor_email: "owner-curator-badges-draft@example.edu",
       publication_state: :draft
     )
-    draft_with_share.create_token!(identifier: Token.generate_auth_token)
+    draft_with_share.create_share_code!
     draft_with_share.version_requests.create!(
       requester_email: "depositor-draft@example.edu",
       requester_name: "Depositor Draft",

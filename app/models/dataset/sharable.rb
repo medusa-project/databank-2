@@ -3,7 +3,7 @@ module Dataset::Sharable
 
   included do
     has_one :share_code, dependent: :destroy
-    after_save :revoke_released_share_code
+    after_save :revoke_ineligible_share_code
   end
 
   def sharing_link
@@ -41,10 +41,19 @@ module Dataset::Sharable
     current.present? && ActiveSupport::SecurityUtils.secure_compare(current, code)
   end
 
+  def share_code_eligable?
+    return false if hold_state_mode == Dataset::HOLD_PERM_METADATA || hold_state_mode == Dataset::HOLD_PERM_FILE
+
+    return false if files_publicly_readable_now?
+
+    true
+  end
+
   private
 
-  def revoke_released_share_code
-    return unless files_publicly_readable_now?
+  # Covers publication, release and permanent suppression, which all end in a save.
+  def revoke_ineligible_share_code
+    return if share_code_eligable?
 
     share_code&.destroy!
     association(:share_code).reset
