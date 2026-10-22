@@ -7,10 +7,10 @@ RSpec.describe "Dataset citation export", type: :request do
   end
 
   {
-    download_endnote_xml_dataset_path: ["application/xml", "<ref-type name=\"Online Database\">45</ref-type>", "DOI-10.5555_IDB-CITE.xml"],
-    download_ris_dataset_path: ["application/x-research-info-systems", "TY  - DATA", "DOI-10.5555_IDB-CITE.ris"],
-    download_bibtex_dataset_path: ["application/x-bibtex", "title = {Cite Me}", "DOI-10.5555_IDB-CITE.bib"],
-    download_plaintext_citation_dataset_path: ["text/plain", "Cite Me", "DOI-10.5555_IDB-CITE.txt"]
+    download_endnote_xml_dataset_path: [ "application/xml", "<ref-type name=\"Online Database\">45</ref-type>", "DOI-10.5555_IDB-CITE.xml" ],
+    download_ris_dataset_path: [ "application/x-research-info-systems", "TY  - DATA", "DOI-10.5555_IDB-CITE.ris" ],
+    download_bibtex_dataset_path: [ "application/x-bibtex", "title = {Cite Me}", "DOI-10.5555_IDB-CITE.bib" ],
+    download_plaintext_citation_dataset_path: [ "text/plain", "Cite Me", "DOI-10.5555_IDB-CITE.txt" ]
   }.each do |path_helper, (type, content, filename)|
     it "serves #{path_helper}" do
       get public_send(path_helper, dataset)
