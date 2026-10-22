@@ -1,9 +1,9 @@
 class DatasetsController < ApplicationController
   include ShareCodeAccess
 
-  skip_before_action :authenticate_user!, only: %i[index pre_deposit show record_text download_metrics download_link open_in_granite]
+  skip_before_action :authenticate_user!, only: %i[index pre_deposit show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite]
 
-  before_action :set_dataset, only: %i[show record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token share remove_sharing_link]
+  before_action :set_dataset, only: %i[show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token share remove_sharing_link]
 
   def share
     authorize! :update, @dataset
@@ -103,6 +103,22 @@ class DatasetsController < ApplicationController
 
   def record_text
     authorize! :read, @dataset
+  end
+
+  def download_endnote_xml
+    send_citation_export(@dataset.citation_endnote_xml, type: "application/xml", extension: "xml")
+  end
+
+  def download_ris
+    send_citation_export(@dataset.citation_ris, type: "application/x-research-info-systems", extension: "ris")
+  end
+
+  def download_bibtex
+    send_citation_export(@dataset.citation_bibtex, type: "application/x-bibtex", extension: "bib")
+  end
+
+  def download_plaintext_citation
+    send_citation_export("#{@dataset.plain_text_citation}\n", type: "text/plain", extension: "txt")
   end
 
   def download_metrics
@@ -339,7 +355,6 @@ class DatasetsController < ApplicationController
     @dataset.hold_state = Dataset::HOLD_PERM_FILE
     @dataset.embargo = Dataset::EMBARGO_NONE
     @dataset.tombstone_date = Date.current
-    @dataset.revoke_released_share_code
 
     if @dataset.save
       if globus_suppression_service.remove_from_public_download
@@ -413,7 +428,6 @@ class DatasetsController < ApplicationController
     @dataset.hold_state = Dataset::HOLD_PERM_METADATA
     @dataset.embargo = Dataset::EMBARGO_NONE
     @dataset.tombstone_date = Date.current
-    @dataset.revoke_released_share_code
 
     if @dataset.save
       doi_ok = doi_suppression_service.suppress_metadata
@@ -612,7 +626,12 @@ class DatasetsController < ApplicationController
   end
 
   def publish
-    authorize! :manage, @dataset
+    authorize! :update, @dataset
+
+    if @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
+      redirect_to dataset_path(@dataset), alert: "Version drafts require pre-publication review before publishing."
+      return
+    end
 
     if @dataset.ready_to_publish?
       identifier = Doi::IdentifierService.new(@dataset).mint_for_publish!
@@ -624,7 +643,6 @@ class DatasetsController < ApplicationController
       )
       Ingest::PublishDatasetEventJob.perform_later(@dataset.id)
       Globus::SubmitDatasetTransferJob.perform_later(@dataset.id)
-      @dataset.revoke_released_share_code if @dataset.files_publicly_readable_now?
       redirect_to dataset_path(@dataset), notice: "Dataset published. DOI: #{@dataset.identifier}"
     else
       redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
@@ -735,6 +753,12 @@ class DatasetsController < ApplicationController
   end
 
   private
+
+  def send_citation_export(content, type:, extension:)
+    authorize! :read, @dataset
+    send_data content, type: "#{type}; charset=utf-8", disposition: "attachment",
+                       filename: @dataset.citation_export_filename(extension)
+  end
 
   def sharing_error(message:)
     respond_to do |format|

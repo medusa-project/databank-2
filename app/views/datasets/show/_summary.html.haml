@@ -7,29 +7,41 @@
 - if logged_in? && can?(:update, dataset)
   - missing = dataset.missing_publish_fields
   .dataset-show-status
+
+    - if missing.any?
+      %p
+        %strong
+          Required elements for a complete dataset
+          %em missing:
+        = " #{missing.join(', ')}"
+    - elsif !dataset.published?
+      %p
+        %strong This dataset is ready to publish.
     %p
       %strong Publication Status (who can see this dataset):
       = "#{dataset.visibility} (#{dataset.who_can_see})"
-    - if missing.any?
-      %p
-        %strong Required elements for a complete dataset missing:
-        = " #{missing.join(', ')}"
-    - else
-      %p
-        %strong This dataset is ready to publish.
 .dataset-show-titlebar
   -# Actions render twice so DOM order matches visual order at every breakpoint; CSS shows one copy.
   .dataset-show-titlebar-actions.dataset-show-actions-narrow
-    = render "datasets/show/actions", dataset: dataset
-  .dataset-show-titlebar-main
-    = render "datasets/show/sharing", dataset: dataset
+    = render "datasets/show/actions", dataset: dataset  
+  - if dataset.share_code_eligable?
+    .dataset-show-titlebar-main
+      = render "datasets/show/sharing", dataset: dataset
   .dataset-show-titlebar-actions.dataset-show-actions-wide
     = render "datasets/show/actions", dataset: dataset
 - if citation_text.present? || doi_url.present?
   .dataset-show-citation
     - if citation_text.present?
       .dataset-show-citation-copy
-        %p.dataset-show-eyebrow Cite this dataset:
+        .dataset-show-citation-header
+          %p.dataset-show-eyebrow Cite this dataset:
+          %details.dataset-export-citation{data: { controller: "dropdown-details" }}
+            %summary.dataset-export-citation-toggle Export Citation
+            %ul.dataset-export-citation-menu
+              %li= link_to "EndNote XML", download_endnote_xml_dataset_path(dataset)
+              %li= link_to "RIS Format", download_ris_dataset_path(dataset)
+              %li= link_to "BibTeX Format", download_bibtex_dataset_path(dataset)
+              %li= link_to "Plain Text", download_plaintext_citation_dataset_path(dataset)
         %p.dataset-show-citation-text= citation_text
 
     - if doi_url.present?

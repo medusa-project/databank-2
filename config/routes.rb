@@ -28,6 +28,10 @@ Rails.application.routes.draw do
       get :suppression_controls
       get :download_metrics, defaults: { format: :json }
       get :record_text
+      get :download_endnote_xml
+      get :download_ris
+      get :download_bibtex
+      get :download_plaintext_citation
       get :confirm_review
       post :suppression_action
       get :suppress_changelog

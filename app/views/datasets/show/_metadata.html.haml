@@ -54,9 +54,9 @@
           %dt Depositor Email
           %dd= dataset.depositor_email
           
-          - if dataset.primary_contact_email.present?
+          - if dataset.corresponding_creator_email.present?
             %dt Corresponding Creator Email
-            %dd= dataset.primary_contact_email
+            %dd= dataset.corresponding_creator_email
 
         - if download_count.positive?
           %dt Downloaded
