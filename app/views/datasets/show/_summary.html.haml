@@ -34,7 +34,7 @@
     - if citation_text.present?
       .dataset-show-citation-copy
         .dataset-show-citation-header
-          %p.dataset-show-eyebrow Cite this dataset:
+          %label.dataset-show-eyebrow{for: "citation-text"} Cite this dataset:
           %details.dataset-export-citation{data: { controller: "dropdown-details" }}
             %summary.dataset-export-citation-toggle Export Citation
             %ul.dataset-export-citation-menu
@@ -42,7 +42,7 @@
               %li= link_to "RIS Format", download_ris_dataset_path(dataset)
               %li= link_to "BibTeX Format", download_bibtex_dataset_path(dataset)
               %li= link_to "Plain Text", download_plaintext_citation_dataset_path(dataset)
-        %p.dataset-show-citation-text= citation_text
+        %input#citation-text.dataset-show-citation-text{type: "text", value: citation_text, readonly: true}
 
     - if doi_url.present?
       .dataset-show-persistent-link
