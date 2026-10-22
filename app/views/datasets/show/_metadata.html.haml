@@ -17,7 +17,7 @@
 
         - if dataset.keywords.present?
           %dt Keywords
-          %dd= dataset.keywords
+          %dd= formatted_keywords(dataset.keywords)
         %dt License
         %dd
           - if dataset.license.present?

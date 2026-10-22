@@ -1,4 +1,9 @@
 module DatasetsHelper
+  # Keywords are stored as "a;b;c"; display them as "a; b; c".
+  def formatted_keywords(keywords)
+    keywords.to_s.split(";").map(&:strip).reject(&:blank?).join("; ")
+  end
+
   def dataset_results_count_text(search:, datasets:, total_count:)
     start_item = search.offset_value + 1
     end_item = [ search.offset_value + datasets.length, total_count ].min
