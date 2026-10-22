@@ -14,14 +14,12 @@
 - visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:review_versions, @dataset) }
 
 %ilw-content.dataset-show-page
-  .dataset-show-summary
-    = render "datasets/show/summary", dataset: @dataset, version_group: @version_group, citation_text: citation_text, doi_url: doi_url
-
   .dataset-show-grid
+    .dataset-show-summary
+      = render "datasets/show/summary", dataset: @dataset, version_group: @version_group, citation_text: citation_text, doi_url: doi_url
     = render "datasets/show/metadata", dataset: @dataset, primary_contact_name: primary_contact_name, additional_contacts: additional_contacts, download_count: download_count, related_materials: related_materials, cited_by_materials: cited_by_materials
     = render "datasets/show/versions", visible_version_entries: visible_version_entries
     = render "datasets/show/files", dataset: @dataset, datafiles: datafiles, datafile_count: datafile_count, show_bulk_file_actions: show_bulk_file_actions, globus_downloadable: @globus_downloadable
-
-  = render "datasets/show/change_log", version_request_history: @version_request_history
-  = render "datasets/show/curator_controls", dataset: @dataset if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
-  = render "datasets/show/external_delivery", dataset: @dataset, ingest_health_summary: @ingest_health_summary, latest_delivery_attempts: @latest_delivery_attempts, failed_delivery_counts: @failed_delivery_counts if logged_in? && can?(:manage, Dataset)
+    = render "datasets/show/change_log", version_request_history: @version_request_history
+    = render "datasets/show/curator_controls", dataset: @dataset if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
+    = render "datasets/show/external_delivery", dataset: @dataset, ingest_health_summary: @ingest_health_summary, latest_delivery_attempts: @latest_delivery_attempts, failed_delivery_counts: @failed_delivery_counts if logged_in? && can?(:manage, Dataset)

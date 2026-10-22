@@ -385,7 +385,12 @@
 }
 
 .dataset-show-summary {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Inside the grid, the grid gap provides the spacing between cards */
+.dataset-show-grid > .dataset-show-summary {
+  margin-bottom: 0;
 }
 
 .dataset-show-titlebar {

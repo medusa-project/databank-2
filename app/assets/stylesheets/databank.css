@@ -1362,6 +1362,15 @@ pre {
 	margin: 0;
 }
 
+/* Visual space between copy and delete without a non-breaking space */
+.idb-sharing-row .datasets-query-fieldset form {
+	margin-left: 0.35rem;
+}
+
+.idb-sharing-row .datasets-query-fieldset form .datasets-query-button {
+	border-radius: 4px;
+}
+
 .idb-sharing-row .datasets-query-button {
 	border-radius: 4px;
 }
