@@ -22,13 +22,11 @@ export default class extends Controller {
     this.materialRowTargets.forEach((row) => this.updateMaterialTypeVisibility(row))
     this.materialRowTargets.forEach((row) => this.syncDataciteListForRow(row))
     this.refreshAllRowPositions()
-    this.refreshCreatorAddButtons()
   }
 
   addCreatorRow() {
     this.addRowFromTemplate(this.creatorTemplateTarget, "creator-rows", "NEW_CREATOR")
     this.syncPrimaryContact()
-    this.refreshCreatorAddButtons()
   }
 
   addContributorRow() {
@@ -73,7 +71,6 @@ export default class extends Controller {
 
     this.syncPrimaryContact()
     this.refreshAllRowPositions()
-    this.refreshCreatorAddButtons()
     const nextField = nextRow?.querySelector("input:not([type='hidden']), select, textarea")
     if (nextField) nextField.focus()
     else addButton?.focus()
@@ -90,9 +87,11 @@ export default class extends Controller {
 
     const previous = visibleRows[index - 1]
     container.insertBefore(row, previous)
-    event.currentTarget.focus()
     this.refreshContainerRowPositions(container)
-    this.refreshCreatorAddButtons()
+    const focusButton = event.currentTarget.disabled
+      ? row.querySelector("button[data-action='deposit-form#moveRowDown']")
+      : event.currentTarget
+    focusButton.focus()
   }
 
   moveRowDown(event) {
@@ -106,9 +105,11 @@ export default class extends Controller {
 
     const next = visibleRows[index + 1]
     container.insertBefore(next, row)
-    event.currentTarget.focus()
     this.refreshContainerRowPositions(container)
-    this.refreshCreatorAddButtons()
+    const focusButton = event.currentTarget.disabled
+      ? row.querySelector("button[data-action='deposit-form#moveRowUp']")
+      : event.currentTarget
+    focusButton.focus()
   }
 
   switchCreatorMode(event) {
@@ -289,10 +290,6 @@ this.orcidResultsTarget.innerHTML = `<p class="idb-orcid-results-count">${countL
     this.refreshRowPositions("material-rows")
   }
 
-  refreshCreatorAddButtons() {
-    // Add button is now outside the rows container, no hiding logic needed
-  }
-
   refreshRowPositions(containerId) {
     const container = this.element.querySelector(`#${containerId}`)
     if (!container) return
@@ -306,6 +303,10 @@ this.orcidResultsTarget.innerHTML = `<p class="idb-orcid-results-count">${countL
       const position = row.querySelector("input[name*='[position]']")
       if (rowPosition) rowPosition.value = idx + 1
       if (position) position.value = idx + 1
+      if (container.id === "creator-rows") {
+        row.querySelector("button[data-action='deposit-form#moveRowUp']").disabled = idx === 0
+        row.querySelector("button[data-action='deposit-form#moveRowDown']").disabled = idx === rows.length - 1
+      }
     })
   }
 
