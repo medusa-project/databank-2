@@ -57,6 +57,8 @@ gem "websocket-driver", ">= 0.8.2"
 gem "json", ">= 2.19.9"
 # Fix Use-After-Free in MessagePack::Buffer#clear
 gem "msgpack", ">= 1.8.2"
+# Fix CSS sanitizer bypass via incorrect tokenization of bad URLs
+gem "crass", ">= 1.0.8"
 # HTTP client with digest auth support
 gem "curb", "~> 1.0"
 # Use Passenger standalone on deployed Rocky hosts
