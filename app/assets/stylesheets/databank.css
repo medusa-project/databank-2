@@ -271,8 +271,9 @@
 }
 
 .idb-required-indicator {
-	color: #d50000;
-	font-size: 0.8em;
+	color: #a00000;
+	font-size: 1.1em;
+	font-weight: 700;
 	line-height: 1;
 	margin-left: 0.12rem;
 }
@@ -745,7 +746,7 @@
 	margin-bottom: 0.3rem;
 }
 
-.dataset-form-page .idb-citation-preview-label {
+.dataset-form-page .idb-citation-preview-prompt {
 	display: inline;
 	margin: 0 0.35rem 0 0;
 }

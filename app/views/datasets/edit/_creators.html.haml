@@ -41,15 +41,15 @@
               %span.sr-only Reorder
             %th
               Organization Name(s)
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
             %th
               Email
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
             %th
               Primary Contact
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
               .idb-inline-help-row
                 = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
@@ -80,7 +80,7 @@
                   = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
                   = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
       .idb-creator-add-row
-        = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", title: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
+        = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
     - else
       %p One primary long-term contact must be selected from the individual author list.
 
@@ -91,28 +91,28 @@
               %span.sr-only Reorder
             %th
               Family Name(s)
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
             %th
               Given Name(s)
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
             %th
               %span.idb-orcid-header-label
-                ORCID
+                ORCiD
                 %sup &trade;
-                = image_tag 'iD_icon.png', alt: "", aria: { hidden: true }
+
               .idb-inline-help-row
-                = contextual_help_link prompt: "what's an ORCID?", url: "https://orcid.org/"
+                = contextual_help_link prompt: "what's an ORCiD?", url: "https://orcid.org/"
             %th
-              %span.sr-only ORCID Lookup
+              %span.sr-only ORCiD Lookup
             %th
               Email
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
             %th
               Primary Contact
-              %sup.idb-required-indicator{aria: { hidden: true }} *
+              %span.idb-required-indicator{aria: { hidden: true }} *
               %span.sr-only required
               .idb-inline-help-row
                 = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
@@ -141,7 +141,7 @@
                   = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
                   = cf.hidden_field :identifier_scheme, value: "ORCID"
                 %td
-                  %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
+                  %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCiD
                 %td
                   = cf.label :email, "Email", class: "sr-only"
                   = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
@@ -152,7 +152,7 @@
                   = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
                   = semantic_action_button action: :remove, style: :idb, type: "button", icon_only: true, aria_label: "Remove author row", title: "Remove author row", class: "idb-compact-action", data: { action: "deposit-form#removeRow" }
       .idb-creator-add-row
-        = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", title: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
+        = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
 
 %template{data: { deposit_form_target: "creatorTemplate" }}
   - if creator_mode_org
@@ -198,7 +198,7 @@
           = cf.text_field :identifier, placeholder: "0000-0000-0000-0000", data: { orcidField: true }
           = cf.hidden_field :identifier_scheme, value: "ORCID"
         %td
-          %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCID
+          %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCiD
         %td
           = cf.label :email, "Email", class: "sr-only"
           = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
