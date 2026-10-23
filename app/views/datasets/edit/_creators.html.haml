@@ -8,6 +8,7 @@
     %span.idb-inline-help-row
       = contextual_help_link prompt: "what's an author?", url: policies_path(anchor: "creator-definition")
   .idb-section-body
+    %p#creator-email-help Email addresses are optional when saving a draft, but required for every author before publishing.
     - if can?(:manage, dataset)
       .idb-curator-only-section
         %p.idb-curator-only-kicker Curator Only
@@ -32,7 +33,7 @@
       - creators_for_mode = creator_mode_org ? dataset.institutional_creators : dataset.individual_creators
 
     - if creator_mode_org
-      %p One primary long-term contact must be selected from the organizational author list.
+      %p#creator-contact-help A primary long-term contact is optional when saving a draft, but one must be selected from the organizational author list before publishing.
 
       %table.idb-compact-table.idb-compact-table-org.creators-table
         %thead
@@ -44,11 +45,11 @@
             %th
               Email
               %span.idb-required-indicator{aria: { hidden: true }} *
-              %span.sr-only required
+              %span.sr-only required before publishing
             %th
               Primary Contact
               %span.idb-required-indicator{aria: { hidden: true }} *
-              %span.sr-only required
+              %span.sr-only required before publishing
               .idb-inline-help-row
                 = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
             %th.idb-actions-header-cell
@@ -62,15 +63,15 @@
                   = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
                   = cf.hidden_field :row_position, value: (cf.object.row_position || cf.object.position || (index + 1))
                   = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
-                  = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
-                  = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                  = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contact_field: true }
+                  = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { is_contact_field: true }
                   = cf.label :institution_name, "Organization Name(s)", class: "sr-only"
                   = cf.text_field :institution_name, value: (cf.object.institution_name.presence || cf.object.name), placeholder: "[Organization Name]", required: true
                 %td
                   = cf.label :email, "Email", class: "sr-only"
-                  = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
+                  = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", aria: { describedby: "creator-email-help" }
                 %td.idb-contact-cell
-                  %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                  %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact", describedby: "creator-contact-help" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
                 %td.idb-row-actions.idb-creator-row-actions
                   = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, disabled: index.zero?, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
                   = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, disabled: index == creators_for_mode.size - 1, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -78,7 +79,7 @@
       .idb-creator-add-row
         = semantic_action_button action: :add, style: :idb, type: "button", aria_label: "Add author row", label: "Add author row", data: { action: "deposit-form#addCreatorRow" }
     - else
-      %p One primary long-term contact must be selected from the individual author list.
+      %p#creator-contact-help A primary long-term contact is optional when saving a draft, but one must be selected from the individual author list before publishing.
 
       %table.idb-compact-table.idb-compact-table-individual.creators-table
         %thead
@@ -103,11 +104,11 @@
             %th
               Email
               %span.idb-required-indicator{aria: { hidden: true }} *
-              %span.sr-only required
+              %span.sr-only required before publishing
             %th
               Primary Contact
               %span.idb-required-indicator{aria: { hidden: true }} *
-              %span.sr-only required
+              %span.sr-only required before publishing
               .idb-inline-help-row
                 = contextual_help_link prompt: "what's a primary contact?", url: pre_deposit_datasets_path(anchor: "predeposit-contact")
             %th
@@ -121,8 +122,8 @@
                   = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
                   = cf.hidden_field :row_position, value: (cf.object.row_position || cf.object.position || (index + 1))
                   = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
-                  = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contactField: true }
-                  = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { isContactField: true }
+                  = cf.hidden_field :contact, value: (creator.contact_selected? ? true : false), data: { contact_field: true }
+                  = cf.hidden_field :is_contact, value: (creator.contact_selected? ? true : false), data: { is_contact_field: true }
                   = cf.label :family_name, "Family Name(s)", class: "sr-only"
                   = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
                 %td
@@ -136,9 +137,9 @@
                   %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCiD
                 %td
                   = cf.label :email, "Email", class: "sr-only"
-                  = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
+                  = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", aria: { describedby: "creator-email-help" }
                 %td.idb-contact-cell
-                  %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+                  %input{type: "radio", name: "primary_contact_index", value: index, checked: creator.contact_selected?, aria: { label: "Primary Contact", describedby: "creator-contact-help" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
                 %td.idb-row-actions.idb-creator-row-actions
                   = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, disabled: index.zero?, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
                   = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, disabled: index == creators_for_mode.size - 1, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -154,15 +155,15 @@
           = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
           = cf.hidden_field :row_position, value: 999
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_INSTITUTION, data: { creatorType: true }
-          = cf.hidden_field :contact, value: false, data: { contactField: true }
-          = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.hidden_field :contact, value: false, data: { contact_field: true }
+          = cf.hidden_field :is_contact, value: false, data: { is_contact_field: true }
           = cf.label :institution_name, "Organization Name(s)", class: "sr-only"
           = cf.text_field :institution_name, placeholder: "[Organization Name]", required: true
         %td
           = cf.label :email, "Email", class: "sr-only"
-          = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", required: true
+          = cf.email_field :email, placeholder: "[e.g.: creator@institute.org]", aria: { describedby: "creator-email-help" }
         %td.idb-contact-cell
-          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact", describedby: "creator-contact-help" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
         %td.idb-row-actions.idb-creator-row-actions
           = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
           = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }
@@ -174,8 +175,8 @@
           = cf.hidden_field :_destroy, value: false, data: { destroyField: true }
           = cf.hidden_field :row_position, value: 999
           = cf.hidden_field :type_of, value: Dataset::CREATOR_TYPE_PERSON, data: { creatorType: true }
-          = cf.hidden_field :contact, value: false, data: { contactField: true }
-          = cf.hidden_field :is_contact, value: false, data: { isContactField: true }
+          = cf.hidden_field :contact, value: false, data: { contact_field: true }
+          = cf.hidden_field :is_contact, value: false, data: { is_contact_field: true }
           = cf.label :family_name, "Family Name(s)", class: "sr-only"
           = cf.text_field :family_name, placeholder: "[e.g.: Smith]", required: true
         %td
@@ -189,9 +190,9 @@
           %button.idb-button-secondary{type: "button", disabled: !orcid_lookup_enabled, data: { action: "deposit-form#openOrcidLookup" }} Look Up ORCiD
         %td
           = cf.label :email, "Email", class: "sr-only"
-          = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", required: true
+          = cf.email_field :email, placeholder: "[e.g.: netid@illinois.edu]", aria: { describedby: "creator-email-help" }
         %td.idb-contact-cell
-          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", required: true, aria: { label: "Primary Contact" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
+          %input{type: "radio", name: "primary_contact_index", value: "NEW_CREATOR", aria: { label: "Primary Contact", describedby: "creator-contact-help" }, data: { action: "change->deposit-form#syncPrimaryContact" }}
         %td.idb-row-actions.idb-creator-row-actions
           = semantic_action_button action: :up, style: :idb, type: "button", icon_only: true, aria_label: "Move author row up", title: "Move author row up", class: "idb-compact-action", data: { action: "deposit-form#moveRowUp" }
           = semantic_action_button action: :down, style: :idb, type: "button", icon_only: true, aria_label: "Move author row down", title: "Move author row down", class: "idb-compact-action", data: { action: "deposit-form#moveRowDown" }

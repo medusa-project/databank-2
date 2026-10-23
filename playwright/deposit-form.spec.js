@@ -85,6 +85,97 @@ async function expectCreatorOrderingControls(page) {
 }
 
 test.describe("deposit form parity behavior", () => {
+  for (const mode of ["individual", "organization"]) {
+    test(`saves ${mode} creators with blank emails and no primary contact while validating supplied emails`, async ({ page }) => {
+      await signInWithDeveloperAuthRole(page, "admin");
+      await createDatasetAndOpenEdit(page);
+      await page.locator("#dataset-curation summary").click();
+      await page.locator("#dataset_identifier").fill(`10.5555/EMAIL-${Date.now()}`);
+
+      if (mode === "organization") {
+        await fillIndividualCreatorRow(page, 0, {
+          familyName: "Initial",
+          givenName: "Author",
+          email: "",
+        });
+        await page.getByRole("button", { name: "Use Organization Creators" }).click();
+        await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+        await page.getByRole("link", { name: "Edit", exact: true }).click();
+      }
+
+      for (const name of ["Email", "Primary Contact"]) {
+        const header = page.getByRole("columnheader", {
+          name: new RegExp(`${name}.*required before publishing`),
+        });
+        await expect(header.locator(".idb-required-indicator")).toHaveText("*");
+      }
+
+      await addCreatorRowFromToolbar(page);
+      const rows = page.locator("#creator-rows .idb-nested-row");
+      await expect(rows).toHaveCount(2);
+      for (let index = 0; index < 2; index++) {
+        if (mode === "organization") {
+          await fillOrganizationCreatorRow(page, index, {
+            institutionName: `Organization ${index}`,
+            email: "",
+          });
+        } else {
+          await fillIndividualCreatorRow(page, index, {
+            familyName: `Author ${index}`,
+            givenName: "Draft",
+            email: "",
+          });
+        }
+        const email = rows.nth(index).getByLabel("Email", { exact: true });
+        await expect(email).not.toHaveAttribute("required");
+        await expect(email).toHaveAccessibleDescription(/optional when saving a draft/);
+        expect(await email.evaluate((field) => field.checkValidity())).toBe(true);
+        await email.fill("not-an-email");
+        expect(await email.evaluate((field) => field.validity.typeMismatch)).toBe(true);
+        await email.fill("");
+        const contact = rows.nth(index).getByRole("radio", { name: "Primary Contact", exact: true });
+        await expect(contact).not.toHaveAttribute("required");
+        await expect(contact).toHaveAccessibleDescription(/optional when saving a draft/);
+        await expect(contact).not.toBeChecked();
+      }
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows).toHaveCount(2);
+      for (const row of await rows.all()) {
+        await expect(row.getByLabel("Email", { exact: true })).toHaveValue("");
+        await expect(row.getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+      }
+      await selectPrimaryContact(page, 1);
+      await expect(rows.nth(1).locator('input[name$="[contact]"]')).toHaveValue("true");
+      await expect(rows.nth(1).locator('input[name$="[is_contact]"]')).toHaveValue("true");
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await expect(page.locator("main")).not.toContainText("contact creator");
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows.nth(1).getByRole("radio", { name: "Primary Contact", exact: true })).toBeChecked();
+      await expect(rows.nth(0).getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+
+      await addCreatorRowFromToolbar(page);
+      if (mode === "organization") {
+        await fillOrganizationCreatorRow(page, 2, { institutionName: "New contact organization", email: "" });
+      } else {
+        await fillIndividualCreatorRow(page, 2, { familyName: "Contact", givenName: "New", email: "" });
+      }
+      await selectPrimaryContact(page, 2);
+      await expect(rows.nth(2).locator('input[name$="[contact]"]')).toHaveValue("true");
+      await expect(rows.nth(2).locator('input[name$="[is_contact]"]')).toHaveValue("true");
+      await expect(rows.nth(1).locator('input[name$="[contact]"]')).toHaveValue("false");
+      await expect(rows.nth(1).locator('input[name$="[is_contact]"]')).toHaveValue("false");
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await expect(page.locator("main")).not.toContainText("contact creator");
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows.nth(2).getByRole("radio", { name: "Primary Contact", exact: true })).toBeChecked();
+      await expect(rows.nth(1).getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+    });
+  }
+
   test("submits draft workflow actions by keyboard and keeps deletion independent", async ({
     page,
   }) => {

@@ -31,6 +31,16 @@ up/down arrow buttons. The first author's up arrow and last author's down arrow
 are disabled; both are disabled for a single author. These states update when
 authors are added, removed, or moved. Drag-and-drop ordering is not offered.
 
+Creator email addresses may be left blank when saving drafts. Every creator must
+have an email address before publication. The form validates the format of
+non-empty email fields.
+
+A draft may also be saved without a selected primary contact. One primary contact
+must be selected before publication. The Email and Primary Contact asterisks
+indicate publication requirements, not requirements for saving a draft.
+When a primary contact is selected, Save & Continue saves that selection on the
+creator record, including newly added authors.
+
 ## Private dataset sharing
 
 Dataset owners, editors, and curators can generate and revoke a private sharing
