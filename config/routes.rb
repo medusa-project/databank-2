@@ -55,6 +55,8 @@ Rails.application.routes.draw do
       get :download_link, defaults: { format: :json }
       post :copy_version_files
       get :open_in_granite
+      get :open_in_globus
+      post :import_from_globus
       post "approve_version_request/:version_request_id", action: :approve_version_request, as: :approve_version_request
       post "reject_version_request/:version_request_id", action: :reject_version_request, as: :reject_version_request
       post :publish

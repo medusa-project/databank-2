@@ -1,9 +1,9 @@
 class DatasetsController < ApplicationController
   include ShareCodeAccess
 
-  skip_before_action :authenticate_user!, only: %i[index pre_deposit show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite]
+  skip_before_action :authenticate_user!, only: %i[index pre_deposit show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite open_in_globus]
 
-  before_action :set_dataset, only: %i[show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token share remove_sharing_link]
+  before_action :set_dataset, only: %i[show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite open_in_globus import_from_globus confirm_review request_review edit update publish replay_failed_deliveries create_version copy_version_files pre_version version_controls suppression_controls suppression_action suppress_changelog unsuppress_changelog temporarily_suppress_files temporarily_suppress_metadata unsuppress permanently_suppress_files permanently_suppress_metadata suppress_review unsuppress_review draft_to_version version_to_draft submit_version_request version_acknowledge approve_version_request reject_version_request get_current_token get_new_token share remove_sharing_link]
 
   def share
     authorize! :update, @dataset
@@ -194,6 +194,32 @@ class DatasetsController < ApplicationController
        render json: return_hash, content_type: request.format
      end
    end
+
+  def open_in_globus
+    authorize! :view_files, @dataset
+    unless @dataset.globus_downloadable?
+      redirect_to dataset_path(@dataset), alert: "Files are not currently available for public download through Globus."
+      return
+    end
+
+    url = @dataset.globus_download_dir
+    @dataset.datafiles.find_each { |datafile| datafile.record_download(request.remote_ip) }
+    redirect_to url, allow_other_host: true
+  rescue Dataset::Globusable::Error => e
+    Rails.logger.error("Globus download failed for #{@dataset.key}: #{e.message}")
+    redirect_to dataset_path(@dataset), alert: "Globus download is not configured correctly. Please contact the Research Data Service."
+  end
+
+  def import_from_globus
+    authorize! :manage, @dataset
+
+    result = @dataset.import_from_globus
+    status = result[:failed].positive? || result[:skipped_invalid].positive? ? :unprocessable_content : :ok
+    globus_import_response(result, status: status)
+  rescue Dataset::Globusable::Error, MedusaStorage::InvalidKeyError, Aws::S3::Errors::ServiceError => e
+    Rails.logger.error("Globus import failed for #{@dataset.key}: #{e.class}: #{e.message}")
+    globus_import_response({ error: "Could not import files from Globus. Please verify the ingest directory and try again." }, status: :unprocessable_content)
+  end
 
   def open_in_granite
     authorize! :view_files, @dataset
@@ -753,6 +779,19 @@ class DatasetsController < ApplicationController
   end
 
   private
+
+  def globus_import_response(result, status:)
+    respond_to do |format|
+      format.json { render json: result, status: status }
+      format.html do
+        if status == :ok
+          redirect_to edit_dataset_path(@dataset), notice: "Imported #{result[:created]} file(s) from Globus; skipped #{result[:skipped_existing]} existing file(s)."
+        else
+          redirect_to edit_dataset_path(@dataset), alert: result[:error] || "Some Globus files could not be imported. Imported #{result[:created]} file(s); failed #{result[:failed]}; invalid #{result[:skipped_invalid]}. Check the logs before retrying."
+        end
+      end
+    end
+  end
 
   def send_citation_export(content, type:, extension:)
     authorize! :read, @dataset

@@ -587,7 +587,7 @@
 .dataset-show-metadata {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  align-items: end;
+  align-items: start;
   gap: 0.55rem 1rem;
   margin: 0;
   padding: 1rem;

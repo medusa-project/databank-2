@@ -717,6 +717,39 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(dataset.corresponding_creator_email).to be_nil
   end
 
+  it "saves a draft without a primary contact but blocks publication" do
+    sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
+
+    post datasets_path, params: { dataset: { title: "Draft without primary contact" } }
+    dataset = Dataset.order(:created_at).last
+    post dataset_datafiles_path(dataset), params: {
+      datafile: {
+        binary: Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/analysis.csv"), "text/csv")
+      }
+    }
+
+    patch dataset_path(dataset), params: {
+      dataset: {
+        creators_attributes: {
+          "0" => { name: "Draft Author", email: "author@example.edu", contact: false, is_contact: false, position: 1 }
+        }
+      }
+    }
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    expect(dataset.reload).to be_draft
+    expect(dataset.creators.count).to eq(1)
+    expect(dataset.creators.none?(&:contact_selected?)).to be(true)
+    expect(dataset.missing_publish_fields).to eq([ "contact creator" ])
+
+    post publish_dataset_path(dataset)
+
+    expect(response).to redirect_to(dataset_path(dataset))
+    follow_redirect!
+    expect(response.body).to include("Cannot publish: contact creator required.")
+    expect(dataset.reload).to be_draft
+  end
+
   it "blocks publish until every creator has an email address" do
     sign_in_as(email: "owner@example.edu", name: "Owner User", role: "depositor")
 
@@ -748,6 +781,12 @@ RSpec.describe "Datasets workflow", type: :request do
         position: 2
       }
     }
+    expect(response).to have_http_status(:redirect)
+    expect(dataset.creators.find_by!(name: "Creator Two").email).to be_blank
+
+    patch dataset_path(dataset), params: { dataset: { title: "Updated draft with missing creator email" } }
+    expect(response).to redirect_to(dataset_path(dataset))
+    expect(dataset.reload.title).to eq("Updated draft with missing creator email")
 
     csv_fixture = Rails.root.join("test/fixtures/files/analysis.csv")
     uploaded_file = Rack::Test::UploadedFile.new(csv_fixture, "text/csv")

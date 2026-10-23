@@ -65,16 +65,139 @@ async function selectPrimaryContact(page, index = 0) {
     .check();
 }
 
+async function expectCreatorOrderingControls(page) {
+  const rows = page.locator("#creator-rows .idb-nested-row:visible");
+  const count = await rows.count();
+  for (let index = 0; index < count; index++) {
+    const row = rows.nth(index);
+    const up = row.getByRole("button", { name: "Move author row up" });
+    const down = row.getByRole("button", { name: "Move author row down" });
+    if (index === 0) await expect(up).toBeDisabled();
+    else await expect(up).toBeEnabled();
+    if (index === count - 1) await expect(down).toBeDisabled();
+    else await expect(down).toBeEnabled();
+    await expect(row.locator('input[name*="[row_position]"]')).toHaveValue(
+      String(index + 1),
+    );
+  }
+  await expect(page.locator(".idb-drag-cell")).toHaveCount(0);
+  await expect(page.getByRole("columnheader", { name: "Reorder", exact: true })).toHaveCount(0);
+}
+
 test.describe("deposit form parity behavior", () => {
-  test("submits draft workflow actions by keyboard and keeps deletion independent", async ({ page }) => {
+  for (const mode of ["individual", "organization"]) {
+    test(`saves ${mode} creators with blank emails and no primary contact while validating supplied emails`, async ({ page }) => {
+      await signInWithDeveloperAuthRole(page, "admin");
+      await createDatasetAndOpenEdit(page);
+      await page.locator("#dataset-curation summary").click();
+      await page.locator("#dataset_identifier").fill(`10.5555/EMAIL-${Date.now()}`);
+
+      if (mode === "organization") {
+        await fillIndividualCreatorRow(page, 0, {
+          familyName: "Initial",
+          givenName: "Author",
+          email: "",
+        });
+        await page.getByRole("button", { name: "Use Organization Creators" }).click();
+        await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+        await page.getByRole("link", { name: "Edit", exact: true }).click();
+      }
+
+      for (const name of ["Email", "Primary Contact"]) {
+        const header = page.getByRole("columnheader", {
+          name: new RegExp(`${name}.*required before publishing`),
+        });
+        await expect(header.locator(".idb-required-indicator")).toHaveText("*");
+      }
+
+      await addCreatorRowFromToolbar(page);
+      const rows = page.locator("#creator-rows .idb-nested-row");
+      await expect(rows).toHaveCount(2);
+      for (let index = 0; index < 2; index++) {
+        if (mode === "organization") {
+          await fillOrganizationCreatorRow(page, index, {
+            institutionName: `Organization ${index}`,
+            email: "",
+          });
+        } else {
+          await fillIndividualCreatorRow(page, index, {
+            familyName: `Author ${index}`,
+            givenName: "Draft",
+            email: "",
+          });
+        }
+        const email = rows.nth(index).getByLabel("Email", { exact: true });
+        await expect(email).not.toHaveAttribute("required");
+        await expect(email).toHaveAccessibleDescription(/optional when saving a draft/);
+        expect(await email.evaluate((field) => field.checkValidity())).toBe(true);
+        await email.fill("not-an-email");
+        expect(await email.evaluate((field) => field.validity.typeMismatch)).toBe(true);
+        await email.fill("");
+        const contact = rows.nth(index).getByRole("radio", { name: "Primary Contact", exact: true });
+        await expect(contact).not.toHaveAttribute("required");
+        await expect(contact).toHaveAccessibleDescription(/optional when saving a draft/);
+        await expect(contact).not.toBeChecked();
+      }
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows).toHaveCount(2);
+      for (const row of await rows.all()) {
+        await expect(row.getByLabel("Email", { exact: true })).toHaveValue("");
+        await expect(row.getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+      }
+      await selectPrimaryContact(page, 1);
+      await expect(rows.nth(1).locator('input[name$="[contact]"]')).toHaveValue("true");
+      await expect(rows.nth(1).locator('input[name$="[is_contact]"]')).toHaveValue("true");
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await expect(page.locator("main")).not.toContainText("contact creator");
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows.nth(1).getByRole("radio", { name: "Primary Contact", exact: true })).toBeChecked();
+      await expect(rows.nth(0).getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+
+      await addCreatorRowFromToolbar(page);
+      if (mode === "organization") {
+        await fillOrganizationCreatorRow(page, 2, { institutionName: "New contact organization", email: "" });
+      } else {
+        await fillIndividualCreatorRow(page, 2, { familyName: "Contact", givenName: "New", email: "" });
+      }
+      await selectPrimaryContact(page, 2);
+      await expect(rows.nth(2).locator('input[name$="[contact]"]')).toHaveValue("true");
+      await expect(rows.nth(2).locator('input[name$="[is_contact]"]')).toHaveValue("true");
+      await expect(rows.nth(1).locator('input[name$="[contact]"]')).toHaveValue("false");
+      await expect(rows.nth(1).locator('input[name$="[is_contact]"]')).toHaveValue("false");
+      await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+      await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
+      await expect(page.locator("main")).not.toContainText("contact creator");
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(rows.nth(2).getByRole("radio", { name: "Primary Contact", exact: true })).toBeChecked();
+      await expect(rows.nth(1).getByRole("radio", { name: "Primary Contact", exact: true })).not.toBeChecked();
+    });
+  }
+
+  test("submits draft workflow actions by keyboard and keeps deletion independent", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);
     const editPath = new URL(page.url()).pathname;
     const showPath = editPath.replace(/\/edit$/, "");
 
-    await expect.poll(() => page.locator("#dataset-edit-form").evaluate((form) =>
-      Boolean(window.Stimulus?.getControllerForElementAndIdentifier(form, "deposit-form")),
-    )).toBe(true);
+    await expect
+      .poll(() =>
+        page
+          .locator("#dataset-edit-form")
+          .evaluate((form) =>
+            Boolean(
+              window.Stimulus?.getControllerForElementAndIdentifier(
+                form,
+                "deposit-form",
+              ),
+            ),
+          ),
+      )
+      .toBe(true);
     await fillIndividualCreatorRow(page, 0, {
       familyName: "Workflow",
       givenName: "Tester",
@@ -83,13 +206,18 @@ test.describe("deposit form parity behavior", () => {
     await selectPrimaryContact(page);
     const title = `Workflow save ${Date.now()}`;
     await page.locator('input[name="dataset[title]"]').fill(title);
-    const save = page.getByRole("button", { name: "Save & Continue", exact: true });
+    const save = page.getByRole("button", {
+      name: "Save & Continue",
+      exact: true,
+    });
     await save.focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`${showPath}$`));
 
     await page.goto(editPath);
-    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(title);
+    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(
+      title,
+    );
     await page.locator('input[name="dataset[title]"]').fill(`${title} exit`);
     await selectPrimaryContact(page);
     const exit = page.getByRole("button", { name: "Save & Exit", exact: true });
@@ -98,12 +226,16 @@ test.describe("deposit form parity behavior", () => {
     await expect(page).toHaveURL(/\/datasets$/);
 
     await page.goto(editPath);
-    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(`${title} exit`);
+    await expect(page.locator('input[name="dataset[title]"]')).toHaveValue(
+      `${title} exit`,
+    );
     const remove = page.getByRole("button", { name: "Delete", exact: true });
     await expect(remove).toHaveAttribute("form", "dataset-delete-form");
   });
 
-  test("labels individual creator fields in initial and added rows", async ({ page }) => {
+  test("labels individual creator fields in initial and added rows", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);
     await addCreatorRowFromToolbar(page);
@@ -111,43 +243,70 @@ test.describe("deposit form parity behavior", () => {
     const rows = page.locator("#creator-rows .idb-nested-row");
     await expect(rows).toHaveCount(2);
     for (const row of await rows.all()) {
-      for (const name of ["Family Name(s)", "Given Name(s)", "ORCID", "Email"]) {
+      for (const name of [
+        "Family Name(s)",
+        "Given Name(s)",
+        "ORCID",
+        "Email",
+      ]) {
         const field = row.getByLabel(name, { exact: false });
         await expect(field).toHaveCount(1);
-        await expect(field).toHaveAccessibleName(new RegExp(`^${name.replace(/[()]/g, "\\$&")}\\s*\\*?$`));
+        await expect(field).toHaveAccessibleName(
+          new RegExp(`^${name.replace(/[()]/g, "\\$&")}\\s*\\*?$`),
+        );
       }
     }
     const results = await new AxeBuilder({ page }).include("main").analyze();
     expect(results.violations).toEqual([]);
   });
 
-  test("labels organization creator fields in initial and added rows", async ({ page }) => {
+  test("labels organization creator fields in initial and added rows", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuthRole(page, "admin");
     await createDatasetAndOpenEdit(page);
     await page.locator("#dataset-curation summary").click();
-    await page.locator("#dataset_identifier").fill(`10.5555/LABELS-${Date.now()}`);
+    await page
+      .locator("#dataset_identifier")
+      .fill(`10.5555/LABELS-${Date.now()}`);
     await fillIndividualCreatorRow(page, 0, {
-      familyName: "Smith", givenName: "Jean", email: "jean@example.test",
+      familyName: "Smith",
+      givenName: "Jean",
+      email: "jean@example.test",
     });
     await selectPrimaryContact(page);
-    await page.getByRole("button", { name: "Use Organization Creators" }).click();
+    await page
+      .getByRole("button", { name: "Use Organization Creators" })
+      .click();
     await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
-    await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
-    await expect(page.locator('#creator-rows input[name*="[institution_name]"]')).toBeVisible();
+    await page.getByRole("link", { name: "Edit", exact: true }).click();
+    await expect(
+      page.locator('#creator-rows input[name*="[institution_name]"]'),
+    ).toBeVisible();
     await expect(page.locator("#dataset_org_creators")).toHaveValue("true");
+    await expectCreatorOrderingControls(page);
     await addCreatorRowFromToolbar(page);
 
     const rows = page.locator("#creator-rows .idb-nested-row");
     await expect(rows).toHaveCount(2);
+    await expectCreatorOrderingControls(page);
+    await rows.nth(1).getByRole("button", { name: "Move author row up" }).click();
+    await expectCreatorOrderingControls(page);
+    await rows.nth(0).getByRole("button", { name: "Move author row down" }).click();
+    await expectCreatorOrderingControls(page);
     for (const row of await rows.all()) {
       for (const name of ["Organization Name(s)", "Email"]) {
         const field = row.getByLabel(name, { exact: false });
         await expect(field).toHaveCount(1);
-        await expect(field).toHaveAccessibleName(new RegExp(`^${name.replace(/[()]/g, "\\$&")}\\s*\\*?$`));
+        await expect(field).toHaveAccessibleName(
+          new RegExp(`^${name.replace(/[()]/g, "\\$&")}\\s*\\*?$`),
+        );
       }
     }
-    for (const disclosure of await page.locator("main details.idb-section-disclosure").all()) {
-      if (await disclosure.getAttribute("open") === null) {
+    for (const disclosure of await page
+      .locator("main details.idb-section-disclosure")
+      .all()) {
+      if ((await disclosure.getAttribute("open")) === null) {
         await disclosure.locator(":scope > summary").click();
       }
     }
@@ -155,10 +314,15 @@ test.describe("deposit form parity behavior", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("keeps keyboard focus usable when adding, reordering, and removing creators", async ({ page }) => {
+  test("keeps keyboard focus usable when adding, reordering, and removing creators", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);
-    const add = page.getByRole("button", { name: "Add author row", exact: true });
+    const add = page.getByRole("button", {
+      name: "Add author row",
+      exact: true,
+    });
     await add.focus();
     await page.keyboard.press("Enter");
     const rows = page.locator("#creator-rows .idb-nested-row");
@@ -166,62 +330,136 @@ test.describe("deposit form parity behavior", () => {
     const up = rows.nth(1).getByRole("button", { name: "Move author row up" });
     await up.focus();
     await page.keyboard.press("Enter");
-    await expect(rows.nth(0).getByRole("button", { name: "Move author row up" })).toBeFocused();
-    await rows.nth(0).getByRole("button", { name: "Remove author row" }).focus();
+    await expect(
+      rows.nth(0).getByRole("button", { name: "Move author row down" }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(
+      rows.nth(1).getByRole("button", { name: "Move author row up" }),
+    ).toBeFocused();
+    await rows
+      .nth(0)
+      .getByRole("button", { name: "Remove author row" })
+      .focus();
     await page.keyboard.press("Enter");
     await expect(rows.nth(0).getByLabel("Family Name(s)")).toBeFocused();
-    await rows.nth(0).getByRole("button", { name: "Remove author row" }).focus();
+    await rows
+      .nth(0)
+      .getByRole("button", { name: "Remove author row" })
+      .focus();
     await page.keyboard.press("Enter");
     await expect(add).toBeFocused();
   });
 
-  test("keeps access grants separate from dataset editing and submits them independently", async ({ page }) => {
+  test("keeps access grants separate from dataset editing and submits them independently", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuthRole(page, "admin");
     await createDatasetAndOpenEdit(page);
     await page.locator("#dataset-curation summary").click();
     const email = page.getByLabel("Grant recipient email");
-    expect(await email.evaluate((field) => field.form.id)).toBe("dataset-access-grant-form");
-    expect(await page.locator("#dataset_title").evaluate((field) => field.form.id)).toBe("dataset-edit-form");
-    expect(await page.locator("#dataset_description").evaluate((field) => field.form.id)).toBe("dataset-edit-form");
+    expect(await email.evaluate((field) => field.form.id)).toBe(
+      "dataset-access-grant-form",
+    );
+    expect(
+      await page.locator("#dataset_title").evaluate((field) => field.form.id),
+    ).toBe("dataset-edit-form");
+    expect(
+      await page
+        .locator("#dataset_description")
+        .evaluate((field) => field.form.id),
+    ).toBe("dataset-edit-form");
     const recipient = `reviewer-${Date.now()}@example.test`;
     await email.fill(recipient);
-    await page.getByRole("button", { name: "Grant Access", exact: true }).click();
-    await expect(page.getByText("Dataset access grant added.", { exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: "Grant Access", exact: true })
+      .click();
+    await expect(
+      page.getByText("Dataset access grant added.", { exact: true }),
+    ).toBeVisible();
     await page.locator("#dataset-curation summary").click();
-    await expect(page.getByRole("cell", { name: recipient, exact: true })).toBeVisible();
-    const remove = page.getByRole("button", { name: `Remove access for ${recipient}`, exact: true });
+    await expect(
+      page.getByRole("cell", { name: recipient, exact: true }),
+    ).toBeVisible();
+    const remove = page.getByRole("button", {
+      name: `Remove access for ${recipient}`,
+      exact: true,
+    });
     page.once("dialog", (dialog) => dialog.accept());
     await remove.click();
-    await expect(page.getByText("Dataset access grant removed.", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Dataset access grant removed.", { exact: true }),
+    ).toBeVisible();
     await page.locator("#dataset-curation summary").click();
-    await expect(page.getByRole("cell", { name: recipient, exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("cell", { name: recipient, exact: true }),
+    ).toHaveCount(0);
   });
 
-  test("opens the file chooser through a keyboard-operable button", async ({ page }) => {
+  test("opens the file chooser through a keyboard-operable button", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("aria-label", "Select files from your computer");
-    await expect.poll(() => page.locator(".idb-file-upload-section").evaluate(
-      (element) => !!window.Stimulus?.getControllerForElementAndIdentifier(element, "file-upload"),
-    )).toBe(true);
-    await page.getByRole("button", { name: "Select files from your computer" }).focus();
+    await expect(page.locator('input[type="file"]')).toHaveAttribute(
+      "aria-label",
+      "Select files from your computer",
+    );
+    await expect
+      .poll(() =>
+        page
+          .locator(".idb-file-upload-section")
+          .evaluate(
+            (element) =>
+              !!window.Stimulus?.getControllerForElementAndIdentifier(
+                element,
+                "file-upload",
+              ),
+          ),
+      )
+      .toBe(true);
+    await page
+      .getByRole("button", { name: "Select files from your computer" })
+      .focus();
     const chooser = page.waitForEvent("filechooser");
     await page.keyboard.press("Enter");
     await chooser;
   });
 
-  test("submits file actions independently without validating unsaved creator fields", async ({ page }) => {
+  test("submits file actions independently without validating unsaved creator fields", async ({
+    page,
+  }) => {
     await signInWithDeveloperAuth(page);
     await createDatasetAndOpenEdit(page);
     await page.locator('input[type="file"]').setInputFiles([
-      { name: "first.csv", mimeType: "text/csv", buffer: Buffer.from("value\n1\n") },
-      { name: "second.csv", mimeType: "text/csv", buffer: Buffer.from("value\n2\n") },
-      { name: "third.csv", mimeType: "text/csv", buffer: Buffer.from("value\n3\n") },
+      {
+        name: "first.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("value\n1\n"),
+      },
+      {
+        name: "second.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("value\n2\n"),
+      },
+      {
+        name: "third.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("value\n3\n"),
+      },
     ]);
-    await expect(page.getByRole("button", { name: "Delete first.csv", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Delete first.csv", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Delete first.csv", exact: true })).toHaveCount(0);
-    await page.getByRole("checkbox", { name: "Select all files", exact: true }).check();
+    await expect(
+      page.getByRole("button", { name: "Delete first.csv", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Delete first.csv", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Delete first.csv", exact: true }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("checkbox", { name: "Select all files", exact: true })
+      .check();
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: /Delete Selected/ }).click();
     await expect(page.locator("#datafiles")).toHaveCount(0);
@@ -235,6 +473,7 @@ test.describe("deposit form parity behavior", () => {
     await createDatasetAndOpenEdit(page);
 
     const creatorRows = page.locator("#creator-rows .idb-nested-row");
+    await expectCreatorOrderingControls(page);
 
     await creatorRows
       .nth(0)
@@ -242,6 +481,7 @@ test.describe("deposit form parity behavior", () => {
       .fill("Alpha");
     await addCreatorRowFromToolbar(page);
     await expect(creatorRows).toHaveCount(2);
+    await expectCreatorOrderingControls(page);
     await creatorRows
       .nth(1)
       .locator('input[name*="[family_name]"]')
@@ -265,6 +505,19 @@ test.describe("deposit form parity behavior", () => {
     await expect(
       creatorRows.nth(1).locator('input[name*="[row_position]"]'),
     ).toHaveValue("2");
+    await expectCreatorOrderingControls(page);
+
+    await addCreatorRowFromToolbar(page);
+    await expect(creatorRows).toHaveCount(3);
+    await expectCreatorOrderingControls(page);
+    await creatorRows.nth(1).getByRole("button", { name: "Move author row down" }).click();
+    await expectCreatorOrderingControls(page);
+    await creatorRows.nth(2).getByRole("button", { name: "Remove author row" }).click();
+    await expect(creatorRows).toHaveCount(2);
+    await expectCreatorOrderingControls(page);
+    await creatorRows.nth(0).getByRole("button", { name: "Remove author row" }).click();
+    await expect(creatorRows).toHaveCount(1);
+    await expectCreatorOrderingControls(page);
   });
 
   test("supports ORCID lookup dialog with focus restore and field application", async ({
@@ -299,7 +552,7 @@ test.describe("deposit form parity behavior", () => {
       .locator("#creator-rows .idb-nested-row")
       .first();
     const lookupButton = firstCreatorRow.getByRole("button", {
-      name: "Look Up ORCID",
+      name: "Look Up ORCiD",
       exact: true,
     });
 
@@ -360,7 +613,7 @@ test.describe("deposit form parity behavior", () => {
       .locator("#creator-rows .idb-nested-row")
       .first();
     const lookupButton = firstCreatorRow.getByRole("button", {
-      name: "Look Up ORCID",
+      name: "Look Up ORCiD",
       exact: true,
     });
 
@@ -422,7 +675,7 @@ test.describe("deposit form parity behavior", () => {
       .getByRole("button", { name: "Save & Continue", exact: true })
       .click();
     await expect(page).toHaveURL(/\/datasets\/[^/]+$/);
-    await page.getByRole("link", { name: "Edit Dataset", exact: true }).click();
+    await page.getByRole("link", { name: "Edit", exact: true }).click();
     await expect(page).toHaveURL(/\/datasets\/.*\/edit$/);
 
     const reloadedRows = page.locator("#creator-rows .idb-nested-row");
@@ -439,6 +692,12 @@ test.describe("deposit form parity behavior", () => {
     await expect(
       reloadedRows.nth(1).locator('input[name*="[row_position]"]'),
     ).toHaveValue("2");
+    await expectCreatorOrderingControls(page);
+    await reloadedRows.nth(0).getByRole("button", { name: "Remove author row" }).click();
+    await expect(page.locator("#creator-rows .idb-nested-row:visible")).toHaveCount(1);
+    await expectCreatorOrderingControls(page);
+    await addCreatorRowFromToolbar(page);
+    await expectCreatorOrderingControls(page);
   });
 
   test("collapses core metadata grid to one column on mobile", async ({

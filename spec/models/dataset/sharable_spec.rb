@@ -12,6 +12,7 @@ RSpec.describe Dataset::Sharable, type: :model do
   end
 
   it "builds a configured dataset URL with the current share code" do
+    allow(IdbConfig).to receive(:fetch).and_call_original
     allow(IdbConfig).to receive(:fetch).with(:app, :root_url_text, default: "http://localhost:3000").and_return("https://example.edu")
     code = dataset.create_share_code!.code
 

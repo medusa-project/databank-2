@@ -25,7 +25,7 @@ module Globus
         break if @dataset_limit && summary[:datasets_scanned] >= @dataset_limit
 
         summary[:datasets_scanned] += 1
-        import_dataset(dataset: dataset, summary: summary)
+        dataset.with_lock { import_dataset(dataset: dataset, summary: summary) }
       end
 
       summary
@@ -40,17 +40,29 @@ module Globus
 
     def import_dataset(dataset:, summary:)
       ingest_root = StorageManager.instance.globus_ingest_root
-      unless ingest_root.exist?("#{dataset.key}/")
+      directory_exists = ingest_root.exist?("#{dataset.key}/")
+      unless directory_exists || ingest_root.root_type == :s3
         summary[:records] << { dataset_key: dataset.key, status: :skipped, message: "ingest directory not found" }
         return
       end
 
-      ingest_root.file_keys(dataset.key).sort.each do |storage_key|
+      storage_keys = ingest_root.file_keys(dataset.key).sort
+      if !directory_exists && storage_keys.empty?
+        summary[:records] << { dataset_key: dataset.key, status: :skipped, message: "ingest directory not found" }
+        return
+      end
+
+      storage_keys.each do |storage_key|
         summary[:records_scanned] += 1
 
         binary_name = File.basename(storage_key.to_s)
-        if binary_name.blank?
+        if storage_key.to_s.end_with?("/")
+          next
+        end
+
+        if binary_name.blank? || !storage_key.to_s.start_with?("#{dataset.key}/") || storage_key.to_s.split("/").any? { |part| %w[. ..].include?(part) }
           summary[:skipped_invalid] += 1
+          @logger.warn("Globus::IngestImportService invalid storage key for #{dataset.key}: #{storage_key}")
           summary[:records] << {
             dataset_key: dataset.key,
             storage_key: storage_key,
@@ -86,6 +98,10 @@ module Globus
           next
         end
 
+        unless StorageManager.instance.globus_ingest_uses_draft_storage?
+          StorageManager.instance.draft_root.copy_content_to(storage_key, ingest_root, storage_key)
+        end
+
         datafile = dataset.datafiles.new(
           binary_name: binary_name,
           binary_size: binary_size,
@@ -93,26 +109,19 @@ module Globus
           storage_key: storage_key
         )
 
-        if datafile.save
-          summary[:created] += 1
-          summary[:records] << {
-            dataset_key: dataset.key,
-            storage_key: storage_key,
-            binary_name: binary_name,
-            binary_size: binary_size,
-            status: :created,
-            web_id: datafile.web_id
-          }
-        else
-          summary[:failed] += 1
-          summary[:records] << {
-            dataset_key: dataset.key,
-            storage_key: storage_key,
-            binary_name: binary_name,
-            status: :failed,
-            message: datafile.errors.full_messages.to_sentence
-          }
+        Datafile.transaction(requires_new: true) do
+          datafile.save!
+          dataset.update!(all_globus: false, all_medusa: false) if dataset.all_globus? || dataset.all_medusa?
         end
+        summary[:created] += 1
+        summary[:records] << {
+          dataset_key: dataset.key,
+          storage_key: storage_key,
+          binary_name: binary_name,
+          binary_size: binary_size,
+          status: :created,
+          web_id: datafile.web_id
+        }
       rescue StandardError => e
         summary[:failed] += 1
         summary[:records] << {

@@ -78,13 +78,13 @@ module Dataset::Publishable
   def missing_publish_fields
     missing = []
     missing << "title"            if title.blank?
-    missing << "description"      if description.blank?
     missing << "creators"         if creators.empty?
     missing << "contact creator"  if creators.none?(&:contact_selected?)
     missing << "email address for all creators" if creators.any? { |creator| creator.email.blank? }
     missing << "release date when embargo is file or metadata" if (file_embargoed? || metadata_embargoed?) && release_date.blank?
     missing << "relation type for each related material URI" if related_materials.any? { |material| material.uri.present? && material.relation_types.empty? }
     missing << "depositor contact" if depositor_email.blank?
+    missing << "at least one file" if datafiles.empty?
     missing
   end
 

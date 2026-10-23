@@ -26,13 +26,14 @@ RSpec.describe Globus::SuppressionService, type: :service do
     )
   end
 
-  let(:download_root) { instance_double("MedusaStorage::Root") }
+  let(:download_root) { instance_double("MedusaStorage::Root", root_type: :s3, file_keys: []) }
 
   before do
     allow(StorageManager.instance).to receive(:globus_download_root).and_return(download_root)
   end
 
   it "removes files from the download root and clears all_globus" do
+    allow(download_root).to receive(:exist?).with("IDB-3333333/").and_return(false)
     allow(download_root).to receive(:exist?).with("IDB-3333333/analysis.csv").and_return(true)
     allow(download_root).to receive(:delete_content)
 
@@ -40,6 +41,18 @@ RSpec.describe Globus::SuppressionService, type: :service do
 
     expect(result).to be true
     expect(download_root).to have_received(:delete_content).with("IDB-3333333/analysis.csv")
+    expect(dataset.reload.all_globus).to be false
+  end
+
+  it "also removes orphaned public copies and the directory marker" do
+    allow(download_root).to receive(:exist?).and_return(true)
+    allow(download_root).to receive(:root_type).and_return(:s3)
+    allow(download_root).to receive(:file_keys).with(dataset.key).and_return([ "#{dataset.key}/removed.csv" ])
+    allow(download_root).to receive(:delete_content)
+
+    expect(described_class.new(dataset).remove_from_public_download).to be true
+    expect(download_root).to have_received(:delete_content).with("#{dataset.key}/removed.csv")
+    expect(download_root).to have_received(:delete_content).with("#{dataset.key}/")
     expect(dataset.reload.all_globus).to be false
   end
 

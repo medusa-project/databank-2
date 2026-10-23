@@ -271,8 +271,9 @@
 }
 
 .idb-required-indicator {
-	color: #d50000;
-	font-size: 0.8em;
+	color: #a00000;
+	font-size: 1.1em;
+	font-weight: 700;
 	line-height: 1;
 	margin-left: 0.12rem;
 }
@@ -498,42 +499,58 @@
 	width: 12%;
 }
 
+.idb-compact-table-individual th:nth-child(1),
+.idb-compact-table-individual td:nth-child(1),
+.idb-compact-table-individual th:nth-child(2),
+.idb-compact-table-individual td:nth-child(2),
+.idb-compact-table-individual th:nth-child(3),
+.idb-compact-table-individual td:nth-child(3),
+.idb-compact-table-individual th:nth-child(5),
+.idb-compact-table-individual td:nth-child(5) {
+	width: 18%;
+}
+
+.idb-compact-table-individual th:nth-child(4),
+.idb-compact-table-individual td:nth-child(4) {
+	width: 8%;
+}
+
+.idb-compact-table-individual th:nth-child(6),
+.idb-compact-table-individual td:nth-child(6) {
+	width: 9%;
+	text-align: center;
+}
+
+.idb-compact-table-individual th:nth-child(7),
+.idb-compact-table-individual td:nth-child(7) {
+	width: 11%;
+	text-align: left;
+}
+
 .idb-compact-table-org th:nth-child(1),
 .idb-compact-table-org td:nth-child(1) {
-	width: 4%;
+	width: 56%;
 }
 
 .idb-compact-table-org th:nth-child(2),
 .idb-compact-table-org td:nth-child(2) {
-	width: 52%;
+	width: 24%;
 }
 
 .idb-compact-table-org th:nth-child(3),
 .idb-compact-table-org td:nth-child(3) {
-	width: 24%;
-}
-
-.idb-compact-table-org th:nth-child(4),
-.idb-compact-table-org td:nth-child(4) {
 	width: 10%;
 	text-align: center;
 }
 
-.idb-compact-table-org th:nth-child(5),
-.idb-compact-table-org td:nth-child(5) {
+.idb-compact-table-org th:nth-child(4),
+.idb-compact-table-org td:nth-child(4) {
 	width: 10%;
 }
 
 .creators-table th{
 	background-color: var(--il-blue-90);
 	color: black;
-}
-
-.idb-drag-cell {
-	text-align: center;
-	color: var(--il-storm-50);
-	font-size: 1.1rem;
-	line-height: 2.2rem;
 }
 
 .idb-contact-cell {
@@ -745,7 +762,7 @@
 	margin-bottom: 0.3rem;
 }
 
-.dataset-form-page .idb-citation-preview-label {
+.dataset-form-page .idb-citation-preview-prompt {
 	display: inline;
 	margin: 0 0.35rem 0 0;
 }

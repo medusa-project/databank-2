@@ -25,4 +25,9 @@ class StorageManager
     self.globus_ingest_root = root_set.at("globus_ingest")
     self.tmpdir = IdbConfig.fetch(:storage, :tmpdir, default: Dir.tmpdir)
   end
+
+  def globus_ingest_uses_draft_storage?
+    configs = STORAGE_CONFIG.fetch(:storage).index_by { |root| root.fetch(:name).to_s }
+    configs.fetch("draft").except(:name) == configs.fetch("globus_ingest").except(:name)
+  end
 end

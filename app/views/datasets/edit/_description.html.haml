@@ -4,7 +4,7 @@
       %h2.idb-section-title Description
     .idb-section-body
       %p
-        %label.idb-citation-preview-label{for: "citation-preview"} Citation Preview:
+        %span.idb-citation-preview-prompt Citation Preview:
         %span#citation-preview.idb-citation-preview-value
           = dataset.creators.map(&:display_name).reject(&:blank?).join("; ").presence || "[Creator List]"
           = " "

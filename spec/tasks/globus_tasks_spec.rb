@@ -44,4 +44,16 @@ RSpec.describe "globus tasks" do
 
     copy_task.invoke
   end
+
+  it "keeps the legacy public-copy task name as an alias" do
+    service = instance_double(Globus::PublicCopyService, call: { copied: 0, records: [] })
+    expect(Globus::PublicCopyService).to receive(:new).with(
+      dataset_key: nil, dry_run: false, dataset_limit: 0
+    ).and_return(service)
+    Rake::Task["globus:copy_datasets"].reenable
+
+    Rake::Task["globus:copy_datasets"].invoke
+
+    expect(service).to have_received(:call)
+  end
 end
