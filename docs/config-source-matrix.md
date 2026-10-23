@@ -33,6 +33,9 @@ This matrix summarizes where deployed runtime values should come from.
 | DataCite | `doi.password` | env | credentials | env | yes |
 | Globus | `globus.transfer_endpoint` | env | credentials | env | no |
 | Globus | `globus.transfer_token` | env | credentials | env | yes |
+| Globus | `globus.download_url_base` | env | credentials | env | no |
+| Globus | `globus.ingest_url_base` | env | credentials | env | no |
+| Globus | `globus.only_gb` | env/default | credentials | env/default (`2`) | no |
 | Ingest | `ingest.rabbitmq_url` | env | credentials | env | often yes |
 | downloader | `downloader.endpoint` | env | credentials | env | no |
 | downloader | `downloader.user` | env | credentials | env | yes |

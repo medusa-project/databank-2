@@ -18,6 +18,9 @@ default: &default
     password: <%= ENV.fetch("DATACITE_PASSWORD", "") %>
     strict: <%= ENV.fetch("DATACITE_STRICT", "false") %>
   globus:
+    only_gb: <%= ENV.fetch("GLOBUS_ONLY_GB", "2") %>
+    download_url_base: <%= ENV.fetch("GLOBUS_DOWNLOAD_URL_BASE", "") %>
+    ingest_url_base: <%= ENV.fetch("GLOBUS_INGEST_URL_BASE", "") %>
     transfer_enabled: <%= ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
     transfer_endpoint: <%= ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
     transfer_token: <%= ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>
@@ -91,6 +94,9 @@ demo:
     password: <%= Rails.application.credentials.dig(:datacite, :password) || ENV.fetch("DATACITE_PASSWORD", "") %>
     strict: <%= Rails.application.credentials.dig(:datacite, :strict) || ENV.fetch("DATACITE_STRICT", "false") %>
   globus:
+    only_gb: <%= Rails.application.credentials.dig(:globus, :only_gb) || ENV.fetch("GLOBUS_ONLY_GB", "2") %>
+    download_url_base: <%= Rails.application.credentials.dig(:globus, :download_url_base) || ENV.fetch("GLOBUS_DOWNLOAD_URL_BASE", "") %>
+    ingest_url_base: <%= Rails.application.credentials.dig(:globus, :ingest_url_base) || ENV.fetch("GLOBUS_INGEST_URL_BASE", "") %>
     transfer_enabled: <%= Rails.application.credentials.dig(:globus, :transfer_enabled) || ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
     transfer_endpoint: <%= Rails.application.credentials.dig(:globus, :transfer_endpoint) || ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
     transfer_token: <%= Rails.application.credentials.dig(:globus, :transfer_token) || ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>
@@ -137,6 +143,9 @@ production:
     password: <%= Rails.application.credentials.dig(:datacite, :password) || ENV.fetch("DATACITE_PASSWORD", "") %>
     strict: <%= Rails.application.credentials.dig(:datacite, :strict) || ENV.fetch("DATACITE_STRICT", "false") %>
   globus:
+    only_gb: <%= Rails.application.credentials.dig(:globus, :only_gb) || ENV.fetch("GLOBUS_ONLY_GB", "2") %>
+    download_url_base: <%= Rails.application.credentials.dig(:globus, :download_url_base) || ENV.fetch("GLOBUS_DOWNLOAD_URL_BASE", "") %>
+    ingest_url_base: <%= Rails.application.credentials.dig(:globus, :ingest_url_base) || ENV.fetch("GLOBUS_INGEST_URL_BASE", "") %>
     transfer_enabled: <%= Rails.application.credentials.dig(:globus, :transfer_enabled) || ENV.fetch("ENABLE_GLOBUS_TRANSFER", "false") %>
     transfer_endpoint: <%= Rails.application.credentials.dig(:globus, :transfer_endpoint) || ENV.fetch("GLOBUS_TRANSFER_ENDPOINT", "") %>
     transfer_token: <%= Rails.application.credentials.dig(:globus, :transfer_token) || ENV.fetch("GLOBUS_TRANSFER_TOKEN", "") %>

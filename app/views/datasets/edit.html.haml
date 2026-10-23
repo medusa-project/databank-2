@@ -43,6 +43,8 @@
           -# The delete control is in the workflow strip, outside this form.
 
       - if can?(:manage, @dataset)
+        = form_with url: import_from_globus_dataset_path(@dataset), method: :post, local: true, id: "globus-import-form" do
+          -# The submit button is in the files section, outside this form.
         = form_with model: [@dataset, DatasetAccessGrant.new], local: true, id: "dataset-access-grant-form" do
           -# Controls are associated using the form attribute to avoid nested forms.
         - creator_emails = @dataset.creators.map(&:email).to_set

@@ -111,4 +111,13 @@ RSpec.describe Globus::PublicCopyService, type: :service do
 
     expect(dataset.reload.all_globus).to be false
   end
+
+  it "clears a stale all_globus flag when a public copy is missing" do
+    dataset.update!(all_globus: true)
+    allow(download_root).to receive(:exist?).and_return(false)
+
+    described_class.new(dataset_key: dataset.key).call
+
+    expect(dataset.reload.all_globus).to be false
+  end
 end

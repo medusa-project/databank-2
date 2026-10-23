@@ -23,12 +23,6 @@
                 %button.idb-button-primary{type: "button", data: {action: "custom-downloader#requestDownload"}, id: "request-download-button", disabled: true, aria: {label: "Create a custom zip file with selected files from this dataset"}}
                   %span Get Custom Zip and Download Link for Selected
                   %span#custom-download-count (0)
-              - if globus_downloadable
-                .dataset-files-controls-right
-                  = link_to "Open in Globus", dataset_open_in_globus_path(dataset), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: {label: "Open files in Globus transfer service"}
-                  %a{href: guides_path(anchor: "upload_globus"), target: "_blank", rel: "noopener noreferrer", class: "dataset-help-link", aria: {label: "What is Globus?"}}
-                    %i.far.fa-question-circle
-                    %span what's this?
 
         #download-link-modal{role: "dialog", aria: {labelledby: "download-link-modal-title", hidden: "true"}}
           .modal-content
@@ -38,6 +32,11 @@
               %p#download-link-result
               %p#download-file-size
             %button.idb-button-secondary{type: "button", data: {action: "click->custom-downloader#closeModal"}, aria: {label: "Close download link modal"}} Close
+
+      - if globus_downloadable && can?(:view_files, dataset)
+        .dataset-files-controls
+          = link_to "Open in Globus", open_in_globus_dataset_path(dataset), target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: {label: "Open files in Globus transfer service (opens in a new tab)"}
+          = link_to "What is Globus?", guides_path(anchor: "upload_globus"), target: "_blank", rel: "noopener noreferrer", class: "dataset-help-link"
 
       .dataset-files-list
         - if datafile_count.positive?

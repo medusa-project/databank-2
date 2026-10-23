@@ -8,6 +8,11 @@
       - if can?(:manage, dataset)
         .idb-file-metadata-actions
           = link_to "Advanced File Management", dataset_datafiles_path(dataset), class: "idb-button-primary"
+        .idb-file-metadata-actions
+          - if dataset.globus_ingest_configured?
+            = link_to "Open Globus Ingest Folder", dataset.globus_ingest_dir, target: "_blank", rel: "noopener noreferrer", class: "idb-button-primary", aria: {label: "Open Globus ingest folder (opens in a new tab)"}
+          %button.idb-button-primary{type: "submit", form: "globus-import-form"} Import from Globus
+        %p After a Globus transfer finishes, import the files into this dataset. Existing filenames are skipped; repeat after each transfer to import new files.
 
       - if dataset.draft? && dataset.previous_version_dataset.present? && can?(:update, dataset)
         .idb-file-metadata-actions
