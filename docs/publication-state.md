@@ -19,6 +19,22 @@ Current application values for `Dataset.publication_state` are defined by enum i
 
 ## Important distinction
 
+### Controller organization
+
+[DatasetsController::Publishable](../app/controllers/concerns/datasets_controller/publishable.rb)
+groups the HTTP actions for pre-publication review requests and confirmation,
+publishing, and curator suppression/release controls, including changelog
+suppression. It also owns the suppression action allowlist and suppression service
+helpers. Dataset lookup and authentication callbacks remain in
+[DatasetsController](../app/controllers/datasets_controller.rb).
+
+Version creation and version-request review remain in
+[DatasetsController::Versionable](../app/controllers/concerns/datasets_controller/versionable.rb).
+External-delivery monitoring and replay remain in the controller. This separation
+organizes existing behavior without changing routes, permissions, or responses.
+
+### State and visibility
+
 `publication_state` has only two values (`draft`, `published`).
 
 User-facing labels such as:

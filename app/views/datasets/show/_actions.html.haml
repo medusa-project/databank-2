@@ -10,13 +10,6 @@
           = link_to "Find out more about Pre-Publication review", "/guides#publish", class: "idb-button-primary", target: "_blank", rel: "noopener"
         - else
           = semantic_action_button(action: :submit, label: "Pre-Publication Review", url: request_review_dataset_path(dataset), style: :idb, method: :post)
-      - else
-        %details.idb-completion-info
-          %summary Show Completion Info
-          %p Required elements for a complete dataset are missing:
-          %ul
-            - dataset.missing_publish_fields.each do |field|
-              %li= field
     = semantic_action_button(action: :edit, label: dataset.draft? ? 'Edit draft' : 'Edit metadata of this published dataset', url: edit_dataset_path(dataset), style: :idb)
 
     - if dataset.version_eligible?

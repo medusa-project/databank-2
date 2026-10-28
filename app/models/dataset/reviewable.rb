@@ -18,6 +18,10 @@ module Dataset::Reviewable
     review_requests.where(modified: false).update_all(modified: true, updated_at: Time.current)
   end
 
+  def in_pre_publication_review?
+    draft? && latest_review_request.present?
+  end
+
   private
 
   def mark_review_requests_modified
