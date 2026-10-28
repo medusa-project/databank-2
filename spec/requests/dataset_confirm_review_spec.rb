@@ -16,7 +16,9 @@ RSpec.describe "Dataset confirm review", type: :request do
     get confirm_review_dataset_path(dataset)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Pre-Publication Review Request Received")
+    document = Nokogiri::HTML(response.body)
+    headings = document.css("main h1").map(&:text)
+    expect(headings).to eq([ "Pre-Publication Review Request Received" ])
   end
 
   it "requires sign in for a non-public draft dataset" do

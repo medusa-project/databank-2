@@ -3,6 +3,7 @@ class Dataset < ApplicationRecord
   include Dataset::Globusable
   include Dataset::Versionable
   include Dataset::Publishable
+  include Dataset::Reviewable
   include Dataset::Searchable
   include Dataset::Sharable
 

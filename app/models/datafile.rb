@@ -1,4 +1,6 @@
 class Datafile < ApplicationRecord
+  include MarksReviewRequestsModified
+
   include Datafile::Storable
   include Datafile::Viewable
 

@@ -1,4 +1,6 @@
 class RelatedMaterial < ApplicationRecord
+  include MarksReviewRequestsModified
+
   VERSION_PREVIOUS_RELATION = "IsPreviousVersionOf"
   VERSION_NEW_RELATION = "IsNewVersionOf"
   VERSION_RELATION_TYPES = [

@@ -22,6 +22,7 @@
       = "#{dataset.visibility} (#{dataset.who_can_see})"
 .dataset-show-titlebar
   -# Actions render twice so DOM order matches visual order at every breakpoint; CSS shows one copy.
+  -# In this context, narrow refers to the layout for smaller screens, while wide refers to the layout for larger screens.
   .dataset-show-titlebar-actions.dataset-show-actions-narrow
     = render "datasets/show/actions", dataset: dataset  
   - if dataset.share_code_eligable?
