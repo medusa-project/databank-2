@@ -1,0 +1,17 @@
+- if can?(:manage, dataset) && dataset.hold_blocks_public_files?
+  .dataset-metadata-restriction-notice{role: "note", aria: { label: "Dataset suppression information" }}
+    %p
+      %strong= "#{dataset.visibility}."
+    %p
+      - case dataset.hold_state_mode
+      - when Dataset::HOLD_TEMP_METADATA
+        This dataset is under curator review. Its metadata and files are temporarily suppressed from public access.
+      - when Dataset::HOLD_TEMP_FILE
+        Files associated with this dataset are under curator review and temporarily suppressed from public access. Metadata remains publicly accessible.
+      - when Dataset::HOLD_PERM_METADATA
+        This dataset has been withdrawn. Its metadata and files are available only to curators.
+      - when Dataset::HOLD_PERM_FILE
+        Files associated with this dataset have been permanently suppressed from public access. Metadata remains publicly accessible.
+      - when Dataset::HOLD_TEMP_VERSION
+        This version candidate is under curator review. Its metadata and files are not publicly available.
+    %p You can view the restricted content because you have curator access.

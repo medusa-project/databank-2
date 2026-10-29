@@ -45,6 +45,12 @@ RSpec.describe "Dataset show actions", type: :request do
       expect(response.body).to include("Curator Publish")
       expect(response.body).to include(publish_dataset_path(dataset))
       expect(response.body).not_to include("Pre-Publication Review")
+      controls = Nokogiri::HTML(response.body).at_css(".idb-curator-control-links")
+      expect(controls.css("a").map { |link| [ link.text, link["href"] ] }).to eq([
+        [ "Suppression Controls", suppression_controls_dataset_path(dataset) ],
+        [ "Version Controls", version_controls_dataset_path(dataset) ],
+        [ "Curator Notes", dataset_notes_path(dataset) ]
+      ])
     end
   end
 
@@ -55,10 +61,16 @@ RSpec.describe "Dataset show actions", type: :request do
     get dataset_path(dataset)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Show Completion Info")
-    expect(response.body).to include("Required elements for a complete dataset are missing:")
+    document = Nokogiri::HTML(response.body)
+    status_text = document.css(".dataset-show-status").text.squish
+    expect(status_text).to include("Required elements for a complete dataset missing:")
+    dataset.missing_publish_fields.each do |field|
+      expect(status_text).to include(field)
+    end
     expect(response.body).not_to include("Pre-Publication Review")
     expect(response.body).not_to include("Curator Publish")
+    expect(document.css("form[action='#{request_review_dataset_path(dataset)}']")).to be_empty
+    expect(document.css("form[action='#{publish_dataset_path(dataset)}']")).to be_empty
   end
 
   it "shows review guidance when an unmodified review request already exists" do

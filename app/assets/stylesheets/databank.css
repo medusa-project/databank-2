@@ -135,7 +135,13 @@
 	line-height: 1.35;
 	color: var(--il-blue);
 }
-
+.curator-section-card {
+	background-color: #ffffff;
+	border: 1px solid var(--il-storm-80);
+	border-radius: 0.5rem;
+	padding: 0.85rem 1rem;
+	scroll-margin-top: 1rem;
+}
 .dataset-form-page .idb-section-title {
 	font-size: 1.1rem;
 	margin-bottom: 0.2rem;
@@ -197,6 +203,21 @@
 
 .idb-section-disclosure[open] > summary::before {
 	content: "-";
+}
+
+.curator-section-card > .idb-section-disclosure > summary {
+	background-color: var(--il-blue);
+	color: #ffffff;
+}
+
+.curator-section-card > .idb-section-disclosure > summary .idb-section-title {
+	color: #ffffff;
+}
+
+.curator-section-card > .idb-section-disclosure > summary::before {
+	color: #ffffff;
+	background-color: var(--il-blue);
+	border-color: #ffffff;
 }
 
 .idb-section-disclosure > summary:focus-visible {

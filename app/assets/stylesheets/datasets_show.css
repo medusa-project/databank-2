@@ -3,6 +3,44 @@
  * Specific styling for the dataset detail/show view
  * ----------------------------------------------------------------------- */
 
+.idb-curator-control-links {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  row-gap: 0.5rem;
+}
+
+.dataset-metadata-restriction-notice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--il-blue);
+  border-inline-start-width: 4px;
+  border-radius: 0.25rem;
+  background-color: var(--il-blue-90);
+  color: var(--il-blue);
+}
+
+.dataset-metadata-restriction-notice p {
+  margin: 0 0 0.5rem;
+}
+
+.dataset-metadata-restriction-notice p:last-child {
+  margin-bottom: 0;
+}
+
+.idb-curator-control-links > li {
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+}
+
+.idb-curator-control-links > li + li::before {
+  content: "|" / "";
+  margin-inline: 0.5rem;
+}
+
 /* Add left padding to create space between the left border and content */
 .dataset-show-disclosure > .idb-section-body {
   padding-left: 1rem;
@@ -507,6 +545,8 @@
   width: 100%;
   margin-top: 1rem;
 }
+
+/* Curator Control Links */
 
 /* Responsive modal for smaller screens */
 @media (max-width: 640px) {

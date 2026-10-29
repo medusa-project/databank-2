@@ -20,16 +20,18 @@
     %p
       %strong Publication Status (who can see this dataset):
       = "#{dataset.visibility} (#{dataset.who_can_see})"
+= render "datasets/show/curator_controls", dataset: @dataset if can?(:manage, @dataset) 
 .dataset-show-titlebar
   -# Actions render twice so DOM order matches visual order at every breakpoint; CSS shows one copy.
   -# In this context, narrow refers to the layout for smaller screens, while wide refers to the layout for larger screens.
   .dataset-show-titlebar-actions.dataset-show-actions-narrow
     = render "datasets/show/actions", dataset: dataset  
-  - if dataset.share_code_eligable?
+  - if can?(:update, dataset) && dataset.share_code_eligable?
     .dataset-show-titlebar-main
       = render "datasets/show/sharing", dataset: dataset
   .dataset-show-titlebar-actions.dataset-show-actions-wide
     = render "datasets/show/actions", dataset: dataset
+
 - if citation_text.present? || doi_url.present?
   .dataset-show-citation
     - if citation_text.present?
@@ -43,7 +45,7 @@
               %li= link_to "RIS Format", download_ris_dataset_path(dataset)
               %li= link_to "BibTeX Format", download_bibtex_dataset_path(dataset)
               %li= link_to "Plain Text", download_plaintext_citation_dataset_path(dataset)
-        %input#citation-text.dataset-show-citation-text{type: "text", value: citation_text, readonly: true}
+        %input#citation-text.dataset-show-citation-text{type: "text", value: citation_text, size: citation_text.length, readonly: true}
 
     - if doi_url.present?
       .dataset-show-persistent-link
@@ -52,4 +54,3 @@
           %input#persistent-url.datasets-search-input{type: "text", value: doi_url, readonly: true}
           = semantic_action_button(action: :copy, icon_only: true, aria_label: "Copy persistent URL to clipboard", class: "dataset-show-copy-button", onclick: "navigator.clipboard.writeText(document.getElementById('persistent-url').value).then(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Persistent URL copied to clipboard.'; } }).catch(function() { var status = document.getElementById('copy-status'); if (status) { status.textContent = 'Unable to copy URL. Please copy manually.'; } });")
           %span#copy-status.sr-only{aria: { live: "polite" }}
-

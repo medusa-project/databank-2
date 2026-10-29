@@ -2,6 +2,7 @@ class DatasetsController < ApplicationController
   include ShareCodeAccess
   include DatasetsController::Versionable
   include DatasetsController::Publishable
+  include DatasetsController::Holdable
 
   skip_before_action :authenticate_user!, only: %i[index pre_deposit show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite open_in_globus]
 
@@ -547,7 +548,8 @@ class DatasetsController < ApplicationController
       owned   = Dataset.where(depositor_email: current_user.email)
       granted = Dataset.where(id: DatasetAccessGrant.for_email(current_user.email).select(:dataset_id))
       public  = Dataset.publicly_readable_now
-      Dataset.where(id: owned).or(Dataset.where(id: public)).or(Dataset.where(id: granted)).distinct
+      Dataset.where(id: owned).or(Dataset.where(id: public)).or(Dataset.where(id: granted))
+        .where("COALESCE(BTRIM(hold_state), '') <> ?", Dataset::HOLD_PERM_METADATA).distinct
     else
       Dataset.publicly_readable_now
     end
