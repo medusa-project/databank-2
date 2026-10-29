@@ -51,6 +51,9 @@ async function createDataset(page) {
 
 async function updateDatasetExternalFiles(page, editUrl) {
   await page.goto(editUrl);
+  await page.locator("#dataset-curation summary").click();
+  await expect(page.locator("#dataset_external_files_link")).toBeVisible();
+  await expect(page.locator("#dataset_external_files_note")).toBeVisible();
   await page
     .locator("#dataset_external_files_link")
     .fill("https://example.test/external-files");
