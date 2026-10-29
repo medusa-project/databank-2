@@ -49,5 +49,9 @@ class Ability
     can :update, Dataset do |dataset|
       user.email.present? && DatasetAccessGrant.grants_edit_access?(dataset_id: dataset.id, email: user.email)
     end
+
+    cannot :manage, Dataset do |dataset|
+      dataset.hold_state_mode == Dataset::HOLD_PERM_METADATA
+    end
   end
 end

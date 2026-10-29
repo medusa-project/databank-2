@@ -2,12 +2,21 @@
 
 %section.idb-workflow-strip{aria: { label: "Dataset workflow actions" }}
   %nav.idb-workflow-actions-right{aria: { label: "Dataset workflow actions" }}
-    = semantic_action_button(action: :edit, label: "Edit", url: edit_dataset_path(dataset), style: :idb)
+    - if dataset.draft?
+      - if dataset.ready_to_publish?
+        - if can?(:manage, dataset) && dataset.hold_state_mode != Dataset::HOLD_TEMP_VERSION
+          = semantic_action_button(action: :publish, label: "Curator Publish", url: publish_dataset_path(dataset), style: :idb, method: :post)
+        - elsif dataset.has_unmodified_review?
+          = link_to "Find out more about Pre-Publication review", "/guides#publish", class: "idb-button-primary", target: "_blank", rel: "noopener"
+        - else
+          = semantic_action_button(action: :submit, label: "Pre-Publication Review", url: request_review_dataset_path(dataset), style: :idb, method: :post)
+    = semantic_action_button(action: :edit, label: dataset.draft? ? 'Edit draft' : 'Edit metadata of this published dataset', url: edit_dataset_path(dataset), style: :idb)
 
     - if dataset.version_eligible?
-      = semantic_action_button(action: :new, label: "Request New Version", url: pre_version_dataset_path(dataset), style: :idb)
-      - if can?(:review_versions, dataset)
-        = semantic_action_button(action: :new, label: "Create New Version", url: version_dataset_path(dataset), style: :idb )
+      - if can?(:manage, dataset)
+        = semantic_action_button(action: :new, label: "Create a version of this published dataset", url: version_dataset_path(dataset), style: :idb )
+      - else
+        = semantic_action_button(action: :new, label: "Request a version of this published dataset", url: pre_version_dataset_path(dataset), style: :idb)
 
     = semantic_action_button(action: :back, label: "Exit this saved dataset", url: datasets_path, style: :idb)
 

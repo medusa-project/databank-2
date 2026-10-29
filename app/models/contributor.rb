@@ -1,4 +1,6 @@
 class Contributor < ApplicationRecord
+  include MarksReviewRequestsModified
+
   belongs_to :dataset
 
   audited except: %i[

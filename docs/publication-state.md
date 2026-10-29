@@ -19,6 +19,24 @@ Current application values for `Dataset.publication_state` are defined by enum i
 
 ## Important distinction
 
+### Controller organization
+
+[DatasetsController::Publishable](../app/controllers/concerns/datasets_controller/publishable.rb)
+groups the HTTP actions for pre-publication review requests and confirmation,
+and publishing.
+[DatasetsController::Holdable](../app/controllers/concerns/datasets_controller/holdable.rb)
+groups curator suppression/release controls, including changelog suppression,
+the suppression action allowlist, and suppression service helpers.
+Dataset lookup and authentication callbacks remain in
+[DatasetsController](../app/controllers/datasets_controller.rb).
+
+Version creation and version-request review remain in
+[DatasetsController::Versionable](../app/controllers/concerns/datasets_controller/versionable.rb).
+External-delivery monitoring and replay remain in the controller. This separation
+organizes existing behavior without changing routes, permissions, or responses.
+
+### State and visibility
+
 `publication_state` has only two values (`draft`, `published`).
 
 User-facing labels such as:
@@ -27,6 +45,27 @@ User-facing labels such as:
 - "Metadata and Files Publication Delayed (Embargoed)"
 
 come from embargo/release-date logic, not additional `publication_state` enum values. See [app/models/dataset.rb](app/models/dataset.rb#L260).
+
+### File-section access
+
+The dataset show page uses `can?(:view_files, dataset)` to gate the entire file
+listing, including filenames, descriptions, sizes, external-file links, previews,
+and download controls. Viewers without file access see a suppression or active
+embargo message instead. Authorized owners, editors, curators, and eligible
+share-link visitors retain access while temporary holds are in place.
+
+Permanent file suppression preserves owner/editor/curator access, but does not
+permit share-link access. Permanent metadata suppression is curator-only:
+non-curator permissions are denied even for owners and editors. Share codes are
+not accepted for either permanent suppression state. These rules also apply to
+file preview/download endpoints, not just their presentation on the show page.
+Permanently metadata-suppressed datasets are excluded from non-curator search
+results, including owned and explicitly shared datasets.
+
+For suppressed datasets and version-review holds, curators see an informational
+box at the top of the Metadata section explaining the restriction and their
+continued curator access. The notice does not hide metadata or change permissions,
+and is not shown to other viewers or for datasets without a hold.
 
 ## Legacy import mapping
 

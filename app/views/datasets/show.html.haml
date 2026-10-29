@@ -21,5 +21,4 @@
     = render "datasets/show/versions", visible_version_entries: visible_version_entries
     = render "datasets/show/files", dataset: @dataset, datafiles: datafiles, datafile_count: datafile_count, show_bulk_file_actions: show_bulk_file_actions, globus_downloadable: @globus_downloadable
     = render "datasets/show/change_log", version_request_history: @version_request_history
-    = render "datasets/show/curator_controls", dataset: @dataset if logged_in? && (can?(:review_versions, @dataset) || can?(:manage, @dataset))
     = render "datasets/show/external_delivery", dataset: @dataset, ingest_health_summary: @ingest_health_summary, latest_delivery_attempts: @latest_delivery_attempts, failed_delivery_counts: @failed_delivery_counts if logged_in? && can?(:manage, Dataset)

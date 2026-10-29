@@ -278,7 +278,8 @@ GEM
       net-ssh (>= 5.0.0, < 8.0.0)
     net-smtp (0.5.1)
       net-protocol
-    net-ssh (7.3.2)
+    net-ssh (7.3.8)
+      logger
     nio4r (2.7.5)
     nokogiri (1.19.4)
       mini_portile2 (~> 2.8.2)
@@ -543,6 +544,7 @@ DEPENDENCIES
   medusa_storage!
   msgpack (>= 1.8.2)
   net-imap (>= 0.6.4.1)
+  net-ssh (~> 7.3, >= 7.3.5)
   nokogiri (>= 1.19.4)
   omniauth (~> 2.1)
   omniauth-rails_csrf_protection (~> 2.0)

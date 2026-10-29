@@ -7,9 +7,9 @@
         %h2.idb-section-title Administrative Controls
       .idb-section-body
         .idb-admin-controls-row
-          = link_to "Manage Researcher Spotlights", featured_researchers_path, class: "idb-button-primary"
-          = link_to "External Delivery Audit", admin_external_delivery_attempts_path, class: "idb-button-primary"
-          = button_to "Clear Rails Cache", clear_admin_cache_path, method: :post, class: "idb-button-danger", form: { data: { turbo_confirm: "Clear the Rails cache?" } }
+          = semantic_action_button(action: :admin_tools, label: "Manage Researcher Spotlights", icon: "person-rays", url: featured_researchers_path, style: :idb)
+          = semantic_action_button(action: :article, label: "External Delivery Audit", url: admin_external_delivery_attempts_path, style: :idb)
+          = semantic_action_button(action: :admin_tools, label: "Clear Rails Cache", icon: "arrow-rotate-left", url: clear_admin_cache_path, style: :idb)
 
   %section.idb-section-card{aria: { label: "Manage Service Message" }}
     %details.idb-section-disclosure{open: false}
@@ -106,10 +106,10 @@
 
   .idb-workflow-strip.idb-workflow-strip-bottom
     %nav.idb-workflow-actions-right{aria: { label: "Admin page actions" }}
-      = link_to "Curator Guide", curator_guide_path, class: "idb-button-secondary"
-      = link_to "Back", root_path, class: "idb-button-secondary"
+      = semantic_action_button(action: :article, label: "Curator Guide", url: curator_guide_path, style: :idb)
+      = semantic_action_button(action: :back, url: root_path, style: :idb)
 - else
   %h2 You are not authorized to view this page.
   .idb-workflow-strip.idb-workflow-strip-bottom
     %nav.idb-workflow-actions-right{aria: { label: "Unauthorized actions" }}
-      = link_to "Back", root_path, class: "idb-button-secondary"
+      = semantic_action_button(action: :back, url: root_path, style: :idb)

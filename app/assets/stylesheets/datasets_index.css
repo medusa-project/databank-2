@@ -95,6 +95,7 @@
 .datasets-per-page-control {
   display: grid;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .datasets-results-count {
@@ -204,10 +205,6 @@
   line-height: 1.35;
 }
 
-.dataset-result-card .curator-only {
-  margin: 0 0 0.2rem;
-}
-
 .dataset-result-card .record_citation {
   margin: 0;
 }
@@ -228,7 +225,7 @@
   margin: 0.1rem 0 0;
 }
 
-.dataset-result-curator-badges {
+.dataset-result-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -353,14 +350,21 @@
   display: flex;
   gap: 0;
   align-items: stretch;
+  min-width: 0;
 }
 
 .datasets-per-page-inline .datasets-select-input {
-  min-width: 9.5rem;
+  flex: 1 1 0;
+  min-width: 0;
   height: 2.5rem;
   box-sizing: border-box;
   border-right: 0;
   border-radius: 4px 0 0 4px;
+}
+
+.datasets-per-page-inline .datasets-go-button {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .datasets-query-controls .idb-button-primary,
@@ -430,7 +434,8 @@
   }
 
   .dataset-show-titlebar-actions {
-    flex: 1 1 0;
+    flex: 0 0 calc(25% - 0.5rem);
+    margin-left: auto;
   }
 
   .dataset-show-actions-wide {
@@ -820,6 +825,10 @@
 }
 
 @media (max-width: 960px) {
+  .datasets-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .datasets-search-layout {
     grid-template-columns: 1fr;
   }
@@ -871,7 +880,9 @@
 /* The header wrapper drops out of layout so label, button and text can be arranged by one grid. */
 .dataset-show-citation-copy {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: fit-content;
+  max-width: 100%;
   gap: 0.5rem 0.75rem;
   align-items: center;
 }
@@ -882,52 +893,34 @@
 
 .dataset-show-citation-header .dataset-show-eyebrow {
   margin: 0;
+  grid-column: 1 / -1;
 }
 
 .dataset-show-citation-copy .dataset-show-citation-text {
+  box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
+  width: auto;
+  field-sizing: content;
+  justify-self: start;
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .dataset-show-citation-copy .dataset-export-citation {
   justify-self: start;
+  grid-column: 2;
+  grid-row: 2;
 }
 
-/* Medium: label and button share a row, text below */
 @media (min-width: 576px) {
-  .dataset-show-citation-copy {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .dataset-show-citation-copy .dataset-show-citation-text {
-    grid-column: 1 / -1;
-  }
-
-  .dataset-show-citation-copy .dataset-export-citation {
-    justify-self: end;
-  }
-
   .dataset-show-citation-copy .dataset-export-citation-menu {
     left: auto;
     right: 0;
   }
 }
 
-/* Desktop: label on its own row, text and button share the next row */
 @media (min-width: 992px) {
-  .dataset-show-citation-copy .dataset-show-eyebrow {
-    grid-column: 1 / -1;
-  }
-
-  .dataset-show-citation-copy .dataset-show-citation-text {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .dataset-show-citation-copy .dataset-export-citation {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
   /* One fixed height keeps the input and the button identical */
   .dataset-show-citation-copy .dataset-show-citation-text,
   .dataset-show-citation-copy .dataset-export-citation > summary {
@@ -977,7 +970,9 @@
 }
 
 .dataset-export-citation > summary::after {
-  content: " \25BE";
+  content: "\25BC" / "";
+  margin-inline-start: 0.4em;
+  font-size: 1em;
 }
 
 .dataset-export-citation-menu {

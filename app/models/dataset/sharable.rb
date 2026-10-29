@@ -35,6 +35,7 @@ module Dataset::Sharable
   end
 
   def valid_share_code?(code:)
+    return false unless share_code_eligable?
     return false unless code.is_a?(String) && code.present?
 
     current = current_share_code

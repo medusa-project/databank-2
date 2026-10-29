@@ -1317,7 +1317,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(response.body).to include("previous dataset must be published")
   end
 
-  it "shows the Request New Version button for an eligible owner" do
+  it "shows the version request link for an eligible owner" do
     source = Dataset.create!(
       title: "Eligible Version Source",
       description: "Published source dataset.",
@@ -1336,10 +1336,12 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Request New Version")
+    link = Nokogiri::HTML(response.body).at_css("a[href='#{pre_version_dataset_path(source)}']")
+    expect(link).to be_present
+    expect(link.text.squish).to include("Request a version of this published dataset")
   end
 
-  it "hides the Request New Version button when a published successor version already exists" do
+  it "hides the version request link when a published successor version already exists" do
     source = Dataset.create!(
       title: "Source Hidden Version Button",
       description: "Published source dataset.",
@@ -1378,10 +1380,10 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Request New Version")
+    expect(Nokogiri::HTML(response.body).css("a[href='#{pre_version_dataset_path(source)}']")).to be_empty
   end
 
-  it "shows the Request New Version button when only a draft successor exists" do
+  it "shows the version request link when only a draft successor exists" do
     source = Dataset.create!(
       title: "Source With Draft Successor Button",
       description: "Published source dataset.",
@@ -1419,10 +1421,12 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Request New Version")
+    link = Nokogiri::HTML(response.body).at_css("a[href='#{pre_version_dataset_path(source)}']")
+    expect(link).to be_present
+    expect(link.text.squish).to include("Request a version of this published dataset")
   end
 
-  it "hides the Request New Version button for a non-owner depositor" do
+  it "hides the version request link for a non-owner depositor" do
     source = Dataset.create!(
       title: "Eligible Source Hidden For Non-Owner",
       description: "Published source dataset.",
@@ -1441,7 +1445,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Request New Version")
+    expect(Nokogiri::HTML(response.body).css("a[href='#{pre_version_dataset_path(source)}']")).to be_empty
   end
 
   it "lets a depositor submit a version request and shows acknowledgement" do
@@ -2400,7 +2404,9 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Request New Version")
+    link = Nokogiri::HTML(response.body).at_css("a[href='#{pre_version_dataset_path(source)}']")
+    expect(link).to be_present
+    expect(link.text.squish).to include("Request a version of this published dataset")
     expect(response.body).not_to include("Version Request History")
     expect(response.body).to include("Pending request from Owner User")
     expect(response.body).to include("Rejected request from Owner User")
@@ -2466,7 +2472,7 @@ RSpec.describe "Datasets workflow", type: :request do
     expect(new_dataset).to be_draft
   end
 
-  it "shows the Create New Version button to admins when dataset is eligible" do
+  it "shows the version creation link to admins when dataset is eligible" do
     source = Dataset.create!(
       title: "Admin Eligible Source",
       description: "Published source dataset.",
@@ -2485,10 +2491,12 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Create New Version")
+    link = Nokogiri::HTML(response.body).at_css("a[href='#{version_dataset_path(source)}']")
+    expect(link).to be_present
+    expect(link.text.squish).to include("Create a version of this published dataset")
   end
 
-  it "hides the Create New Version button from admins when a published successor makes dataset ineligible" do
+  it "hides the version creation link from admins when a published successor makes dataset ineligible" do
     source = Dataset.create!(
       title: "Admin Ineligible Source",
       description: "Published source dataset.",
@@ -2527,7 +2535,7 @@ RSpec.describe "Datasets workflow", type: :request do
     get dataset_path(source)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to include("Create New Version")
+    expect(Nokogiri::HTML(response.body).css("a[href='#{version_dataset_path(source)}']")).to be_empty
   end
 
   it "copies files from previous version into a draft version dataset" do

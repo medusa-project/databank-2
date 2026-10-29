@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_194500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_28_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -503,6 +503,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_194500) do
   create_table "review_requests", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "dataset_id", null: false
+    t.boolean "modified", default: false, null: false
     t.datetime "requested_at", null: false
     t.string "requester_email", null: false
     t.string "requester_name", null: false

@@ -1,9 +1,10 @@
-%section.idb-section-card{aria: { label: "Curator controls" }}
+%section.curator-section-card{aria: { label: "Curator controls" }}
   %details.idb-section-disclosure{open: true}
     %summary
       %h2.idb-section-title Curator Controls
     .idb-section-body
-      - if can?(:manage, dataset)
-        %p= link_to "Suppression Controls", suppression_controls_dataset_path(dataset), class: "idb-button-danger"
-      %p= link_to "Version Controls", version_controls_dataset_path(dataset), class: "idb-button-primary"
-      %p= link_to "Curator Notes", dataset_notes_path(dataset), class: "idb-button-secondary"
+      = render "datasets/metadata_restriction_alert", dataset: dataset
+      %ul.idb-curator-control-links{role: "list"}
+        %li= link_to "Suppression Controls", suppression_controls_dataset_path(dataset), class: "idb"
+        %li= link_to "Version Controls", version_controls_dataset_path(dataset), class: "idb"
+        %li= link_to "Curator Notes", dataset_notes_path(dataset), class: "idb"

@@ -1,4 +1,6 @@
 class Funder < ApplicationRecord
+  include MarksReviewRequestsModified
+
   belongs_to :dataset
 
   audited associated_with: :dataset

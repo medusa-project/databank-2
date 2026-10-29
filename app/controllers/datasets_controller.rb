@@ -1,5 +1,8 @@
 class DatasetsController < ApplicationController
   include ShareCodeAccess
+  include DatasetsController::Versionable
+  include DatasetsController::Publishable
+  include DatasetsController::Holdable
 
   skip_before_action :authenticate_user!, only: %i[index pre_deposit show download_endnote_xml download_ris download_bibtex download_plaintext_citation record_text download_metrics download_link open_in_granite open_in_globus]
 
@@ -128,22 +131,6 @@ class DatasetsController < ApplicationController
     end
   end
 
-  def confirm_review
-    authorize! :update, @dataset
-  end
-
-  def request_review
-    authorize! :update, @dataset
-    @dataset.update_column(:identifier, @dataset.generate_doi) if @dataset.identifier.blank?
-    review_request = ReviewRequest.create!(
-      dataset: @dataset,
-      requester_name: current_user.name,
-      requester_email: current_user.email,
-      requested_at: Time.zone.now
-    )
-    ReviewRequestMailer.review_requested(review_request: review_request, dataset: @dataset).deliver_now
-    render :confirm_review
-  end
    def download_link
      authorize! :view_files, @dataset
      return_hash = {}
@@ -242,281 +229,6 @@ class DatasetsController < ApplicationController
     redirect_to redirect_url, allow_other_host: true
   end
 
-  def pre_version
-    authorize! :update, @dataset
-
-    unless @dataset.published?
-      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
-      return
-    end
-
-    unless @dataset.version_eligible?
-      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
-      return
-    end
-
-    @title = "New Version"
-  end
-
-  def version_controls
-    authorize! :review_versions, @dataset
-    @version_group = DatasetVersionGroup.new(@dataset)
-    @previous_version = @dataset.previous_version_dataset
-    @version_comparison = build_version_comparison(current: @dataset, previous: @previous_version) if @previous_version.present?
-    @pending_version_requests = @dataset.version_requests.pending.order(requested_at: :desc, created_at: :desc)
-    @approved_version_requests = @dataset.version_requests.approved.order(reviewed_at: :desc, updated_at: :desc)
-    @rejected_version_requests = @dataset.version_requests.rejected.order(reviewed_at: :desc, updated_at: :desc)
-    @title = "Version Controls"
-  end
-
-  def suppression_controls
-    authorize! :manage, @dataset
-    @title = "Suppression Controls"
-  end
-
-  def suppression_action
-    authorize! :manage, @dataset
-
-    action = params[:suppression_action].to_s
-    unless suppression_actions.include?(action)
-      redirect_to suppression_controls_dataset_path(@dataset), alert: "Unknown suppression action."
-      return
-    end
-
-    case action
-    when "suppress_changelog"
-      suppress_changelog
-    when "unsuppress_changelog"
-      unsuppress_changelog
-    when "temporarily_suppress_files"
-      temporarily_suppress_files
-    when "temporarily_suppress_metadata"
-      temporarily_suppress_metadata
-    when "unsuppress"
-      unsuppress
-    when "permanently_suppress_files"
-      permanently_suppress_files
-    when "permanently_suppress_metadata"
-      permanently_suppress_metadata
-    when "suppress_review"
-      suppress_review
-    when "unsuppress_review"
-      unsuppress_review
-    end
-  end
-
-  def suppress_changelog
-    authorize! :manage, @dataset
-
-    if @dataset.respond_to?(:suppress_changelog=)
-      @dataset.suppress_changelog = true
-      if @dataset.save
-        redirect_to dataset_path(@dataset), notice: "Dataset changelog has suppressed."
-      else
-        redirect_to dataset_path(@dataset), alert: "Error - see log."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Suppress changelog is not available in this deployment."
-    end
-  end
-
-  def unsuppress_changelog
-    authorize! :manage, @dataset
-
-    if @dataset.respond_to?(:suppress_changelog=)
-      @dataset.suppress_changelog = false
-      if @dataset.save
-        redirect_to dataset_path(@dataset), notice: "Dataset changelog has been unsuppressed."
-      else
-        redirect_to dataset_path(@dataset), alert: "Error - see log."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Suppress changelog is not available in this deployment."
-    end
-  end
-
-  def temporarily_suppress_files
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_TEMP_FILE
-
-    if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset files have been temporarily suppressed."
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def temporarily_suppress_metadata
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_TEMP_METADATA
-
-    if @dataset.save
-      if doi_suppression_service.suppress_metadata
-        redirect_to dataset_path(@dataset), notice: "Dataset metadata and files have been temporarily suppressed."
-      else
-        redirect_to dataset_path(@dataset), notice: "Dataset metadata and files have been temporarily suppressed in IDB, but DataCite was not updated."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def unsuppress
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_NONE
-
-    if @dataset.save
-      if doi_suppression_service.unsuppress_metadata
-        redirect_to dataset_path(@dataset), notice: "Dataset has been unsuppressed."
-      else
-        redirect_to dataset_path(@dataset), notice: "Dataset has been unsuppressed in IDB, but DataCite was not updated."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def permanently_suppress_files
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_PERM_FILE
-    @dataset.embargo = Dataset::EMBARGO_NONE
-    @dataset.tombstone_date = Date.current
-
-    if @dataset.save
-      if globus_suppression_service.remove_from_public_download
-        redirect_to dataset_path(@dataset), notice: "Dataset files have been permanently suppressed."
-      else
-        redirect_to dataset_path(@dataset), notice: "Failed to remove from Globus Download."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def suppress_review
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_TEMP_VERSION
-
-    if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset version candidate under curator review."
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def unsuppress_review
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_NONE
-
-    if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset released for pre-publication review."
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def draft_to_version
-    authorize! :review_versions, @dataset
-
-    unless @dataset.draft?
-      redirect_to dataset_path(@dataset), alert: "Publication state must be draft to designate version-type draft."
-      return
-    end
-
-    @dataset.hold_state = Dataset::HOLD_TEMP_VERSION
-
-    if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset designated as version-type draft."
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def version_to_draft
-    authorize! :review_versions, @dataset
-
-    unless @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
-      redirect_to dataset_path(@dataset), alert: "Draft/Version toggle requires a version-type draft dataset."
-      return
-    end
-
-    @dataset.hold_state = Dataset::HOLD_NONE
-
-    if @dataset.save
-      redirect_to dataset_path(@dataset), notice: "Dataset designated as standard draft."
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def permanently_suppress_metadata
-    authorize! :manage, @dataset
-    @dataset.hold_state = Dataset::HOLD_PERM_METADATA
-    @dataset.embargo = Dataset::EMBARGO_NONE
-    @dataset.tombstone_date = Date.current
-
-    if @dataset.save
-      doi_ok = doi_suppression_service.suppress_metadata
-      globus_ok = globus_suppression_service.remove_from_public_download
-
-      if doi_ok && globus_ok
-        redirect_to dataset_path(@dataset), notice: "Dataset has been permanently supressed in Illinois Data Bank and DataCite."
-      else
-        redirect_to dataset_path(@dataset), alert: "Failed to remove from DataCite or Globus Download."
-      end
-    else
-      redirect_to dataset_path(@dataset), alert: "Error - see log."
-    end
-  end
-
-  def submit_version_request
-    authorize! :update, @dataset
-
-    unless @dataset.published?
-      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
-      return
-    end
-
-    unless @dataset.version_eligible?
-      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
-      return
-    end
-
-    existing_request = @dataset.version_requests.pending.order(requested_at: :desc).first
-    if existing_request.present?
-      redirect_to version_acknowledge_dataset_path(@dataset, version_request_id: existing_request.id), notice: "A pending version request already exists for this dataset."
-      return
-    end
-
-    request = @dataset.version_requests.create!(
-      requester_uid: current_user.uid,
-      requester_email: current_user.email,
-      requester_name: current_user.name,
-      comment: params[:comment].to_s,
-      requested_at: Time.current,
-      status: :pending
-    )
-
-    VersionRequestNotificationService.request_submitted(version_request: request, dataset: @dataset)
-
-    redirect_to version_acknowledge_dataset_path(@dataset, version_request_id: request.id)
-  rescue StandardError => e
-    raise e if e.is_a?(CanCan::AccessDenied)
-
-    Rails.logger.error("submit_version_request failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
-    redirect_to dataset_path(@dataset), alert: "Could not submit a version request right now. Please try again."
-  end
-
-  def version_acknowledge
-    authorize! :update, @dataset
-    request_id = params[:version_request_id]
-    @version_request = @dataset.version_requests.pending.find_by(id: request_id)
-
-    return if @version_request.present?
-
-    redirect_to dataset_path(@dataset), alert: "No pending version request found."
-  end
-
   def get_current_token
     authorize! :update, @dataset
     token = @dataset.current_token || @dataset.new_token
@@ -526,70 +238,6 @@ class DatasetsController < ApplicationController
   def get_new_token
     authorize! :update, @dataset
     render json: { token: @dataset.new_token.identifier }
-  end
-
-  def approve_version_request
-    authorize! :review_versions, @dataset
-
-    source_path = review_action_redirect_path(default_path: dataset_path(@dataset))
-    version_request = @dataset.version_requests.pending.find(params[:version_request_id])
-
-    new_dataset = DatasetVersionBuilder.new(
-      previous_dataset: @dataset,
-      new_version_uri_builder: ->(dataset) { dataset_url(dataset) }
-    ).call
-
-    version_request.update!(
-      status: :approved,
-      reviewed_at: Time.current,
-      reviewed_by_uid: current_user.uid,
-      review_note: params[:review_note].to_s,
-      approved_dataset: new_dataset
-    )
-
-    VersionRequestNotificationService.request_approved(
-      version_request: version_request,
-      dataset: @dataset,
-      approved_dataset: new_dataset
-    )
-
-    if params[:from] == "version_controls"
-      redirect_to version_controls_dataset_path(@dataset), notice: "Version request approved. Draft #{new_dataset.key} is ready for editing."
-    else
-      redirect_to edit_dataset_path(new_dataset), notice: "Version request approved. Draft #{new_dataset.key} is ready for editing."
-    end
-  rescue ActiveRecord::RecordNotFound
-    redirect_to source_path, alert: "No pending version request found."
-  rescue ArgumentError => e
-    redirect_to source_path, alert: e.message
-  rescue StandardError => e
-    raise e if e.is_a?(CanCan::AccessDenied)
-
-    Rails.logger.error("approve_version_request failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
-    redirect_to source_path, alert: "Could not approve the version request right now. Please try again."
-  end
-
-  def reject_version_request
-    authorize! :review_versions, @dataset
-
-    source_path = review_action_redirect_path(default_path: dataset_path(@dataset))
-    version_request = @dataset.version_requests.pending.find(params[:version_request_id])
-
-    version_request.update!(
-      status: :rejected,
-      reviewed_at: Time.current,
-      reviewed_by_uid: current_user.uid,
-      review_note: params[:review_note].to_s
-    )
-
-    redirect_to source_path, notice: "Version request rejected."
-  rescue ActiveRecord::RecordNotFound
-    redirect_to source_path, alert: "No pending version request found."
-  rescue StandardError => e
-    raise e if e.is_a?(CanCan::AccessDenied)
-
-    Rails.logger.error("reject_version_request failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
-    redirect_to source_path, alert: "Could not reject the version request right now. Please try again."
   end
 
   def new
@@ -649,86 +297,6 @@ class DatasetsController < ApplicationController
     rescue ActiveRecord::RecordInvalid
       render :edit, status: :unprocessable_entity
     end
-  end
-
-  def publish
-    authorize! :update, @dataset
-
-    if @dataset.draft? && @dataset.hold_state_mode == Dataset::HOLD_TEMP_VERSION
-      redirect_to dataset_path(@dataset), alert: "Version drafts require pre-publication review before publishing."
-      return
-    end
-
-    if @dataset.ready_to_publish?
-      identifier = Doi::IdentifierService.new(@dataset).mint_for_publish!
-
-      @dataset.update!(
-        publication_state: :published,
-        published_at: Time.current,
-        identifier: identifier
-      )
-      Ingest::PublishDatasetEventJob.perform_later(@dataset.id)
-      Globus::SubmitDatasetTransferJob.perform_later(@dataset.id)
-      redirect_to dataset_path(@dataset), notice: "Dataset published. DOI: #{@dataset.identifier}"
-    else
-      redirect_to dataset_path(@dataset), alert: "Cannot publish: #{@dataset.missing_publish_fields.join(', ')} required."
-    end
-  end
-
-  def create_version
-    authorize! :update, @dataset
-
-    unless @dataset.published?
-      redirect_to dataset_path(@dataset), alert: "Only published datasets can be versioned."
-      return
-    end
-
-    unless @dataset.version_eligible?
-      redirect_to dataset_path(@dataset), alert: "A newer version has already been started for this dataset."
-      return
-    end
-
-    new_dataset = DatasetVersionBuilder.new(
-      previous_dataset: @dataset,
-      new_version_uri_builder: ->(dataset) { dataset_url(dataset) }
-    ).call
-
-    redirect_to edit_dataset_path(new_dataset), notice: "Draft version created from #{@dataset.key}."
-  rescue ArgumentError => e
-    redirect_to dataset_path(@dataset), alert: e.message
-  rescue StandardError => e
-    raise e if e.is_a?(CanCan::AccessDenied)
-
-    Rails.logger.error("create_version failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
-    redirect_to dataset_path(@dataset), alert: "Could not create a new version right now. Please try again."
-  end
-
-  def copy_version_files
-    authorize! :update, @dataset
-    redirect_path = copy_version_files_redirect_path
-
-    unless @dataset.draft?
-      redirect_to redirect_path, alert: "Version files can only be copied into a draft dataset."
-      return
-    end
-
-    unless @dataset.previous_version_dataset.present?
-      redirect_to redirect_path, alert: "No previous version dataset found to copy files from."
-      return
-    end
-
-    result = DatasetVersionFileCopyService.new(version_dataset: @dataset).call
-    message = "Copied #{result.copied_count} file(s) from the previous version"
-    message += ", skipped #{result.skipped_count} duplicate(s)" if result.skipped_count.positive?
-
-    redirect_to redirect_path, notice: "#{message}."
-  rescue ArgumentError => e
-    redirect_to redirect_path, alert: e.message
-  rescue StandardError => e
-    raise e if e.is_a?(CanCan::AccessDenied)
-
-    Rails.logger.error("copy_version_files failed for dataset #{@dataset.key}: #{e.class}: #{e.message}")
-    redirect_to redirect_path, alert: "Could not copy files from the previous version. Please try again."
   end
 
   def replay_failed_deliveries
@@ -828,68 +396,8 @@ class DatasetsController < ApplicationController
     )
   end
 
-  def build_version_comparison(current:, previous:)
-    {
-      metadata_rows: [
-        comparison_row(label: "Title", current: current.title, previous: previous.title),
-        comparison_row(label: "Description", current: current.description, previous: previous.description),
-        comparison_row(label: "Keywords", current: current.keywords, previous: previous.keywords),
-        comparison_row(label: "Subject", current: current.subject, previous: previous.subject),
-        comparison_row(label: "License", current: current.license, previous: previous.license),
-        comparison_row(label: "Publisher", current: current.publisher, previous: previous.publisher),
-        comparison_row(label: "Depositor Name", current: current.depositor_name, previous: previous.depositor_name),
-        comparison_row(label: "Depositor Email", current: current.depositor_email, previous: previous.depositor_email)
-      ],
-      creators_added: creator_signatures(current.creators) - creator_signatures(previous.creators),
-      creators_removed: creator_signatures(previous.creators) - creator_signatures(current.creators),
-      funders_added: funder_signatures(current.funders) - funder_signatures(previous.funders),
-      funders_removed: funder_signatures(previous.funders) - funder_signatures(current.funders),
-      related_materials_added: related_material_signatures(current.nonversion_related_materials) - related_material_signatures(previous.nonversion_related_materials),
-      related_materials_removed: related_material_signatures(previous.nonversion_related_materials) - related_material_signatures(current.nonversion_related_materials),
-      files_added: file_signatures(current.datafiles) - file_signatures(previous.datafiles),
-      files_removed: file_signatures(previous.datafiles) - file_signatures(current.datafiles)
-    }
-  end
-
-  def comparison_row(label:, current:, previous:)
-    {
-      label: label,
-      current: current.to_s,
-      previous: previous.to_s,
-      different: current.to_s != previous.to_s
-    }
-  end
-
-  def creator_signatures(creators)
-    creators.map { |creator| [ creator.name.to_s, creator.email.to_s ] }.sort.map { |name, email| email.present? ? "#{name} <#{email}>" : name }
-  end
-
   def force_replay_requested?
     ActiveModel::Type::Boolean.new.cast(params[:force_replay])
-  end
-
-  def funder_signatures(funders)
-    funders.map { |funder| [ funder.name.to_s, funder.identifier.to_s, funder.award_number.to_s ] }.sort.map do |name, identifier, award_number|
-      [ name, identifier, award_number ].reject(&:blank?).join(" | ")
-    end
-  end
-
-  def related_material_signatures(materials)
-    materials.map { |material| [ material.title.to_s, material.uri.to_s, material.relation_type.to_s ] }.sort.map do |title, uri, relation_type|
-      [ title, uri, relation_type ].reject(&:blank?).join(" | ")
-    end
-  end
-
-  def file_signatures(files)
-    files.map { |file| [ file.binary_name.to_s, file.binary_size.to_i ] }.sort.map do |binary_name, binary_size|
-      binary_size.positive? ? "#{binary_name} (#{binary_size} bytes)" : binary_name
-    end
-  end
-
-  def copy_version_files_redirect_path
-    return edit_dataset_path(@dataset) unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
-
-    version_controls_dataset_path(@dataset)
   end
 
   def safe_external_files_url(url)
@@ -900,12 +408,6 @@ class DatasetsController < ApplicationController
     parsed.to_s
   rescue URI::InvalidURIError
     nil
-  end
-
-  def review_action_redirect_path(default_path:)
-    return default_path unless params[:from] == "version_controls" && can?(:review_versions, @dataset)
-
-    version_controls_dataset_path(@dataset)
   end
 
   def dataset_params
@@ -1046,7 +548,8 @@ class DatasetsController < ApplicationController
       owned   = Dataset.where(depositor_email: current_user.email)
       granted = Dataset.where(id: DatasetAccessGrant.for_email(current_user.email).select(:dataset_id))
       public  = Dataset.publicly_readable_now
-      Dataset.where(id: owned).or(Dataset.where(id: public)).or(Dataset.where(id: granted)).distinct
+      Dataset.where(id: owned).or(Dataset.where(id: public)).or(Dataset.where(id: granted))
+        .where("COALESCE(BTRIM(hold_state), '') <> ?", Dataset::HOLD_PERM_METADATA).distinct
     else
       Dataset.publicly_readable_now
     end
@@ -1151,27 +654,5 @@ class DatasetsController < ApplicationController
     return value if ExternalDeliveryAttempt.integrations.key?(value)
 
     nil
-  end
-
-  def suppression_actions
-    %w[
-      suppress_changelog
-      unsuppress_changelog
-      temporarily_suppress_files
-      temporarily_suppress_metadata
-      unsuppress
-      permanently_suppress_files
-      permanently_suppress_metadata
-      suppress_review
-      unsuppress_review
-    ]
-  end
-
-  def doi_suppression_service
-    @doi_suppression_service ||= Doi::SuppressionService.new(@dataset)
-  end
-
-  def globus_suppression_service
-    @globus_suppression_service ||= Globus::SuppressionService.new(@dataset)
   end
 end

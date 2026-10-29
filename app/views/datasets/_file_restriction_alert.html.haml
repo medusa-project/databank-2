@@ -1,4 +1,13 @@
-- if dataset.embargo_mode == Dataset::EMBARGO_FILE || dataset.embargo_mode == Dataset::EMBARGO_METADATA
+- if dataset.hold_blocks_public_files?
+  .embargo-placeholder
+    - if [Dataset::HOLD_PERM_FILE, Dataset::HOLD_PERM_METADATA].include?(dataset.hold_state_mode)
+      %p Files associated with this dataset are not publicly available because they have been permanently suppressed.
+    - else
+      %p Files associated with this dataset are under curator review and are not publicly available.
+    %p
+      = link_to "Contact the Research Data Service", contact_path
+      with any questions.
+- elsif (dataset.file_embargoed? || dataset.metadata_embargoed?) && !dataset.embargo_released?
   .alert.alert-warning{role: "alert"}
     %strong Warning:
     - release_date_label = dataset.release_date&.strftime('%B %d, %Y') || "a future release date"
@@ -6,3 +15,5 @@
       %span File access is currently restricted due to embargo. Files will become available on #{release_date_label}.
     - elsif dataset.embargo_mode == Dataset::EMBARGO_METADATA
       %span This dataset is currently under embargo. Both metadata and files will become publicly available on #{release_date_label}.
+- elsif cannot?(:view_files, dataset)
+  %p Files associated with this dataset are not available to you.
