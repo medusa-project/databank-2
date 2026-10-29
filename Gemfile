@@ -49,6 +49,8 @@ gem "rubyzip", "~> 3.4"
 gem "bunny", "~> 2.24", require: false
 # Fix bundler-audit vulnerability: Net::IMAP command injection (CVE)
 gem "net-imap", ">= 0.6.4.1"
+# Keep Net::SSH on a patched release compatible with deployment dependencies
+gem "net-ssh", "~> 7.3", ">= 7.3.5"
 # Fix CVE in concurrent-ruby reported by CI security scan
 gem "concurrent-ruby", ">= 1.3.7"
 # Fix Denial of service via malformed Host header in websocket-driver
