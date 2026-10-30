@@ -1,4 +1,4 @@
-%section#dataset-curation.idb-section-card
+%section#dataset-curation.curator-section-card
   %details.idb-section-disclosure{open: false}
     %summary
       %h2.idb-section-title
@@ -58,7 +58,7 @@
 
               - if @dataset.dataset_access_grants.any?
                 - creator_emails = @dataset.creators.map(&:email).to_set
-                %table.idb-compact-table
+                %table.idb-compact-table.idb-compact-table-access-grants
                   %thead
                     %tr
                       %th Email
@@ -66,6 +66,8 @@
                       %th Actions
                   %tbody
                     - @dataset.dataset_access_grants.each do |grant|
+                      - next unless grant.illinois_email?
+
                       %tr
                         %td= grant.email
                         %td= grant.access_level.humanize

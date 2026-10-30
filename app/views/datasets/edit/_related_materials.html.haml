@@ -13,15 +13,21 @@
                 = mf.hidden_field :row_position, value: (mf.object.row_position || mf.object.position || (index + 1))
                 = mf.hidden_field :datacite_list, data: { dataciteListField: true }
                 .idb-nested-grid
+                  .idb-grid-col-3
+                    = mf.label :title, "Title"
+                    = mf.text_field :title
                   .idb-grid-col-2
                     = mf.label :selected_type, "Related Resource Type"
                     = mf.select :selected_type, options_for_select(["Article", "Code", "Dataset", "Presentation", "Thesis", "Other"], mf.object.selected_type), { include_blank: "Select..." }, { data: { action: "change->deposit-form#materialTypeChanged" } }
                   .idb-grid-col-2
                     = mf.label :material_type, "Material Type"
                     = mf.text_field :material_type, data: { materialTypeField: true }
-                  .idb-grid-col-3
+                  .idb-grid-col-2
                     = mf.label :link, "Resource URL"
                     = mf.text_field :link
+                  .idb-grid-col-3
+                    = mf.label :uri, "External URI"
+                    = mf.text_field :uri
                   .idb-grid-col-4
                     = mf.label :citation
                     = mf.text_area :citation, rows: 2
@@ -55,15 +61,21 @@
               = mf.hidden_field :row_position, value: 1
               = mf.hidden_field :datacite_list, data: { dataciteListField: true }
               .idb-nested-grid
+                .idb-grid-col-3
+                  = mf.label :title, "Title"
+                  = mf.text_field :title
                 .idb-grid-col-2
                   = mf.label :selected_type, "Related Resource Type"
                   = mf.select :selected_type, options_for_select(["Article", "Code", "Dataset", "Presentation", "Thesis", "Other"]), { include_blank: "Select..." }, { data: { action: "change->deposit-form#materialTypeChanged" } }
                 .idb-grid-col-2
                   = mf.label :material_type, "Material Type"
                   = mf.text_field :material_type, data: { materialTypeField: true }
-                .idb-grid-col-3
+                .idb-grid-col-2
                   = mf.label :link, "Resource URL"
                   = mf.text_field :link
+                .idb-grid-col-3
+                  = mf.label :uri, "External URI"
+                  = mf.text_field :uri
                 .idb-grid-col-4
                   = mf.label :citation
                   = mf.text_area :citation, rows: 2
@@ -100,15 +112,21 @@
       = mf.hidden_field :row_position, value: 999
       = mf.hidden_field :datacite_list, data: { dataciteListField: true }
       .idb-nested-grid
+        .idb-grid-col-3
+          = mf.label :title, "Title"
+          = mf.text_field :title
         .idb-grid-col-2
           = mf.label :selected_type, "Related Resource Type"
           = mf.select :selected_type, options_for_select(["Article", "Code", "Dataset", "Presentation", "Thesis", "Other"]), { include_blank: "Select..." }, { data: { action: "change->deposit-form#materialTypeChanged" } }
         .idb-grid-col-2
           = mf.label :material_type, "Material Type"
           = mf.text_field :material_type, data: { materialTypeField: true }
-        .idb-grid-col-3
+        .idb-grid-col-2
           = mf.label :link, "Resource URL"
           = mf.text_field :link
+        .idb-grid-col-3
+          = mf.label :uri, "External URI"
+          = mf.text_field :uri
         .idb-grid-col-4
           = mf.label :citation
           = mf.text_area :citation, rows: 2

@@ -114,15 +114,18 @@ RSpec.describe "Dataset Globus workflows", type: :request do
       allow(root).to receive(:size).with("#{dataset.key}/new.csv").and_return(256)
     end
 
-    it "shows curator controls associated with a separate POST form" do
+    it "shows curator controls using semantic action button" do
       sign_in_as("curator")
       get edit_dataset_path(dataset)
 
       expect(response).to have_http_status(:ok)
       doc = Nokogiri::HTML(response.body)
-      expect(doc.at_css("button[form='globus-import-form']").text).to eq("Import from Globus")
-      expect(doc.at_css("form#globus-import-form")["action"]).to eq(import_from_globus_dataset_path(dataset))
-      expect(doc.at_css("form#globus-import-form")["method"]).to eq("post")
+      # Check that the semantic action button exists and points to the import action
+      import_button = doc.at_css("a[href='#{import_from_globus_dataset_path(dataset)}']")
+      expect(import_button).to be_present
+      expect(import_button.text).to include("Import from Globus")
+      # Check that the helper form still exists for other uses
+      expect(doc.at_css("form#globus-import-form")).to be_present
       expect(doc.css("form form")).to be_empty
     end
 
@@ -130,7 +133,7 @@ RSpec.describe "Dataset Globus workflows", type: :request do
       sign_in_as("depositor", dataset.depositor_email)
       get edit_dataset_path(dataset)
       expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include("globus-import-form")
+      expect(response.body).not_to include("Import from Globus")
     end
 
     it "imports files and skips existing filenames on repeated imports" do

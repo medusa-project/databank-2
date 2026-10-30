@@ -9,7 +9,7 @@
         .idb-admin-controls-row
           = semantic_action_button(action: :admin_tools, label: "Manage Researcher Spotlights", icon: "person-rays", url: featured_researchers_path, style: :idb)
           = semantic_action_button(action: :article, label: "External Delivery Audit", url: admin_external_delivery_attempts_path, style: :idb)
-          = semantic_action_button(action: :admin_tools, label: "Clear Rails Cache", icon: "arrow-rotate-left", url: clear_admin_cache_path, style: :idb)
+          = semantic_action_button(action: :admin_tools, label: "Clear Rails Cache", icon: "arrow-rotate-left", url: clear_admin_cache_path, method: :post, style: :idb)
 
   %section.idb-section-card{aria: { label: "Manage Service Message" }}
     %details.idb-section-disclosure{open: false}

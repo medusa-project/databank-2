@@ -63,10 +63,13 @@ class DatasetVersionGroup
   def entry_for(record, selected: false)
     {
       dataset: record,
+      version: record.dataset_version,
+      comment: record.version_comment,
       key: record.key,
       title: record.title,
       doi: record.identifier,
       publication_state: record.publication_state,
+      publication_date: "#{record.release_date&.iso8601 || 'N/A'}",
       selected: selected
     }
   end
