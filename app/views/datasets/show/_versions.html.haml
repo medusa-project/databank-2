@@ -18,7 +18,7 @@
               - visible_version_entries.each do |entry|
                 %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
                   %td.version-cell
-                    = entry[:version]
+                    = entry[:version].present? ? entry[:version] : entry[:title]
                   %td
                     - if entry[:doi].present?
                       = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"

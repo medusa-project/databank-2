@@ -6,9 +6,9 @@
 			- if can?(:manage, dataset) && dataset.draft?
 				.idb-metadata-grid
 					.idb-grid-col-5
-						= semantic_action_button action: :submit, label: "Curator Import from Globus", url: import_from_globus_dataset_path(dataset), type: "button"
+						= semantic_action_button action: :submit, label: "Import from Globus", url: import_from_globus_dataset_path(dataset), type: "button"
 					.idb-grid-col-7
-						%p After a Globus transfer finishes, import the files into this dataset. Existing filenames are skipped; repeat after each transfer to import new files.	
+						%p After a Globus transfer finishes, import the files into this dataset. Existing filenames are skipped; repeat after each transfer to import new files.
 
 			- if dataset.draft?
 				.idb-metadata-grid
@@ -24,11 +24,11 @@
 							The API, as used in the included Python script, can be used for files
 							%strong up to 50 GB.
 
-			  .idb-metadata-grid
-				  .idb-grid-col-5
-					  %button.idb-button-primary{type: "button", onclick: "window.open('https://forms.illinois.edu/sec/1813779862', '_blank')"} Request large file transfer
-				  .idb-grid-col-7
-					  %p Files larger than 50GB require special handling.
-					  %p See the large file transfer request form for details
-				- else
+				.idb-metadata-grid
+					.idb-grid-col-5
+						%button.idb-button-primary{type: "button", onclick: "window.open('https://forms.illinois.edu/sec/1813779862', '_blank')"} Request large file transfer
+					.idb-grid-col-7
+						%p Files larger than 50GB require special handling.
+						%p See the large file transfer request form for details
+			- else
 				%p Advanced upload options are available for draft datasets you can edit.
