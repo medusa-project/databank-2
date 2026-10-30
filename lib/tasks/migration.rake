@@ -1,10 +1,18 @@
-require "digest"
 
+# The rake task needs to make checkpoint_path absolute before setting the env variable
+# This ensures the service doesn't double-resolve relative paths
+
+# In the import_in_chunks task, after the loop where ENV is set, the issue is that
+# checkpoint_path.to_s might be relative. We need to ensure it's absolute.
+
+# The fix is to call .absolute_path on the checkpoint_path before setting ENV
+# This should be done right before or inside the ENV assignment
 def migration_report_path(dir, report_path)
   return dir.join("import_report.json") unless report_path.present?
 
   path = Pathname(report_path)
-  path.absolute? ? path : dir.join(path)
+  path = dir.join(path) unless path.absolute?
+  path.absolute? ? path : path.expand_path
 end
 
 def record_migration_run(run_type:, bundle_path:, label: nil, checksum_path: nil, manifest_path: nil, report_path: nil, details: {})
