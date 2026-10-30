@@ -1,13 +1,6 @@
 - content_for :title, @dataset.title.present? ? "Edit Dataset: #{@dataset.title}" : "Edit Dataset"
 - content_for :include_orcid_css, true
 
-- previous_version = @dataset.previous_version_dataset
-- next_version = @dataset.version_successor
-- previous_version_material = @dataset.previous_version_material
-- next_version_material = @dataset.version_related_materials.find { |material| material.relation_type == RelatedMaterial::VERSION_NEW_RELATION }
-- previous_version_visible = previous_version if previous_version.present? && can?(:read, previous_version)
-- next_version_visible = next_version if next_version.present? && can?(:read, next_version)
-
 %ilw-content.dataset-form-page.idb-page-sections
   .idb-sections-layout
     .idb-sections-content
@@ -25,13 +18,16 @@
 
       = form_with model: @dataset, local: true, html: form_html do |f|
         = f.hidden_field :org_creators, data: { deposit_form_target: "orgCreatorsField" }
-        = render "datasets/edit/description", f: f, dataset: @dataset
         - if can?(:manage, @dataset)
           = render "datasets/edit/curation", f: f, dataset: @dataset
+        = render "datasets/edit/description", f: f, dataset: @dataset
         = render "datasets/edit/funders", f: f, dataset: @dataset
         = render "datasets/edit/related_materials", f: f, dataset: @dataset
-        = render "datasets/edit/versions", dataset: @dataset, previous_version_visible: previous_version_visible, next_version_visible: next_version_visible, previous_version_material: previous_version_material, next_version_material: next_version_material, next_version: next_version
-        = render "datasets/edit/files", f: f, dataset: @dataset
+        = render "/datasets/show/versions", dataset: @dataset
+        - if @dataset.draft?
+          = render "datasets/edit/files", f: f, dataset: @dataset
+        - else
+          = render "datasets/show/files", dataset: @dataset
         - if @dataset.draft?
           = render "datasets/edit/advanced_upload", f: f, dataset: @dataset
         - if can?(:update, @dataset)

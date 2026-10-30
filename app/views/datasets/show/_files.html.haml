@@ -1,3 +1,7 @@
+- datafiles = dataset.datafiles
+- datafile_count = datafiles.length
+- globus_downloadable = dataset.globus_downloadable?
+- show_bulk_file_actions = can?(:view_files, dataset) && datafile_count > 1 && dataset.fileset_preserved? || dataset.globus_downloadable? && !dataset.external_files?
 - can_view_files = can?(:view_files, dataset)
 %section.idb-section-card{aria: { label: "Files" }}
   %details.idb-section-disclosure{open: true}

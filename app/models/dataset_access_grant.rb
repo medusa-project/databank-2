@@ -26,6 +26,10 @@ class DatasetAccessGrant < ApplicationRecord
     for_email(email).where(dataset_id: dataset_id, access_level: :editor).exists?
   end
 
+  def illinois_email?
+    email.to_s.strip.downcase.end_with?("illinois.edu")
+  end
+
   private
 
   def normalize_email

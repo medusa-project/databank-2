@@ -274,6 +274,7 @@ class DatasetsController < ApplicationController
 
   def edit
     authorize! :update, @dataset
+    @version_group = DatasetVersionGroup.new(@dataset)
   end
 
   def update

@@ -1,3 +1,4 @@
+- visible_version_entries = @version_group.entries.select { |entry| entry[:dataset].published? || can?(:review_versions, @dataset) }
 - if visible_version_entries.any?
   %section.idb-section-card{aria: { label: "Versions in Illinois Data Bank" }}
     %details.idb-section-disclosure{open: (visible_version_entries.length > 1)}
@@ -8,16 +9,20 @@
           %table.dataset-show-table
             %thead
               %tr
-                %th Dataset
+                %th.version-cell
+                  Version
                 %th DOI
-                %th State
+                %th Comment
+                %th Publication Date
             %tbody
               - visible_version_entries.each do |entry|
                 %tr{ class: (entry[:selected] ? "dataset-show-version-selected" : nil) }
-                  %td= link_to "#{entry[:title]} (#{entry[:key]})", dataset_path(entry[:dataset])
+                  %td.version-cell
+                    = entry[:version]
                   %td
                     - if entry[:doi].present?
                       = link_to entry[:doi], "https://doi.org/#{entry[:doi]}"
                     - else
-                      not yet set
-                  %td= semantic_status_badge(status: entry[:publication_state].to_s, sr_label: "Publication state #{entry[:publication_state]}")
+                      = link_to "DOI not yet set", dataset_path(entry[:dataset]) if entry[:dataset].present?
+                  %td= entry[:comment]
+                  %td= entry[:publication_date]

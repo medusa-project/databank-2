@@ -520,6 +520,22 @@
 	width: 12%;
 }
 
+/* Dataset access grants table - 3 columns: Email, Access Level, Actions */
+.idb-compact-table-access-grants th:nth-child(1),
+.idb-compact-table-access-grants td:nth-child(1) {
+	width: 50%;
+}
+
+.idb-compact-table-access-grants th:nth-child(2),
+.idb-compact-table-access-grants td:nth-child(2) {
+	width: 20%;
+}
+
+.idb-compact-table-access-grants th:nth-child(3),
+.idb-compact-table-access-grants td:nth-child(3) {
+	width: 30%;
+}
+
 .idb-compact-table-individual th:nth-child(1),
 .idb-compact-table-individual td:nth-child(1),
 .idb-compact-table-individual th:nth-child(2),

@@ -222,6 +222,10 @@
   white-space: nowrap;
 }
 
+.dataset-show-table td.version-cell, .dataset-show-table th.version-cell {
+  text-align: center !important;
+}
+
 /* Responsive layout for tablet */
 @media (max-width: 1200px) {
   .dataset-files-header,
