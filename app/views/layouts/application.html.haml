@@ -26,7 +26,7 @@
     %script{async: true, type: "module", src: "/idb-header.js"}
     %script{src: "//cdn.disability.illinois.edu/skipto.min.js"}
     :javascript
-      var SkipToConfig = { 'settings': { 'skipTo': { displayOption: 'static', colorTheme: 'illinois', headings: 'h1, h2, h3' } } };
+      var SkipToConfig = { 'settings': { 'skipTo': { displayOption: 'static', colorTheme: 'illinois', headings: 'h1, h2, h3', landmarks: 'main, [role="main"], [role="navigation"], [role="search"]' } } };
     = stylesheet_link_tag "fontawesome/all.min", "data-turbo-track": "reload"
     = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
     = stylesheet_link_tag "application", "data-turbo-track": "reload"
