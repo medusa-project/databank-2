@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.3", ">= 8.1.3.1"
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record.
@@ -9,10 +9,10 @@ gem "propshaft"
 # from precompiled platform gems.
 if RUBY_PLATFORM.include?("linux")
   gem "pg", "~> 1.1", force_ruby_platform: true
-  gem "nokogiri", ">= 1.19.4", force_ruby_platform: true
+  gem "nokogiri", ">= 1.19.5", force_ruby_platform: true
 else
   gem "pg", "~> 1.1"
-  gem "nokogiri", ">= 1.19.4"
+  gem "nokogiri", ">= 1.19.5"
 end
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", "~> 8.0", ">= 8.0.2"
@@ -39,7 +39,11 @@ gem "aws-sdk-ecs", "~> 1.221", require: false
 gem "aws-sdk-sqs", "~> 1.105", require: false
 # Required by Active Storage variant generation
 gem "image_processing", "~> 1.2"
-gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", ref: "2523839f6f75b9fc5500c226dd9c4212d7f54691"
+gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", branch: "databank"
+# medusa_storage includes IO::Like as a module; 0.4 changes it to a class.
+gem "io-like", "~> 0.3.1"
+# Use the legacy application's S3 multipart backend for resumable uploads.
+gem "tus-server", "~> 2.3"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
@@ -53,10 +57,15 @@ gem "net-imap", ">= 0.6.4.1"
 gem "net-ssh", "~> 7.3", ">= 7.3.5"
 # Fix CVE in concurrent-ruby reported by CI security scan
 gem "concurrent-ruby", ">= 1.3.7"
+# Security fixes for transitive HTTP, URL, and HTML parsing dependencies.
+gem "addressable", ">= 2.9.1"
+gem "rack", ">= 3.2.8"
+gem "rails-html-sanitizer", ">= 1.7.2"
+gem "loofah", ">= 2.25.3"
 # Fix Denial of service via malformed Host header in websocket-driver
 gem "websocket-driver", ">= 0.8.2"
-# Fix JSON generator heap buffer overflow when streaming to an IO
-gem "json", ">= 2.19.9"
+# Fix JSON generator heap buffer overflow; Rails 8.1 JSON decoding requires JSON 2.
+gem "json", ">= 2.19.9", "< 3"
 # Fix Use-After-Free in MessagePack::Buffer#clear
 gem "msgpack", ">= 1.8.2"
 # Fix CSS sanitizer bypass via incorrect tokenization of bad URLs

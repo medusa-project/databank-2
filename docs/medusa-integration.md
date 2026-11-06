@@ -45,9 +45,28 @@ Datafile location is tracked by:
 
 `Datafile::Storable` resolves the effective root via `StorageManager.instance.root_set.at(storage_root)` and performs `exist?` / streaming IO operations against that root.
 
+The `medusa_storage` dependency uses its `databank` branch, with `io-like`
+restricted to 0.3.x because the storage gem requires the module-based
+`IO::Like` API. Version 0.4 changes it to a class and prevents boot.
+JSON is restricted to version 2 because Rails 8.1's JSON decoder passes
+arguments that JSON 3 no longer accepts.
+
 Typical flow:
 
-1. Upload API writes depositor uploads to the `draft` root.
+1. The token-authenticated Tus API writes chunks as S3 multipart uploads in
+   the `draft` root and keeps resumable metadata in S3. Registration references
+   the completed object directly; it does not download or copy the file locally.
+   The maximum Tus upload is 50 GiB. Each PATCH is limited to 64 MiB, and
+   non-final chunks must be at least 5 MiB or large enough to keep the total
+   part count under 10,000. Use the bundled Python client for compatible chunk
+   sizing. Proxy and application servers may buffer a PATCH body locally, so
+   size temporary storage for concurrent chunks rather than entire files.
+   Interrupted multipart uploads and unregistered completed uploads remain in
+   S3; configure an S3 lifecycle rule to abort incomplete multipart uploads and
+   use an operational cleanup process that checks dataset references before
+   deleting completed objects. Deploying this change does not migrate uploads
+   staged by the former local Tus implementation; finish them before deployment
+   or restart them afterward.
 2. Browser uploads initially use Active Storage. Before ingest, they are streamed into the MedusaStorage `draft` root and their location metadata is updated.
 3. Publishing sends one Medusa `operation: ingest` request per file, using the prefixed draft storage key and `dataset.key/binary_name` as the preservation target. Medusa's IDB staging root must point to the matching bucket/key namespace.
 4. Responses can include Medusa keys/UUIDs; app stores those in per-file delivery attempt response fields.

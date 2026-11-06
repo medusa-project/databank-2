@@ -13,9 +13,10 @@ class ApiDatasetController < ApplicationController
     end
 
     render json: "file has been successfully uploaded to draft server"
-  rescue TusUploadStore::UploadNotFound, TusUploadStore::InvalidUploadId, ArgumentError
+  rescue TusUploadStore::UploadNotFound, TusUploadStore::InvalidUploadId, TusUploadStore::InvalidUpload, ArgumentError
     render json: "Invalid TUS upload reference", status: :bad_request
-  rescue StandardError
+  rescue StandardError => e
+    Rails.logger.error("Failed to store dataset upload: #{e.class}: #{e.message}")
     render json: "Encountered error while storing file on draft server", status: :internal_server_error
   end
 
@@ -51,28 +52,31 @@ class ApiDatasetController < ApplicationController
   end
 
   def create_from_tus_metadata!
-    datafile = @dataset.datafiles.build(
-      binary_name: params.require(:filename),
-      binary_size: params.require(:size),
-      description: params[:description].presence,
-      storage_root: StorageManager.instance.draft_root.name
-    )
-    datafile.valid?
-    datafile.storage_key = storage_key_for_tus(datafile)
-    store = persist_tus_upload_to_storage!(datafile)
-    datafile.save!
-    store.delete!
-  end
+    store = TusUploadStore.new(tus_upload_id)
+    store.with_lock do
+      info = store.state(dataset_key: @dataset.key)
+      size = Integer(params.require(:size), 10)
+      raise TusUploadStore::InvalidUpload unless size == Integer(info.fetch("Upload-Length"), 10)
+      raise TusUploadStore::InvalidUpload unless info.fetch("Upload-Offset") == info.fetch("Upload-Length")
+      object = store.storage.bucket.object(store.object_key)
+      raise TusUploadStore::InvalidUpload unless object.exists? && object.content_length == size
 
-  def persist_tus_upload_to_storage!(datafile)
-    tus_id = tus_upload_id
-    raise ArgumentError, "Missing tus upload identifier" if tus_id.blank?
-
-    store = TusUploadStore.new(tus_id)
-    store.with_input_io do |io|
-      StorageManager.instance.draft_root.copy_io_to(datafile.storage_key, io, nil, datafile.binary_size.to_i)
+      name = params.require(:filename)
+      existing = Datafile.find_by(storage_root: StorageManager.instance.draft_root.name, storage_key: store.storage_key)
+      if existing
+        raise TusUploadStore::InvalidUpload unless existing.dataset_id == @dataset.id &&
+          existing.binary_name == name && existing.binary_size == size
+      else
+        @dataset.datafiles.create!(
+          binary_name: name,
+          binary_size: size,
+          description: params[:description].presence,
+          storage_root: StorageManager.instance.draft_root.name,
+          storage_key: store.storage_key
+        )
+      end
     end
-    store
+    store.remove_info!
   end
 
   def tus_upload_id
@@ -80,15 +84,6 @@ class ApiDatasetController < ApplicationController
     tus_path.to_s.split("/").reject(&:blank?).last
   rescue URI::InvalidURIError
     nil
-  end
-
-  def storage_key_for_tus(datafile)
-    tus_id = tus_upload_id
-    return File.join(datafile.web_id, datafile.binary_name) if tus_id.blank?
-
-    File.join("tus", tus_id, datafile.binary_name)
-  rescue URI::InvalidURIError
-    File.join(datafile.web_id, datafile.binary_name)
   end
 
   def render_unauthorized
