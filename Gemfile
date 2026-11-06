@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.3", ">= 8.1.3.1"
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record.
@@ -9,10 +9,10 @@ gem "propshaft"
 # from precompiled platform gems.
 if RUBY_PLATFORM.include?("linux")
   gem "pg", "~> 1.1", force_ruby_platform: true
-  gem "nokogiri", ">= 1.19.4", force_ruby_platform: true
+  gem "nokogiri", ">= 1.19.5", force_ruby_platform: true
 else
   gem "pg", "~> 1.1"
-  gem "nokogiri", ">= 1.19.4"
+  gem "nokogiri", ">= 1.19.5"
 end
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", "~> 8.0", ">= 8.0.2"
@@ -57,6 +57,11 @@ gem "net-imap", ">= 0.6.4.1"
 gem "net-ssh", "~> 7.3", ">= 7.3.5"
 # Fix CVE in concurrent-ruby reported by CI security scan
 gem "concurrent-ruby", ">= 1.3.7"
+# Security fixes for transitive HTTP, URL, and HTML parsing dependencies.
+gem "addressable", ">= 2.9.1"
+gem "rack", ">= 3.2.8"
+gem "rails-html-sanitizer", ">= 1.7.2"
+gem "loofah", ">= 2.25.3"
 # Fix Denial of service via malformed Host header in websocket-driver
 gem "websocket-driver", ">= 0.8.2"
 # Fix JSON generator heap buffer overflow; Rails 8.1 JSON decoding requires JSON 2.
