@@ -25,7 +25,6 @@ import requests
 if len(sys.argv) < 4:
    sys.exit("Usage: python databank_api_client_v2.py <DATASET> <TOKEN> <FILE> [<SYSTEM>]")
 
-five_mb = 5 * 1024 * 1024
 success_code = 200
 
 dataset_key = sys.argv[1]
@@ -85,11 +84,12 @@ def upload_datafile():
    # setup tus client
    tus_client = client.TusClient(upload_endpoint, headers={'Authorization': 'Token token=' + token})
 
-   # for multipart uploads, s3 requires that all chunks except last be at least 5 MB
-   five_mb = 5 * 1024 * 1024  # 5MB
+   # S3 permits at most 10,000 parts; round up to a whole MiB.
+   mib = 1024 * 1024
+   chunk_size = max(5 * mib, ((size + 10000 * mib - 1) // (10000 * mib)) * mib)
 
    # set up tus client uploader
-   uploader = tus_client.uploader(filepath, chunk_size=five_mb)
+   uploader = tus_client.uploader(filepath, chunk_size=chunk_size)
 
    # upload the entire file, chunk by chunk
    uploader.upload()

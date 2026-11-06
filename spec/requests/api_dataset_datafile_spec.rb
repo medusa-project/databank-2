@@ -1,4 +1,5 @@
 require "rails_helper"
+require_relative "../support/fake_tus_storage"
 
 RSpec.describe "API dataset datafile upload", type: :request do
   let(:dataset) do
@@ -12,8 +13,10 @@ RSpec.describe "API dataset datafile upload", type: :request do
   end
   let(:token) { dataset.new_token.identifier }
   let(:path) { "/api/dataset/#{dataset.key}/datafile" }
+  let(:storage) { FakeTusStorage.new }
 
   before do
+    allow_any_instance_of(TusUploadStore).to receive(:storage).and_return(storage)
     allow(StorageManager.instance.draft_root).to receive(:copy_io_to).and_return(true)
   end
 
@@ -35,8 +38,10 @@ RSpec.describe "API dataset datafile upload", type: :request do
   end
 
   it "accepts tus metadata registration" do
-    upload_id = TusUploadStore.create(upload_length: 42)
-    TusUploadStore.new(upload_id).append_chunk!(expected_offset: 0, chunk_io: StringIO.new("x" * 42))
+    upload_id = TusUploadStore.create(upload_length: "42", metadata: {}, dataset_key: dataset.key)
+    TusUploadStore.new(upload_id).append_chunk!(
+      dataset_key: dataset.key, expected_offset: "0", chunk_io: StringIO.new("x" * 42), content_length: 42
+    )
 
     post path,
       params: {
@@ -64,6 +69,57 @@ RSpec.describe "API dataset datafile upload", type: :request do
 
     expect(response).to have_http_status(:bad_request)
     expect(response.body).to include("Invalid TUS upload reference")
+  end
+
+  it "does not register an incomplete upload or a mismatched size" do
+    upload_id = TusUploadStore.create(upload_length: "42", metadata: {}, dataset_key: dataset.key)
+    headers = { "Authorization" => "Token token=#{token}" }
+    params = { tus_url: "https://example.edu/files/#{upload_id}", filename: "via-tus.csv", size: 42 }
+    post path, params: params, headers: headers
+    expect(response).to have_http_status(:bad_request)
+    expect(dataset.datafiles).to be_empty
+
+    TusUploadStore.new(upload_id).append_chunk!(
+      dataset_key: dataset.key, expected_offset: "0", chunk_io: StringIO.new("x" * 42), content_length: 42
+    )
+    post path, params: params.merge(size: 41), headers: headers
+    expect(response).to have_http_status(:bad_request)
+    expect(dataset.datafiles).to be_empty
+  end
+
+  it "rejects registration with another dataset's token" do
+    upload_id = TusUploadStore.create(upload_length: "1", metadata: {}, dataset_key: "other-dataset")
+    TusUploadStore.new(upload_id).append_chunk!(
+      dataset_key: "other-dataset", expected_offset: "0", chunk_io: StringIO.new("x"), content_length: 1
+    )
+    post path,
+      params: { tus_url: "https://example.edu/files/#{upload_id}", filename: "other.csv", size: 1 },
+      headers: { "Authorization" => "Token token=#{token}" }
+
+    expect(response).to have_http_status(:bad_request)
+    expect(dataset.datafiles).to be_empty
+  end
+
+  it "allows registration to be retried if metadata cleanup previously failed" do
+    upload_id = TusUploadStore.create(upload_length: "1", metadata: {}, dataset_key: dataset.key)
+    TusUploadStore.new(upload_id).append_chunk!(
+      dataset_key: dataset.key, expected_offset: "0", chunk_io: StringIO.new("x"), content_length: 1
+    )
+    cleanup_attempts = 0
+    allow_any_instance_of(TusUploadStore).to receive(:remove_info!).and_wrap_original do |method|
+      cleanup_attempts += 1
+      raise IOError, "cleanup failed" if cleanup_attempts == 1
+
+      method.call
+    end
+    params = { tus_url: "https://example.edu/files/#{upload_id}", filename: "retry.csv", size: 1 }
+    headers = { "Authorization" => "Token token=#{token}" }
+
+    post path, params: params, headers: headers
+    expect(response).to have_http_status(:internal_server_error)
+    post path, params: params, headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(dataset.datafiles.where(binary_name: "retry.csv").count).to eq(1)
   end
 
   it "returns bad credentials for an invalid token" do

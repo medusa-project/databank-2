@@ -39,7 +39,11 @@ gem "aws-sdk-ecs", "~> 1.221", require: false
 gem "aws-sdk-sqs", "~> 1.105", require: false
 # Required by Active Storage variant generation
 gem "image_processing", "~> 1.2"
-gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", ref: "2523839f6f75b9fc5500c226dd9c4212d7f54691"
+gem "medusa_storage", git: "https://github.com/medusa-project/medusa_storage.git", branch: "databank"
+# medusa_storage includes IO::Like as a module; 0.4 changes it to a class.
+gem "io-like", "~> 0.3.1"
+# Use the legacy application's S3 multipart backend for resumable uploads.
+gem "tus-server", "~> 2.3"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 # CSV parser/generator (explicit for Ruby 3.4+ compatibility)
@@ -55,8 +59,8 @@ gem "net-ssh", "~> 7.3", ">= 7.3.5"
 gem "concurrent-ruby", ">= 1.3.7"
 # Fix Denial of service via malformed Host header in websocket-driver
 gem "websocket-driver", ">= 0.8.2"
-# Fix JSON generator heap buffer overflow when streaming to an IO
-gem "json", ">= 2.19.9"
+# Fix JSON generator heap buffer overflow; Rails 8.1 JSON decoding requires JSON 2.
+gem "json", ">= 2.19.9", "< 3"
 # Fix Use-After-Free in MessagePack::Buffer#clear
 gem "msgpack", ">= 1.8.2"
 # Fix CSS sanitizer bypass via incorrect tokenization of bad URLs
